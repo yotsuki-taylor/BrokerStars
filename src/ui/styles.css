@@ -815,6 +815,9 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  /* the figure is pushed below its box, and without this it would bleed
+     through the gaps between the buttons instead of ending at the card */
+  overflow: hidden;
 }
 
 .hero .character {
@@ -823,7 +826,7 @@ body {
   height: 100%;
   max-height: 42dvh;
   max-width: 62%;
-  transform: translateY(13%);
+  transform: translateY(calc(13% + 100px));
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
 }
 
@@ -1264,4 +1267,13 @@ body {
   width: 100%;
   padding: 7px;
   z-index: 2;
+}
+
+/* The 100px drop is measured against a tall phone; on a short one it would
+   swallow the figure. Must sit after the base rule — equal specificity, so
+   source order decides. */
+@media (max-height: 620px) {
+  .hero .character {
+    transform: translateY(calc(13% + 60px));
+  }
 }
