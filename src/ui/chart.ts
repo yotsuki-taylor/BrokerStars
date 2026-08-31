@@ -7,7 +7,11 @@ export interface ChartOpts {
   humanIdx: number;
 }
 
-const FONT = "'BD Cartoon Shout', 'Trebuchet MS', sans-serif";
+const FONT_FAMILY =
+  "ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', 'Segoe UI', Roboto, " +
+  "'Trebuchet MS', system-ui, sans-serif";
+/** Canvas labels carry the same heavy weight the HUD uses. */
+const font = (px: number) => `800 ${px}px ${FONT_FAMILY}`;
 
 function fit(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
   const ctx = canvas.getContext('2d');
@@ -104,7 +108,7 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
   // --- grid
   const step = niceStep(hi - lo);
   ctx.lineWidth = 1;
-  ctx.font = `9px ${FONT}`;
+  ctx.font = font(9);
   ctx.textBaseline = 'middle';
   for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
     const y = py(v);
@@ -258,7 +262,7 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = color;
-    ctx.font = `11px ${FONT}`;
+    ctx.font = font(11);
     ctx.textAlign = 'center';
     ctx.fillText(label, chipX + (padR - 8) / 2, chipY + 1);
   });
@@ -333,9 +337,9 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   const rows = state.traders.map((t) => `${t.name} ${fmt(t.netWorth)}`);
-  ctx.font = `10px ${FONT}`;
+  ctx.font = font(10);
   let boxW = Math.max(...rows.map((r) => ctx.measureText(r).width)) + 16;
-  ctx.font = `9px ${FONT}`;
+  ctx.font = font(9);
   boxW = Math.max(boxW, ctx.measureText('NET WORTH').width);
 
   // backdrop: a net worth curve will otherwise run straight through the labels
@@ -349,7 +353,7 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
     const y = 19 + i * 13;
     ctx.fillStyle = colors[i];
     ctx.fillRect(12, y + 4, 11, 3);
-    ctx.font = `10px ${FONT}`;
+    ctx.font = font(10);
     ctx.fillText(row, 28, y);
   });
 }

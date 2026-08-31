@@ -88,7 +88,12 @@ export default function ResultScreen({
         </div>
         <div className="stat">
           <div className="k">CLOSED IN PROFIT</div>
-          <div className="v" style={{ color: winRate >= 50 ? 'var(--up)' : 'var(--down)' }}>
+          <div
+            className="v"
+            style={{
+              color: !closed.length ? 'var(--neutral)' : winRate >= 50 ? 'var(--up)' : 'var(--down)',
+            }}
+          >
             {closed.length ? `${winRate.toFixed(0)}%` : '—'}
           </div>
         </div>

@@ -1,5 +1,7 @@
-/* @font-face for BD Cartoon Shout is declared at runtime in main.tsx —
-   the font file is not in the repository. See README. */
+/* System stack only — no font file to ship, license or lose. ui-rounded gives
+   Apple platforms SF Pro Rounded, which suits the cartoon art; everything else
+   falls through to its own UI face. Heavy weights do the work the display font
+   used to do. */
 
 :root {
   --ink: #0a1f3c;
@@ -30,7 +32,9 @@ body {
 }
 
 body {
-  font-family: 'BD Cartoon Shout', 'Trebuchet MS', system-ui, sans-serif;
+  font-family: ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', 'Segoe UI', Roboto, 'Trebuchet MS', system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   color: var(--white);
   background: radial-gradient(circle at 50% 38%, #2f9bf2 0%, #0f61c0 45%, #0a3f88 100%);
   background-attachment: fixed;
@@ -510,7 +514,6 @@ body {
 .overlay h2 {
   margin: 0 0 2px;
   font-size: 22px;
-  font-weight: normal;
   text-align: center;
   letter-spacing: 1px;
 }
