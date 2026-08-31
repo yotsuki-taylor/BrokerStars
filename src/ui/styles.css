@@ -764,10 +764,9 @@ body {
   justify-content: center;
 }
 
-.hero img {
-  max-height: 100%;
-  max-width: 78%;
-  object-fit: contain;
+.hero .character {
+  height: 100%;
+  max-width: 82%;
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
 }
 
@@ -853,6 +852,185 @@ body {
 }
 
 .big-btn.ghost {
+  background: linear-gradient(#5b6d88, #35455d);
+  color: #f4f9ff;
+}
+
+/* ---------- layered character ---------- */
+
+.character {
+  position: relative;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.character img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- shop / equip ---------- */
+
+.shop {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vh, 12px);
+  padding-bottom: 6px;
+}
+
+.menu-btn.back {
+  min-height: 34px;
+  font-size: 13px;
+  padding: 0 14px;
+  border-radius: 10px;
+}
+
+.shop-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-preview .character {
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+}
+
+.slot-tabs {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.slot-tab {
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.55);
+  color: #cfe0f5;
+  font-family: inherit;
+  font-weight: inherit;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.slot-tab.on {
+  background: linear-gradient(#e8f3ff, #b9d3f0);
+  color: var(--ink);
+}
+
+.item-grid {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.item {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(8, 34, 70, 0.6);
+  padding: 3px 2px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: inherit;
+  opacity: 0.72;
+  transition: transform 0.08s, opacity 0.15s;
+}
+
+.item.owned {
+  opacity: 1;
+}
+
+.item.picked {
+  background: rgba(30, 90, 160, 0.85);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* the sprite sheet is mostly empty, so the thumbnail zooms into the slot */
+.item i {
+  display: block;
+  width: 100%;
+  max-width: 54px;
+  aspect-ratio: 1 / 1;
+}
+
+.item .tag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.item .worn-tag {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-style: normal;
+  font-size: 9px;
+  line-height: 14px;
+  padding: 0 5px;
+  border-radius: 7px;
+  border: 2px solid var(--ink);
+  background: #43e06a;
+  color: #06203f;
+}
+
+.empty-note {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 8px 0;
+}
+
+.menu-btn.action {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 50px;
+}
+
+.menu-btn.action:disabled {
+  cursor: default;
+  filter: saturate(0.5) brightness(0.85);
+}
+
+/* gold on orange reads as an empty outline; make it solid instead */
+.menu-btn.action svg path {
+  fill: #3a2000;
+  stroke: none;
+}
+
+.menu-btn.action.broke svg path {
+  fill: #ffc02e;
+  stroke: #0a1f3c;
+}
+
+.menu-btn.action.broke {
   background: linear-gradient(#5b6d88, #35455d);
   color: #f4f9ff;
 }

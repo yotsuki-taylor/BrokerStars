@@ -1,21 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
+import Character from './Character';
 import { Star, tex } from './components';
+import type { Outfit } from './wardrobe';
 
-/**
- * Main menu. The hero is a placeholder portrait until the real art lands, and
- * SHOP / EQUIP are wired to a stub so there is somewhere to build into.
- */
+/** Main menu. The hero wears whatever the player has equipped. */
 export default function Menu({
   stars,
+  outfit,
   onPlay,
+  onShop,
+  onEquip,
   onHelp,
 }: {
   stars: number;
+  outfit: Outfit;
   onPlay: () => void;
+  onShop: () => void;
+  onEquip: () => void;
   onHelp: () => void;
 }) {
-  const [stub, setStub] = useState<string | null>(null);
-
   return (
     <div className="menu">
       <header className="menu-top">
@@ -32,15 +35,15 @@ export default function Menu({
       <div className="menu-title">BROKER STARS</div>
 
       <div className="hero">
-        <img src={tex('player1.png')} alt="" />
+        <Character outfit={outfit} />
       </div>
 
       <div className="menu-actions">
         <div className="menu-left">
-          <button className="menu-btn" onClick={() => setStub('SHOP')}>
+          <button className="menu-btn" onClick={onShop}>
             SHOP
           </button>
-          <button className="menu-btn" onClick={() => setStub('EQUIP')}>
+          <button className="menu-btn" onClick={onEquip}>
             EQUIP
           </button>
         </div>
@@ -49,18 +52,6 @@ export default function Menu({
         </button>
       </div>
 
-      {stub && (
-        <div className="overlay" onClick={() => setStub(null)}>
-          <h2>{stub}</h2>
-          <p>
-            Not built yet. Stars you win in matches are already being counted, so there will be
-            something to spend them on.
-          </p>
-          <button className="big-btn" onClick={() => setStub(null)}>
-            BACK
-          </button>
-        </div>
-      )}
     </div>
   );
 }

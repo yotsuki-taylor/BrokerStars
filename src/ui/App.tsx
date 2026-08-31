@@ -17,7 +17,19 @@ import {
 import DevPanel from './DevPanel';
 import Menu from './Menu';
 import ResultScreen from './ResultScreen';
+import Shop from './Shop';
 import { awardFor, loadStars, saveStars, type Award } from './progress';
+import {
+  PRICES,
+  itemId,
+  loadOutfit,
+  loadOwned,
+  saveOutfit,
+  saveOwned,
+  type Outfit,
+  type Rarity,
+  type Slot,
+} from './wardrobe';
 
 const HUMAN = 0;
 const PORTRAITS = ['player1.png', 'player2.png'];
@@ -94,8 +106,10 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
-  const [screen, setScreen] = useState<'menu' | 'match'>('menu');
+  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'match'>('menu');
   const [stars, setStars] = useState(loadStars);
+  const [owned, setOwned] = useState<Set<string>>(loadOwned);
+  const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
   const [award, setAward] = useState<Award | null>(null);
   const awarded = useRef(false);
 
@@ -231,6 +245,33 @@ export default function App() {
     rerender();
   };
 
+  const equip = (slot: Slot, rarity: Rarity) => {
+    setOutfit((prev) => {
+      const next = { ...prev, [slot]: rarity };
+      saveOutfit(next);
+      return next;
+    });
+    haptic();
+  };
+
+  const buy = (slot: Slot, rarity: Rarity) => {
+    const price = PRICES[rarity];
+    const id = itemId(slot, rarity);
+    if (owned.has(id) || stars < price) return;
+    setStars((prev) => {
+      const next = prev - price;
+      saveStars(next);
+      return next;
+    });
+    setOwned((prev) => {
+      const next = new Set(prev).add(id);
+      saveOwned(next);
+      return next;
+    });
+    equip(slot, rarity);
+    haptic('heavy');
+  };
+
   const patch = (fn: (c: Config) => void) => {
     fn(stateRef.current.cfg);
     fn(baseCfg.current);
@@ -261,16 +302,35 @@ export default function App() {
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
 
+  if (screen === 'shop' || screen === 'equip') {
+    return (
+      <div className="app">
+        <Shop
+          mode={screen}
+          stars={stars}
+          owned={owned}
+          outfit={outfit}
+          onBuy={buy}
+          onEquip={equip}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'menu') {
     return (
       <div className="app">
         <div className="dev-corner" onClick={cornerTap} />
         <Menu
           stars={stars}
+          outfit={outfit}
           onPlay={() => {
             restart(String(Math.floor(Math.random() * 1e6)));
             setScreen('match');
           }}
+          onShop={() => setScreen('shop')}
+          onEquip={() => setScreen('equip')}
           onHelp={() => setHelpOpen(true)}
         />
         {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
