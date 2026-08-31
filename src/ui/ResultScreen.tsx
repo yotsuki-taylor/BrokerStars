@@ -72,13 +72,13 @@ export default function ResultScreen({
         </div>
         <div className="stat">
           <div className="k">BEST TRADE</div>
-          <div className="v" style={{ color: 'var(--up)' }}>
+          <div className="v" style={{ color: best ? 'var(--up)' : 'var(--neutral)' }}>
             {tradeLabel(best)}
           </div>
         </div>
         <div className="stat">
           <div className="k">WORST TRADE</div>
-          <div className="v" style={{ color: 'var(--down)' }}>
+          <div className="v" style={{ color: worst ? 'var(--down)' : 'var(--neutral)' }}>
             {tradeLabel(worst)}
           </div>
         </div>

@@ -316,21 +316,45 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
     ctx.setLineDash([]);
   }
 
-  const colors = ['#7fd7ff', '#ffd166'];
+  // Deliberately outside the company palette: these are people, not assets. An
+  // earlier version used a cyan and an amber, and the two lines read as the
+  // NOVA and TET price lines with URANUS mysteriously missing.
+  const colors = ['#ffffff', '#8fa3be'];
   series.forEach((s, i) => {
     ctx.beginPath();
     s.forEach((v, idx) => (idx ? ctx.lineTo(px(idx), py(v)) : ctx.moveTo(px(idx), py(v))));
     ctx.strokeStyle = colors[i];
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = i === 0 ? 3 : 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
   });
 
-  ctx.font = `10px ${FONT}`;
+  // caption plus swatch legend, so the chart cannot be mistaken for prices
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  state.traders.forEach((t, i) => {
+  const rows = state.traders.map((t) => `${t.name} ${fmt(t.netWorth)}`);
+  ctx.font = `10px ${FONT}`;
+  let boxW = Math.max(...rows.map((r) => ctx.measureText(r).width)) + 16;
+  ctx.font = `9px ${FONT}`;
+  boxW = Math.max(boxW, ctx.measureText('NET WORTH').width);
+
+  // backdrop: a net worth curve will otherwise run straight through the labels
+  ctx.fillStyle = 'rgba(6,26,54,0.78)';
+  roundRect(ctx, 6, 3, boxW + 26, 17 + rows.length * 13, 6);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('NET WORTH', 12, 6);
+  rows.forEach((row, i) => {
+    const y = 19 + i * 13;
     ctx.fillStyle = colors[i];
-    ctx.fillText(t.name, 10, 8 + i * 13);
+    ctx.fillRect(12, y + 4, 11, 3);
+    ctx.font = `10px ${FONT}`;
+    ctx.fillText(row, 28, y);
   });
+}
+
+/** Same thousands separator the HUD uses, without pulling React in here. */
+function fmt(n: number): string {
+  return Math.round(n).toLocaleString('en-US').replace(/,/g, '\u00a0');
 }
