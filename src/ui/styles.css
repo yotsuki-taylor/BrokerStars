@@ -1,0 +1,706 @@
+/* @font-face for BD Cartoon Shout is declared at runtime in main.tsx —
+   the font file is not in the repository. See README. */
+
+:root {
+  --ink: #0a1f3c;
+  --panel: #0e468f;
+  --panel-deep: #072f66;
+  --line: #2f6dbe;
+  --white: #ffffff;
+  --up: #43e06a;
+  --down: #ff5b5b;
+  --neutral: #b9c9df;
+  --radius: 12px;
+  --outline: 3px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: 'BD Cartoon Shout', 'Trebuchet MS', system-ui, sans-serif;
+  color: var(--white);
+  background: radial-gradient(circle at 50% 38%, #2f9bf2 0%, #0f61c0 45%, #0a3f88 100%);
+  background-attachment: fixed;
+  user-select: none;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ---------- layout skeleton: fixed viewport, never scrolls ---------- */
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.5vh, 14px);
+  padding: calc(4px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
+    calc(6px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  max-width: 560px;
+  margin: 0 auto;
+  position: relative;
+}
+
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+  }
+}
+
+/* ---------- header ---------- */
+
+.hdr {
+  flex: 0 0 auto;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hdr .title {
+  font-size: 15px;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.hdr .spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(#2a67ae, #113f7e);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.icon-btn.accent {
+  background: linear-gradient(#ffc02e, #f08322);
+}
+
+.icon-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* ---------- chart panel ---------- */
+
+.chart-card {
+  flex: 1 1 auto;
+  min-height: 128px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  background: #0d3f83;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.chart-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.news-flash {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 26, 54, 0.92);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  animation: flash-in 0.25s ease-out;
+}
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+/* ---------- traders strip ---------- */
+
+.mid {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 6px;
+}
+
+.timer {
+  text-align: center;
+  font-size: 24px;
+  line-height: 1;
+  padding-bottom: 7px;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  min-width: 74px;
+}
+
+.timer.urgent {
+  color: #ffd23f;
+  animation: tick-pulse 1s steps(2) infinite;
+}
+
+@keyframes tick-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.trader {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+@media (min-height: 700px) {
+  .portrait {
+    height: 64px;
+  }
+  .timer {
+    font-size: 27px;
+  }
+}
+
+/* portraits are deliberately small — the mock-up wasted a third of the screen on them */
+.portrait {
+  height: 52px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: -4px;
+  pointer-events: none;
+}
+
+.portrait img {
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  transition: filter 0.3s, transform 0.3s;
+}
+
+.portrait.winning img {
+  transform: scale(1.07) translateY(-2px);
+  filter: drop-shadow(0 0 6px rgba(90, 255, 140, 0.8));
+}
+
+.portrait.losing img {
+  transform: scale(0.93) translateY(3px);
+  filter: grayscale(0.55) brightness(0.8);
+}
+
+.trader-card {
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(#1d5ea6, #10427c);
+  padding: 4px 8px 5px;
+  min-width: 0;
+}
+
+.trader-card .name {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trader-card .nw {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.trader-card .nw b {
+  font-size: 18px;
+  white-space: nowrap;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.delta {
+  font-size: 12px;
+}
+
+.delta.up {
+  color: var(--up);
+}
+
+.delta.down {
+  color: var(--down);
+}
+
+.delta.flat {
+  color: var(--neutral);
+}
+
+.bankrupt-tag {
+  font-size: 10px;
+  color: var(--down);
+  letter-spacing: 1px;
+}
+
+/* ---------- trade size ---------- */
+
+.sizes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sizes .label {
+  font-size: 10px;
+  opacity: 0.7;
+  letter-spacing: 0.6px;
+  margin-right: 2px;
+}
+
+.size-btn {
+  flex: 1 1 0;
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.55);
+  color: #cfe0f5;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.size-btn.on {
+  background: linear-gradient(#e8f3ff, #b9d3f0);
+  color: var(--ink);
+}
+
+/* ---------- stock rows ---------- */
+
+.rows {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  align-items: stretch;
+  gap: 5px;
+  height: 52px;
+  position: relative;
+}
+
+.info {
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(#66799a, #46587a);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.info .logo {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.info .meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.info .tick-name {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info .price-line {
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.info .price {
+  font-size: 15px;
+}
+
+.info .chg {
+  font-size: 10px;
+}
+
+.pos-badge {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 15px;
+  background: #0a2c58;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.pos-badge.long {
+  color: var(--up);
+}
+
+.pos-badge.short {
+  color: var(--down);
+}
+
+/* Buy and sell differ by side, shape and label — never by colour.
+   Colour on this row belongs to the company. */
+.trade-btn {
+  border: var(--outline) solid var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #f4f9ff;
+  cursor: pointer;
+  padding: 0;
+  min-height: 44px;
+  border-radius: 10px;
+  position: relative;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 0.06s;
+}
+
+.trade-btn.sell {
+  transform: skewX(-9deg);
+  background: linear-gradient(#5b6d88, #35455d);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.trade-btn.buy {
+  transform: skewX(9deg);
+  background: linear-gradient(#dfeaf7, #97acc6);
+  color: var(--ink);
+  text-shadow: none;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.trade-btn.sell span {
+  display: block;
+  transform: skewX(9deg);
+}
+
+.trade-btn.buy span {
+  display: block;
+  transform: skewX(-9deg);
+}
+
+.trade-btn .sub {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  opacity: 0.75;
+}
+
+.trade-btn.sell:active:not(:disabled) {
+  transform: skewX(-9deg) translateY(2px) scale(0.98);
+}
+
+.trade-btn.buy:active:not(:disabled) {
+  transform: skewX(9deg) translateY(2px) scale(0.98);
+}
+
+.trade-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* floating P&L number on a trade — starts over the middle of the row so it
+   never lands on the position badge sitting at the top edge */
+.float-pnl {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  pointer-events: none;
+  animation: float-up 0.9s ease-out forwards;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 6px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+}
+
+@keyframes float-up {
+  to {
+    transform: translate(-50%, -230%);
+    opacity: 0;
+  }
+}
+
+/* ---------- overlays ---------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 22, 48, 0.97);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  padding: calc(10px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));
+  overflow: auto;
+}
+
+.overlay h2 {
+  margin: 0 0 2px;
+  font-size: 22px;
+  font-weight: normal;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.overlay .sub {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.overlay p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 6px 0;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.result-chart {
+  height: 132px;
+  flex: 0 0 auto;
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: #0a3a78;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.stat {
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 5px 7px;
+  background: rgba(10, 45, 92, 0.7);
+}
+
+.stat .k {
+  opacity: 0.65;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+
+.stat .v {
+  font-size: 14px;
+}
+
+.big-btn {
+  margin-top: auto;
+  height: 46px;
+  flex: 0 0 auto;
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(#ffc02e, #f08322);
+  color: #2a1600;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* ---------- dev panel ---------- */
+
+.dev {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 14, 32, 0.96);
+  z-index: 30;
+  padding: 12px;
+  overflow: auto;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.dev h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.dev section {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 0;
+}
+
+.dev label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.dev input[type='text'],
+.dev input[type='number'] {
+  width: 84px;
+  background: #0b2c58;
+  border: 1px solid #2f6dbe;
+  color: #fff;
+  border-radius: 5px;
+  padding: 3px 5px;
+  font: inherit;
+}
+
+.dev .grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+}
+
+.dev button {
+  font: inherit;
+  background: #1d5ea6;
+  color: #fff;
+  border: 1px solid #4d8ad6;
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+  margin: 0 4px 4px 0;
+}
+
+.dev button.on {
+  background: #ffb020;
+  color: #221200;
+}
+
+.dev-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 56px;
+  height: 56px;
+  z-index: 10;
+}
+
+/* narrow screens (iPhone SE 320pt and smaller) */
+@media (max-width: 350px) {
+  .trader-card .nw b {
+    font-size: 15px;
+  }
+  .trader-card .nw {
+    gap: 3px;
+  }
+  .delta {
+    font-size: 10px;
+  }
+  .info .price {
+    font-size: 13px;
+  }
+  .info .tick-name {
+    font-size: 9px;
+  }
+  .info {
+    gap: 4px;
+    padding: 0 5px;
+  }
+  .info .logo {
+    width: 18px;
+    height: 18px;
+  }
+  .trade-btn {
+    font-size: 14px;
+  }
+  .row {
+    grid-template-columns: 1fr 1.5fr 1fr;
+  }
+  .hdr .title {
+    font-size: 13px;
+  }
+}
+
+/* very short screens (iPhone SE and smaller): tighten everything */
+@media (max-height: 620px) {
+  .portrait {
+    height: 44px;
+  }
+  .timer {
+    font-size: 21px;
+  }
+  .row {
+    height: 46px;
+  }
+  .rows {
+    gap: 8px;
+  }
+  .trader-card .nw b {
+    font-size: 16px;
+  }
+}
