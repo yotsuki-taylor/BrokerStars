@@ -49,9 +49,6 @@ export function TraderCard({
   const mood = bankrupt ? 'losing' : pct > 1 ? 'winning' : pct < -1 ? 'losing' : 'level';
   return (
     <div className="trader">
-      <div className={`portrait ${mood}`}>
-        <img src={tex(portrait)} alt="" style={mirrored ? { transform: 'scaleX(-1)' } : undefined} />
-      </div>
       <div className="trader-card">
         <div className="name">{name}</div>
         <div className="nw">
@@ -62,6 +59,9 @@ export function TraderCard({
             <span className={`delta ${deltaClass(pct)}`}>{signed(pct, 1)}%</span>
           )}
         </div>
+      </div>
+      <div className={`portrait ${mood}`}>
+        <img src={tex(portrait)} alt="" style={mirrored ? { transform: 'scaleX(-1)' } : undefined} />
       </div>
     </div>
   );
