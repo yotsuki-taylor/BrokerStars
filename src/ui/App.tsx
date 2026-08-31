@@ -34,7 +34,8 @@ import {
 } from './wardrobe';
 
 const HUMAN = 0;
-const PORTRAITS = ['player1.png', 'player2.png'];
+/** The bot's own art. The player has no sprite — they are drawn from their outfit. */
+const RIVAL_SPRITE = 'player2.png';
 
 function haptic(kind: 'light' | 'heavy' = 'light') {
   const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
@@ -501,7 +502,6 @@ export default function App() {
       <div className="mid">
         <TraderCard
           name={me.name}
-          portrait={PORTRAITS[0]}
           outfit={outfit}
           netWorth={me.netWorth}
           startCash={cfg.match.startingCash}
@@ -513,7 +513,7 @@ export default function App() {
         </div>
         <TraderCard
           name={rival.name}
-          portrait={PORTRAITS[1]}
+          portrait={RIVAL_SPRITE}
           netWorth={rival.netWorth}
           startCash={cfg.match.startingCash}
           bankrupt={rival.bankrupt}
