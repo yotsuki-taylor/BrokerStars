@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # `secrets` is not available in a step-level `if`, so it is mapped here.
-      DISPLAY_FONT_B64: ${{ secrets.DISPLAY_FONT_B64 }}
+      # Accepts either a secret or a variable: the settings page offers both
+      # under one "Secrets and variables" heading and they are easy to confuse.
+      DISPLAY_FONT_B64: ${{ secrets.DISPLAY_FONT_B64 || vars.DISPLAY_FONT_B64 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,12 +34,20 @@ jobs:
       # Store it base64-encoded in the DISPLAY_FONT_B64 repository secret to ship
       # it with the deployed build; without the secret the game falls back to the
       # stack in styles.css and everything else still works.
+      # Always runs, so the log always says why the font is or is not there.
       - name: Restore display font
-        if: ${{ env.DISPLAY_FONT_B64 != '' }}
         run: |
           # Never fail the deploy over a cosmetic asset: a bad secret must degrade
           # to the fallback font stack, not take the whole site down with it.
           set +e
+          if [ -z "$DISPLAY_FONT_B64" ]; then
+            echo "::warning::DISPLAY_FONT_B64 is empty or not set. Building with the fallback font."
+            echo "Expected a repository secret (or variable) named exactly DISPLAY_FONT_B64,"
+            echo "holding the base64 of BD_Cartoon_Shout.ttf. Note that an *environment*"
+            echo "secret would not reach this job, which declares no environment."
+            exit 0
+          fi
+          echo "secret present, ${#DISPLAY_FONT_B64} characters"
           mkdir -p public/fonts
           out=public/fonts/BD_Cartoon_Shout.ttf
           # Pasting into the secret field can introduce newlines and stray
