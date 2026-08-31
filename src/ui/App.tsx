@@ -19,6 +19,7 @@ import Menu from './Menu';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import { NO_AWARD, awardFor, loadStars, saveStars, type Award } from './progress';
+import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import {
   PRICES,
   itemId,
@@ -111,6 +112,7 @@ export default function App() {
   const [stars, setStars] = useState(loadStars);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
+  const [roomDone, setRoomDone] = useState(loadRoom);
   const [award, setAward] = useState<Award | null>(null);
   const awarded = useRef(false);
 
@@ -301,6 +303,23 @@ export default function App() {
     haptic('heavy');
   };
 
+  const renovate = () => {
+    if (roomDone >= ROOM_DONE) return;
+    const price = ROOM_STEPS[roomDone].price;
+    if (stars < price) return;
+    setStars((prev) => {
+      const next = prev - price;
+      saveStars(next);
+      return next;
+    });
+    setRoomDone((prev) => {
+      const next = prev + 1;
+      saveRoom(next);
+      return next;
+    });
+    haptic('heavy');
+  };
+
   const patch = (fn: (c: Config) => void) => {
     fn(stateRef.current.cfg);
     fn(baseCfg.current);
@@ -354,6 +373,8 @@ export default function App() {
         <Menu
           stars={stars}
           outfit={outfit}
+          roomDone={roomDone}
+          onRenovate={renovate}
           onPlay={() => {
             restart(String(Math.floor(Math.random() * 1e6)));
             setScreen('match');
