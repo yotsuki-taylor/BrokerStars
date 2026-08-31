@@ -20,6 +20,7 @@ import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import { NO_AWARD, awardFor, loadStars, saveStars, type Award } from './progress';
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
+import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import {
   PRICES,
   itemId,
@@ -113,6 +114,8 @@ export default function App() {
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
   const [roomDone, setRoomDone] = useState(loadRoom);
+  const [freeMode, setFreeMode] = useState(loadFreeMode);
+  const admin = isAdmin();
   const [award, setAward] = useState<Award | null>(null);
   const awarded = useRef(false);
 
@@ -286,14 +289,10 @@ export default function App() {
   };
 
   const buy = (slot: Slot, rarity: Rarity) => {
-    const price = PRICES[rarity];
+    const price = freeMode ? 0 : PRICES[rarity];
     const id = itemId(slot, rarity);
     if (owned.has(id) || stars < price) return;
-    setStars((prev) => {
-      const next = prev - price;
-      saveStars(next);
-      return next;
-    });
+    addStars(-price);
     setOwned((prev) => {
       const next = new Set(prev).add(id);
       saveOwned(next);
@@ -303,21 +302,58 @@ export default function App() {
     haptic('heavy');
   };
 
-  const renovate = () => {
-    if (roomDone >= ROOM_DONE) return;
-    const price = ROOM_STEPS[roomDone].price;
-    if (stars < price) return;
+  /** Dev only: give an item back and refund it. */
+  const refund = (slot: Slot, rarity: Rarity) => {
+    if (!admin || rarity === 'common') return; // the starter set cannot be sold back
+    const id = itemId(slot, rarity);
+    if (!owned.has(id)) return;
+    addStars(PRICES[rarity]);
+    setOwned((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      saveOwned(next);
+      return next;
+    });
+    if (outfit[slot] === rarity) equip(slot, 'common');
+  };
+
+  const addStars = (delta: number) =>
     setStars((prev) => {
-      const next = prev - price;
+      const next = Math.max(0, prev + delta);
       saveStars(next);
       return next;
     });
+
+  const renovate = () => {
+    if (roomDone >= ROOM_DONE) return;
+    const price = freeMode ? 0 : ROOM_STEPS[roomDone].price;
+    if (stars < price) return;
+    addStars(-price);
     setRoomDone((prev) => {
       const next = prev + 1;
       saveRoom(next);
       return next;
     });
     haptic('heavy');
+  };
+
+  /** Dev only: step the room back and hand the stars back. */
+  const undoRenovate = () => {
+    if (!admin || roomDone === 0) return;
+    addStars(ROOM_STEPS[roomDone - 1].price);
+    setRoomDone((prev) => {
+      const next = prev - 1;
+      saveRoom(next);
+      return next;
+    });
+  };
+
+  const toggleFree = () => {
+    if (!admin) return;
+    setFreeMode((prev) => {
+      saveFreeMode(!prev);
+      return !prev;
+    });
   };
 
   const patch = (fn: (c: Config) => void) => {
@@ -358,8 +394,11 @@ export default function App() {
           stars={stars}
           owned={owned}
           outfit={outfit}
+          admin={admin}
+          freeMode={freeMode}
           onBuy={buy}
           onEquip={equip}
+          onRefund={refund}
           onBack={() => setScreen('menu')}
         />
       </div>
@@ -374,7 +413,11 @@ export default function App() {
           stars={stars}
           outfit={outfit}
           roomDone={roomDone}
+          admin={admin}
+          freeMode={freeMode}
           onRenovate={renovate}
+          onUndoRenovate={undoRenovate}
+          onToggleFree={toggleFree}
           onPlay={() => {
             restart(String(Math.floor(Math.random() * 1e6)));
             setScreen('match');

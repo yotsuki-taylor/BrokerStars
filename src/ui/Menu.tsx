@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Character from './Character';
 import Room from './Room';
-import { Star, tex } from './components';
+import { Check, Cross, Star, tex } from './components';
 import { ROOM_DONE, ROOM_STEPS } from './renovation';
 import type { Outfit } from './wardrobe';
 
@@ -10,7 +10,11 @@ export default function Menu({
   stars,
   outfit,
   roomDone,
+  admin,
+  freeMode,
   onRenovate,
+  onUndoRenovate,
+  onToggleFree,
   onPlay,
   onShop,
   onEquip,
@@ -19,13 +23,23 @@ export default function Menu({
   stars: number;
   outfit: Outfit;
   roomDone: number;
+  admin: boolean;
+  freeMode: boolean;
   onRenovate: () => void;
+  onUndoRenovate: () => void;
+  onToggleFree: () => void;
   onPlay: () => void;
   onShop: () => void;
   onEquip: () => void;
   onHelp: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
+  const [confirming, setConfirming] = useState(false);
+  const price = freeMode ? 0 : (step?.price ?? 0);
+  const affordable = stars >= price;
+
+  // never leave the confirm state hanging over a different upgrade
+  useEffect(() => setConfirming(false), [roomDone]);
 
   return (
     <div className="menu">
@@ -46,21 +60,62 @@ export default function Menu({
         <Character outfit={outfit} />
       </div>
 
+      {admin && (
+        <div className="admin-bar">
+          <span className="admin-tag">DEV</span>
+          <button className={`admin-btn${freeMode ? ' on' : ''}`} onClick={onToggleFree}>
+            FREE {freeMode ? 'ON' : 'OFF'}
+          </button>
+          <button className="admin-btn" onClick={onUndoRenovate} disabled={roomDone === 0}>
+            UNDO ROOM
+          </button>
+        </div>
+      )}
+
       {step ? (
-        <div className="reno">
+        <div className={`reno${confirming ? ' confirming' : ''}`}>
           <div className="reno-text">
             <span className="reno-kicker">
-              NEXT UPGRADE · {roomDone + 1}/{ROOM_DONE}
+              {confirming ? 'RENOVATE?' : `NEXT UPGRADE · ${roomDone + 1}/${ROOM_DONE}`}
             </span>
             <b>{step.label}</b>
           </div>
-          <button
-            className="menu-btn reno-btn"
-            disabled={stars < step.price}
-            onClick={onRenovate}
-          >
-            <Star size={15} /> {step.price}
-          </button>
+
+          {confirming ? (
+            <div className="confirm-pair">
+              <button
+                className="confirm-btn no"
+                onClick={() => setConfirming(false)}
+                aria-label="cancel"
+              >
+                <Cross size={22} />
+              </button>
+              <button
+                className="confirm-btn yes"
+                onClick={() => {
+                  onRenovate();
+                  setConfirming(false);
+                }}
+                aria-label="confirm"
+              >
+                <Check size={22} />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="menu-btn reno-btn"
+              disabled={!affordable}
+              onClick={() => setConfirming(true)}
+            >
+              {price === 0 ? (
+                'FREE'
+              ) : (
+                <>
+                  <Star size={15} /> {price}
+                </>
+              )}
+            </button>
+          )}
         </div>
       ) : (
         <div className="reno done">

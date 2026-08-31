@@ -26,7 +26,12 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Baked into the client bundle, so it is readable by anyone who opens the
+      # JS. It only hides the dev buttons from ordinary players; see admin.ts.
       - run: npm run build
+        env:
+          VITE_ADMIN_ID: ${{ secrets.MY_ID }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

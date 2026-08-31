@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Character from './Character';
-import { Star } from './components';
+import { Check, Cross, Star } from './components';
 import {
   PRICES,
   RARITIES,
@@ -42,20 +42,27 @@ export default function Shop({
   stars,
   owned,
   outfit,
+  admin,
+  freeMode,
   onBuy,
   onEquip,
+  onRefund,
   onBack,
 }: {
   mode: 'shop' | 'equip';
   stars: number;
   owned: Set<string>;
   outfit: Outfit;
+  admin: boolean;
+  freeMode: boolean;
   onBuy: (slot: Slot, rarity: Rarity) => void;
   onEquip: (slot: Slot, rarity: Rarity) => void;
+  onRefund: (slot: Slot, rarity: Rarity) => void;
   onBack: () => void;
 }) {
   const [slot, setSlot] = useState<Slot>('torso');
   const [picked, setPicked] = useState<Rarity | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const rarities = mode === 'equip' ? RARITIES.filter((r) => owned.has(itemId(slot, r))) : RARITIES;
   const selected = picked && rarities.includes(picked) ? picked : (outfit[slot] ?? rarities[0] ?? null);
@@ -64,7 +71,7 @@ export default function Shop({
 
   const isOwned = selected ? owned.has(itemId(slot, selected)) : false;
   const isWorn = selected != null && outfit[slot] === selected;
-  const price = selected ? PRICES[selected] : 0;
+  const price = freeMode ? 0 : selected ? PRICES[selected] : 0;
   const canAfford = stars >= price;
 
   return (
@@ -92,6 +99,7 @@ export default function Shop({
             onClick={() => {
               setSlot(s);
               setPicked(null);
+              setConfirming(false);
             }}
           >
             {SLOT_LABEL[s]}
@@ -108,7 +116,10 @@ export default function Shop({
               key={r}
               className={`item${r === selected ? ' picked' : ''}${own ? ' owned' : ''}`}
               style={{ borderColor: RARITY_COLOR[r] }}
-              onClick={() => setPicked(r)}
+              onClick={() => {
+              setPicked(r);
+              setConfirming(false);
+            }}
             >
               <i style={thumbStyle(slot, r)} />
               {worn && <em className="worn-tag">ON</em>}
@@ -131,16 +142,42 @@ export default function Shop({
         {rarities.length === 0 && <p className="empty-note">Nothing owned in this slot yet.</p>}
       </div>
 
-      {selected && (
+      {selected && admin && isOwned && selected !== 'common' && (
+        <button className="admin-btn wide" onClick={() => onRefund(slot, selected)}>
+          DEV · REFUND THIS
+        </button>
+      )}
+
+      {selected && confirming && (
+        <div className="confirm-pair action">
+          <button className="confirm-btn no" onClick={() => setConfirming(false)} aria-label="cancel">
+            <Cross size={24} />
+          </button>
+          <button
+            className="confirm-btn yes"
+            onClick={() => {
+              onBuy(slot, selected);
+              setConfirming(false);
+            }}
+            aria-label="confirm"
+          >
+            <Check size={24} />
+          </button>
+        </div>
+      )}
+
+      {selected && !confirming && (
         <button
           className={`menu-btn play action${!isOwned && !canAfford ? ' broke' : ''}`}
           disabled={isWorn || (!isOwned && !canAfford)}
-          onClick={() => (isOwned ? onEquip(slot, selected) : onBuy(slot, selected))}
+          onClick={() => (isOwned ? onEquip(slot, selected) : setConfirming(true))}
         >
           {isWorn ? (
             'WEARING'
           ) : isOwned ? (
             'WEAR'
+          ) : price === 0 ? (
+            'BUY FREE'
           ) : canAfford ? (
             <>
               BUY <Star size={16} /> {price}

@@ -818,12 +818,12 @@ body {
 }
 
 .hero .character {
-  /* Small enough that the room stays the picture, and nudged off centre: the
-     bedside table sits dead centre of the scene and would be hidden otherwise. */
+  /* Dropped past the bottom of its box on purpose: the renovation card cuts
+     across the figure's lower edge, which is what sits it into the scene. */
   height: 100%;
-  max-height: 34dvh;
-  max-width: 50%;
-  transform: translateX(26%);
+  max-height: 42dvh;
+  max-width: 62%;
+  transform: translateY(13%);
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
 }
 
@@ -1096,6 +1096,7 @@ body {
 
 .reno {
   flex: 0 0 auto;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1165,4 +1166,102 @@ body {
   font-size: 15px;
   letter-spacing: 1px;
   color: #ffc02e;
+}
+
+/* ---------- confirm / cancel pair ---------- */
+
+.confirm-pair {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.confirm-btn {
+  width: 52px;
+  min-height: 40px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22);
+  transition: transform 0.06s;
+}
+
+.confirm-btn:active {
+  transform: translateY(2px);
+}
+
+.confirm-btn.no {
+  background: linear-gradient(#5b6d88, #35455d);
+  color: #eaf2ff;
+}
+
+.confirm-btn.yes {
+  background: linear-gradient(#5fd08a, #2f9e5f);
+  color: #06301b;
+}
+
+.confirm-pair.action {
+  flex: 0 0 auto;
+  margin-left: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+}
+
+.confirm-pair.action .confirm-btn {
+  width: auto;
+  min-height: 50px;
+}
+
+/* ---------- developer strip ---------- */
+
+.admin-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+
+.admin-tag {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #0a1f3c;
+  background: #ffc02e;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.admin-btn {
+  font-family: inherit;
+  font-weight: inherit;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #cfe0f5;
+  background: rgba(8, 34, 70, 0.92);
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+
+.admin-btn.on {
+  background: #ffc02e;
+  color: #2a1600;
+}
+
+/* dimming by opacity let the character show straight through the label */
+.admin-btn:disabled {
+  color: #6d7f99;
+  cursor: default;
+}
+
+.admin-btn.wide {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 7px;
+  z-index: 2;
 }
