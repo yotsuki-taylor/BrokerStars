@@ -17,6 +17,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # `secrets` is not available in a step-level `if`, so it is mapped here.
+      DISPLAY_FONT_B64: ${{ secrets.DISPLAY_FONT_B64 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,10 +33,10 @@ jobs:
       # it with the deployed build; without the secret the game falls back to the
       # stack in styles.css and everything else still works.
       - name: Restore display font
-        if: ${{ secrets.DISPLAY_FONT_B64 != '' }}
+        if: ${{ env.DISPLAY_FONT_B64 != '' }}
         run: |
           mkdir -p public/fonts
-          printf '%s' "${{ secrets.DISPLAY_FONT_B64 }}" | base64 -d > public/fonts/BD_Cartoon_Shout.ttf
+          printf '%s' "$DISPLAY_FONT_B64" | base64 -d > public/fonts/BD_Cartoon_Shout.ttf
           ls -l public/fonts
 
       - run: npm ci
