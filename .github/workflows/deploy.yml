@@ -10,9 +10,12 @@ permissions:
   pages: write
   id-token: write
 
+# One deployment at a time, but never cancel one that is already running: a
+# Pages deploy killed mid-flight is what "Deployment failed, try again later"
+# tends to mean. Queued runs wait their turn instead.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
