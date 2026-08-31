@@ -26,10 +26,20 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
   else navigator.vibrate?.(kind === 'heavy' ? 25 : 10);
 }
 
+/**
+ * Display name from Telegram when the game runs as a mini app. Cosmetic only —
+ * initDataUnsafe is client-supplied and unverified, and nothing here trusts it.
+ */
+function playerName(): string {
+  const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+  const name = String(u?.first_name ?? u?.username ?? '').trim();
+  return name ? name.slice(0, 12).toUpperCase() : 'YOU';
+}
+
 function makeMatch(cfg: Config, seed: string, preset: string): MatchState {
   return createMatch(hashSeed(seed), cfg, {
     traders: [
-      { name: 'YOU', kind: 'human', preset: 'easy' },
+      { name: playerName(), kind: 'human', preset: 'easy' },
       { name: 'RIVAL', kind: 'bot', preset },
     ],
   });

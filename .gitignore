@@ -4,3 +4,6 @@ tsconfig.tsbuildinfo
 
 # licensed display font, supplied separately (see README)
 *.ttf
+
+# bot token lives here
+.env

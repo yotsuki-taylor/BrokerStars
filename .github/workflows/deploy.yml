@@ -1,0 +1,54 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # The display font is licensed separately and is not in the repository.
+      # Store it base64-encoded in the DISPLAY_FONT_B64 repository secret to ship
+      # it with the deployed build; without the secret the game falls back to the
+      # stack in styles.css and everything else still works.
+      - name: Restore display font
+        if: ${{ secrets.DISPLAY_FONT_B64 != '' }}
+        run: |
+          mkdir -p public/fonts
+          printf '%s' "${{ secrets.DISPLAY_FONT_B64 }}" | base64 -d > public/fonts/BD_Cartoon_Shout.ttf
+          ls -l public/fonts
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
