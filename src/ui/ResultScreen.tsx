@@ -34,7 +34,9 @@ export default function ResultScreen({
   const winRate = closed.length
     ? (100 * closed.filter((t) => t.realized > 0).length) / closed.length
     : 0;
-  const title = me.bankrupt
+  const title = state.resigned === humanIdx
+    ? 'SURRENDERED'
+    : me.bankrupt
     ? 'BANKRUPT'
     : state.winner === null
       ? 'DRAW'

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
-import { createMatch, step } from '../sim/match';
+import { createMatch, resign, step } from '../sim/match';
 import { hashSeed } from '../sim/rng';
 import { applyAction, isShortSide, plannedQty } from '../sim/trading';
 import type { MatchState } from '../sim/types';
@@ -18,7 +18,7 @@ import DevPanel from './DevPanel';
 import Menu from './Menu';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
-import { awardFor, loadStars, saveStars, type Award } from './progress';
+import { NO_AWARD, awardFor, loadStars, saveStars, type Award } from './progress';
 import {
   PRICES,
   itemId,
@@ -104,6 +104,7 @@ export default function App() {
   const [fraction, setFraction] = useState(0.25);
   const [devOpen, setDevOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'match'>('menu');
@@ -117,7 +118,7 @@ export default function App() {
   const ui = useRef({ speed, showTruth, paused: false });
   ui.current.speed = speed;
   ui.current.showTruth = showTruth;
-  ui.current.paused = devOpen || helpOpen || screen !== 'match';
+  ui.current.paused = devOpen || helpOpen || pauseOpen || screen !== 'match';
 
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
@@ -164,11 +165,14 @@ export default function App() {
       if (st.finished && !awarded.current) {
         awarded.current = true;
         const me = st.traders[HUMAN];
-        const a = awardFor(
-          st.winner === HUMAN,
-          st.winner === null,
-          me.netWorth > st.cfg.match.startingCash,
-        );
+        const a =
+          st.resigned === HUMAN
+            ? NO_AWARD
+            : awardFor(
+                st.winner === HUMAN,
+                st.winner === null,
+                me.netWorth > st.cfg.match.startingCash,
+              );
         setAward(a);
         if (a.total > 0) {
           setStars((prev) => {
@@ -238,6 +242,7 @@ export default function App() {
       progressRef.current = 0;
       awarded.current = false;
       setAward(null);
+      setPauseOpen(false);
       setFloats({});
       rerender();
     },
@@ -357,7 +362,31 @@ export default function App() {
           onEquip={() => setScreen('equip')}
           onHelp={() => setHelpOpen(true)}
         />
-        {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
+        {pauseOpen && !st.finished && (
+        <div className="overlay pause">
+          <h2>PAUSED</h2>
+          <div className="sub">
+            {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
+          </div>
+          <div className="result-actions">
+            <button
+              className="big-btn ghost"
+              onClick={() => {
+                resign(stateRef.current, HUMAN);
+                setPauseOpen(false);
+                rerender();
+              }}
+            >
+              SURRENDER
+            </button>
+            <button className="big-btn" onClick={() => setPauseOpen(false)}>
+              RESUME
+            </button>
+          </div>
+        </div>
+      )}
+
+      {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
         {devOpen && (
           <DevPanel
             cfg={cfg}
@@ -388,7 +417,12 @@ export default function App() {
         <button className="icon-btn accent" onClick={() => setHelpOpen(true)} aria-label="help">
           <img src={tex('help.png')} alt="" />
         </button>
-        <button className="icon-btn" onClick={() => setDevOpen(true)} aria-label="menu">
+        <button
+          className="icon-btn"
+          onClick={() => setPauseOpen(true)}
+          disabled={st.finished}
+          aria-label="pause"
+        >
           <img src={tex('options.png')} alt="" />
         </button>
       </header>
@@ -457,6 +491,30 @@ export default function App() {
           onRestart={() => restart(String(Math.floor(Math.random() * 1e6)))}
           onMenu={() => setScreen('menu')}
         />
+      )}
+
+      {pauseOpen && !st.finished && (
+        <div className="overlay pause">
+          <h2>PAUSED</h2>
+          <div className="sub">
+            {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
+          </div>
+          <div className="result-actions">
+            <button
+              className="big-btn ghost"
+              onClick={() => {
+                resign(stateRef.current, HUMAN);
+                setPauseOpen(false);
+                rerender();
+              }}
+            >
+              SURRENDER
+            </button>
+            <button className="big-btn" onClick={() => setPauseOpen(false)}>
+              RESUME
+            </button>
+          </div>
+        </div>
       )}
 
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}

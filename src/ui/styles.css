@@ -578,6 +578,20 @@ body {
   cursor: pointer;
 }
 
+/* the pause popup is short, so it sits centred rather than pinned to the top */
+.overlay.pause {
+  justify-content: center;
+}
+
+.overlay.pause .result-actions {
+  margin-top: 18px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ---------- dev panel ---------- */
 
 .dev {

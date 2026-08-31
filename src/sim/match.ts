@@ -74,6 +74,7 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     news: [],
     finished: false,
     winner: null,
+    resigned: null,
     rng: { price: priceRng, bot: botRng },
   };
   return state;
@@ -140,6 +141,15 @@ export function finish(state: MatchState): MatchState {
   state.finished = true;
   const [a, b] = state.traders;
   state.winner = a.netWorth === b.netWorth ? null : a.netWorth > b.netWorth ? 0 : 1;
+  return state;
+}
+
+/** Giving up: the match ends here and the other trader takes it, whatever the book says. */
+export function resign(state: MatchState, traderIdx: number): MatchState {
+  if (state.finished) return state;
+  state.resigned = traderIdx;
+  finish(state);
+  state.winner = 1 - traderIdx;
   return state;
 }
 

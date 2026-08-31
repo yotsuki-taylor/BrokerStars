@@ -56,6 +56,8 @@ export interface MatchState {
   news: NewsBanner[];
   finished: boolean;
   winner: number | null;
+  /** index of the trader who gave up, if the match ended that way */
+  resigned: number | null;
   rng: { price: Rng; bot: Rng };
 }
 

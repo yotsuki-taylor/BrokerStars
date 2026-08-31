@@ -19,6 +19,9 @@ export interface Award {
   total: number;
 }
 
+/** Surrendering pays nothing — otherwise an early lead could be cashed out. */
+export const NO_AWARD: Award = { win: 0, profit: 0, total: 0 };
+
 export function awardFor(won: boolean, drew: boolean, inProfit: boolean): Award {
   const win = won ? REWARDS.win : drew ? REWARDS.draw : REWARDS.loss;
   const profit = inProfit ? REWARDS.profit : 0;
