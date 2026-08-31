@@ -23,8 +23,8 @@ export interface MatchOptions {
 }
 
 const DEFAULT_TRADERS: [TraderSpec, TraderSpec] = [
-  { name: 'YOU', kind: 'human', preset: 'easy' },
-  { name: 'RIVAL', kind: 'bot', preset: 'easy' },
+  { name: 'YOU', kind: 'human', preset: 'medium' },
+  { name: 'RIVAL', kind: 'bot', preset: 'medium' },
 ];
 
 export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptions = {}): MatchState {

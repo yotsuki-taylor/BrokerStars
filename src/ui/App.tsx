@@ -41,7 +41,7 @@ function playerName(): string {
 function makeMatch(cfg: Config, seed: string, preset: string): MatchState {
   return createMatch(hashSeed(seed), cfg, {
     traders: [
-      { name: playerName(), kind: 'human', preset: 'easy' },
+      { name: playerName(), kind: 'human', preset: 'medium' },
       { name: 'RIVAL', kind: 'bot', preset },
     ],
   });
@@ -79,8 +79,7 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
 export default function App() {
   const baseCfg = useRef<Config>(cloneConfig(CONFIG));
   const [seed, setSeed] = useState(() => String(Math.floor(Math.random() * 1e6)));
-  // easy by default: medium trades ~80 times a match, faster than a human can tap
-  const [botPreset, setBotPreset] = useState('easy');
+  const [botPreset, setBotPreset] = useState('medium');
   const stateRef = useRef<MatchState>(makeMatch(baseCfg.current, seed, botPreset));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
