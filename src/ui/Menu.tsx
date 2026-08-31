@@ -15,6 +15,7 @@ export default function Menu({
   onRenovate,
   onUndoRenovate,
   onToggleFree,
+  onOpenDev,
   onPlay,
   onShop,
   onEquip,
@@ -28,6 +29,7 @@ export default function Menu({
   onRenovate: () => void;
   onUndoRenovate: () => void;
   onToggleFree: () => void;
+  onOpenDev: () => void;
   onPlay: () => void;
   onShop: () => void;
   onEquip: () => void;
@@ -69,6 +71,9 @@ export default function Menu({
           </button>
           <button className="admin-btn" onClick={onUndoRenovate} disabled={roomDone === 0}>
             UNDO ROOM
+          </button>
+          <button className="admin-btn" onClick={onOpenDev}>
+            PANEL
           </button>
         </div>
       )}

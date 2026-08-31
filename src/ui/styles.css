@@ -655,16 +655,6 @@ body {
   background: #ffb020;
   color: #221200;
 }
-
-.dev-corner {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 56px;
-  height: 56px;
-  z-index: 10;
-}
-
 /* roomy screens: the portraits can afford to be bigger */
 @media (min-height: 700px) {
   .portrait {

@@ -237,16 +237,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const taps = useRef<number[]>([]);
-  const cornerTap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current, now].filter((t) => now - t < 800);
-    if (taps.current.length >= 3) {
-      taps.current = [];
-      setDevOpen(true);
-    }
-  };
-
   /* ------------------------------------------------------------------- actions */
   const restart = useCallback(
     (nextSeed?: string, nextPreset?: string) => {
@@ -441,7 +431,6 @@ export default function App() {
   if (screen === 'menu') {
     return (
       <div className="app">
-        <div className="dev-corner" onClick={cornerTap} />
         <Menu
           stars={stars}
           outfit={outfit}
@@ -451,6 +440,7 @@ export default function App() {
           onRenovate={renovate}
           onUndoRenovate={undoRenovate}
           onToggleFree={toggleFree}
+          onOpenDev={() => setDevOpen(true)}
           onPlay={() => {
             restart(String(Math.floor(Math.random() * 1e6)));
             setScreen('vs');
@@ -465,6 +455,17 @@ export default function App() {
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
+          {admin && (
+            <button
+              className="admin-btn wide"
+              onClick={() => {
+                setPauseOpen(false);
+                setDevOpen(true);
+              }}
+            >
+              DEV · OPEN PANEL
+            </button>
+          )}
           <div className="result-actions">
             <button
               className="big-btn ghost"
@@ -506,8 +507,6 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="dev-corner" onClick={cornerTap} />
-
       <header className="hdr">
         <span className="title">BROKER STARS</span>
         <span className="spacer" />
@@ -602,6 +601,17 @@ export default function App() {
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
+          {admin && (
+            <button
+              className="admin-btn wide"
+              onClick={() => {
+                setPauseOpen(false);
+                setDevOpen(true);
+              }}
+            >
+              DEV · OPEN PANEL
+            </button>
+          )}
           <div className="result-actions">
             <button
               className="big-btn ghost"
