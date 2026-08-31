@@ -124,14 +124,24 @@ export const SIZES: { label: string; value: number }[] = [
 
 export function SizeSelector({
   value,
+  power,
+  cheapestShare,
   onChange,
 }: {
   value: number;
+  /** what the leverage cap still allows, which is not the same as cash */
+  power: number;
+  /** price of the cheapest share, so "cannot afford anything" is visible */
+  cheapestShare: number;
   onChange: (v: number) => void;
 }) {
+  const spent = power < cheapestShare;
   return (
     <div className="sizes">
-      <span className="label">SIZE</span>
+      <span className={`label power${spent ? ' spent' : ''}`}>
+        POWER
+        <b>{money(power)}</b>
+      </span>
       {SIZES.map((s) => (
         <button
           key={s.label}

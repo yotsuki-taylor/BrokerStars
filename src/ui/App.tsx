@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
 import { createMatch, resign, step } from '../sim/match';
 import { Rng, hashSeed } from '../sim/rng';
-import { applyAction, isShortSide, plannedQty } from '../sim/trading';
+import { applyAction, buyingPower, isShortSide, plannedQty } from '../sim/trading';
 import type { MatchState } from '../sim/types';
 import { drawChart } from './chart';
 import {
@@ -550,7 +550,12 @@ export default function App() {
         />
       </div>
 
-      <SizeSelector value={fraction} onChange={setFraction} />
+      <SizeSelector
+        value={fraction}
+        power={buyingPower(st, me)}
+        cheapestShare={Math.min(...st.stocks.map((s) => s.price))}
+        onChange={setFraction}
+      />
 
       <div className="rows">
         {cfg.stocks.map((s, i) => {
