@@ -43,7 +43,8 @@ export default function Menu({
 
   return (
     <div className="menu">
-      <Room done={roomDone} />
+      {/* while confirming, the room already shows what the upgrade would look like */}
+      <Room done={confirming ? roomDone + 1 : roomDone} />
 
       <header className="menu-top">
         <div className="star-count">

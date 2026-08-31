@@ -815,9 +815,6 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* the figure is pushed below its box, and without this it would bleed
-     through the gaps between the buttons instead of ending at the card */
-  overflow: hidden;
 }
 
 .hero .character {
@@ -1105,7 +1102,7 @@ body {
   gap: 10px;
   border: var(--outline) solid var(--ink);
   border-radius: 12px;
-  background: linear-gradient(rgba(20, 60, 110, 0.92), rgba(9, 38, 76, 0.92));
+  background: linear-gradient(#144470, #09264c);
   padding: 6px 8px 6px 12px;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
 }
@@ -1121,6 +1118,11 @@ body {
   font-size: 9px;
   letter-spacing: 0.6px;
   opacity: 0.65;
+}
+
+.reno.confirming .reno-kicker {
+  color: #5fd08a;
+  opacity: 1;
 }
 
 .reno-text b {
