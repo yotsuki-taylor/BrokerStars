@@ -27,6 +27,21 @@ function LogoMask({ file, color, className }: { file: string; color: string; cla
   );
 }
 
+/** No star in the texture set yet, so it is drawn inline. */
+export function Star({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M12 2.6l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"
+        fill="#ffc02e"
+        stroke="#0a1f3c"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------- trader card */
 
 export function TraderCard({

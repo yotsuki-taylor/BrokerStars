@@ -15,7 +15,9 @@ import {
   type FloatPnl,
 } from './components';
 import DevPanel from './DevPanel';
+import Menu from './Menu';
 import ResultScreen from './ResultScreen';
+import { awardFor, loadStars, saveStars, type Award } from './progress';
 
 const HUMAN = 0;
 const PORTRAITS = ['player1.png', 'player2.png'];
@@ -45,6 +47,35 @@ function makeMatch(cfg: Config, seed: string, preset: string): MatchState {
   });
 }
 
+function HelpOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="overlay">
+      <h2>HOW TO PLAY</h2>
+      <p>
+        120 seconds. You and your rival trade the same three stocks. Whoever ends with the bigger
+        net worth — cash plus positions — wins. Positions close automatically at the whistle, so
+        the finish is never a race to sell.
+      </p>
+      <p>
+        TET CORP is expensive and slow, URANUS swings hard in both directions, NOVA sits between
+        them. Read the chart: a move that has just started usually has further to run.
+      </p>
+      <p>
+        SIZE sets how much of your buying power one tap commits. BUY goes long. SELL closes a
+        long, or opens a short when you hold nothing — then you profit when the price falls. Big
+        orders move the price against you, so the rival feels every trade you make.
+      </p>
+      <p>
+        Dashed line on the chart is your average entry: above it you are in profit. Win a match to
+        earn stars.
+      </p>
+      <button className="big-btn" onClick={onClose}>
+        GOT IT
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const baseCfg = useRef<Config>(cloneConfig(CONFIG));
   const [seed, setSeed] = useState(() => String(Math.floor(Math.random() * 1e6)));
@@ -64,12 +95,16 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
+  const [screen, setScreen] = useState<'menu' | 'match'>('menu');
+  const [stars, setStars] = useState(loadStars);
+  const [award, setAward] = useState<Award | null>(null);
+  const awarded = useRef(false);
 
   // latest UI values for the animation loop, which is created only once
   const ui = useRef({ speed, showTruth, paused: false });
   ui.current.speed = speed;
   ui.current.showTruth = showTruth;
-  ui.current.paused = devOpen || helpOpen;
+  ui.current.paused = devOpen || helpOpen || screen !== 'match';
 
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
@@ -100,6 +135,24 @@ export default function App() {
           showTruth: ui.current.showTruth,
           humanIdx: HUMAN,
         });
+      }
+
+      if (st.finished && !awarded.current) {
+        awarded.current = true;
+        const me = st.traders[HUMAN];
+        const a = awardFor(
+          st.winner === HUMAN,
+          st.winner === null,
+          me.netWorth > st.cfg.match.startingCash,
+        );
+        setAward(a);
+        if (a.total > 0) {
+          setStars((prev) => {
+            const next = prev + a.total;
+            saveStars(next);
+            return next;
+          });
+        }
       }
 
       if (st.news.length !== renderedNews) {
@@ -146,6 +199,8 @@ export default function App() {
       if (nextPreset) setBotPreset(p);
       stateRef.current = makeMatch(baseCfg.current, s, p);
       progressRef.current = 0;
+      awarded.current = false;
+      setAward(null);
       setFloats({});
       rerender();
     },
@@ -206,6 +261,39 @@ export default function App() {
   const remaining = Math.max(0, (st.totalTicks - st.tick) * cfg.match.tickMs) / 1000;
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
+
+  if (screen === 'menu') {
+    return (
+      <div className="app">
+        <div className="dev-corner" onClick={cornerTap} />
+        <Menu
+          stars={stars}
+          onPlay={() => {
+            restart(String(Math.floor(Math.random() * 1e6)));
+            setScreen('match');
+          }}
+          onHelp={() => setHelpOpen(true)}
+        />
+        {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
+        {devOpen && (
+          <DevPanel
+            cfg={cfg}
+            seed={seed}
+            speed={speed}
+            showTruth={showTruth}
+            botPreset={botPreset}
+            onSeed={setSeed}
+            onRestart={restart}
+            onSpeed={setSpeed}
+            onShowTruth={setShowTruth}
+            onBotPreset={setBotPreset}
+            onPatch={patch}
+            onClose={() => setDevOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -278,32 +366,16 @@ export default function App() {
       </div>
 
       {st.finished && (
-        <ResultScreen state={st} humanIdx={HUMAN} onRestart={() => restart(String(Math.floor(Math.random() * 1e6)))} />
+        <ResultScreen
+          state={st}
+          humanIdx={HUMAN}
+          award={award}
+          onRestart={() => restart(String(Math.floor(Math.random() * 1e6)))}
+          onMenu={() => setScreen('menu')}
+        />
       )}
 
-      {helpOpen && (
-        <div className="overlay">
-          <h2>HOW TO PLAY</h2>
-          <p>
-            120 seconds. You and your rival trade the same two stocks. Whoever ends with the bigger
-            net worth — cash plus positions — wins. Positions close automatically at the whistle.
-          </p>
-          <p>
-            The strip under the chart predicts what is about to happen: company icon plus one to
-            three arrows. More arrows means a stronger move <b>and</b> a more reliable tip. One arrow
-            is close to a coin flip, and unknown companies never trade at all.
-          </p>
-          <p>
-            SIZE sets how much of your buying power one tap commits. BUY goes long. SELL closes a
-            long, or opens a short when you hold nothing — you profit when the price falls. Big
-            orders move the price against you, so the rival feels every trade you make.
-          </p>
-          <p>Dashed line on the chart = your average entry. Above it you are in profit.</p>
-          <button className="big-btn" onClick={() => setHelpOpen(false)}>
-            GOT IT
-          </button>
-        </div>
-      )}
+      {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
 
       {devOpen && (
         <DevPanel

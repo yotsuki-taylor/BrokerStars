@@ -1,16 +1,21 @@
 import React, { useEffect, useRef } from 'react';
 import { drawNetWorthChart } from './chart';
-import { money, signed } from './components';
+import { Star, money, signed } from './components';
 import type { MatchState } from '../sim/types';
+import type { Award } from './progress';
 
 export default function ResultScreen({
   state,
   humanIdx,
+  award,
   onRestart,
+  onMenu,
 }: {
   state: MatchState;
   humanIdx: number;
+  award: Award | null;
   onRestart: () => void;
+  onMenu: () => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -48,6 +53,17 @@ export default function ResultScreen({
       <div className="sub">
         {money(me.netWorth)} vs {money(rival.netWorth)} · gap {(gapPct * 100).toFixed(1)}%
       </div>
+
+      {award && (
+        <div className={`payout${award.total ? '' : ' empty'}`}>
+          <Star size={22} />
+          <b>+{award.total}</b>
+          <span>
+            {award.win > 0 ? `WIN +${award.win}` : 'NO WIN'}
+            {award.profit > 0 ? `  ·  IN PROFIT +${award.profit}` : ''}
+          </span>
+        </div>
+      )}
 
       <canvas ref={ref} className="result-chart" />
 
@@ -99,9 +115,14 @@ export default function ResultScreen({
         </div>
       </div>
 
-      <button className="big-btn" onClick={onRestart}>
-        PLAY AGAIN
-      </button>
+      <div className="result-actions">
+        <button className="big-btn ghost" onClick={onMenu}>
+          MENU
+        </button>
+        <button className="big-btn" onClick={onRestart}>
+          PLAY AGAIN
+        </button>
+      </div>
     </div>
   );
 }
