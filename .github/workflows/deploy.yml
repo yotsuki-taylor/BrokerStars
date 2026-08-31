@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       # The display font is licensed separately and is not in the repository.
@@ -35,9 +35,25 @@ jobs:
       - name: Restore display font
         if: ${{ env.DISPLAY_FONT_B64 != '' }}
         run: |
+          # Never fail the deploy over a cosmetic asset: a bad secret must degrade
+          # to the fallback font stack, not take the whole site down with it.
+          set +e
           mkdir -p public/fonts
-          printf '%s' "$DISPLAY_FONT_B64" | base64 -d > public/fonts/BD_Cartoon_Shout.ttf
-          ls -l public/fonts
+          out=public/fonts/BD_Cartoon_Shout.ttf
+          # Pasting into the secret field can introduce newlines and stray
+          # whitespace, which strict base64 refuses to decode.
+          printf '%s' "$DISPLAY_FONT_B64" | tr -d '[:space:]' | base64 -di > "$out" 2>/dev/null
+          size=$(wc -c < "$out" 2>/dev/null || echo 0)
+          magic=$(head -c 4 "$out" | od -An -tx1 | tr -d ' 
+')
+          # TrueType files start with 00010000, OpenType with 'OTTO' (4f54544f).
+          if [ "$size" -gt 1000 ] && { [ "$magic" = "00010000" ] || [ "$magic" = "4f54544f" ]; }; then
+            echo "display font restored: $size bytes"
+          else
+            echo "::warning::DISPLAY_FONT_B64 did not decode to a font (size=$size magic=$magic). Building with the fallback font."
+            rm -f "$out"
+          fi
+          exit 0
 
       - run: npm ci
       - run: npm run build
