@@ -124,13 +124,24 @@ export default function App() {
     let raf = 0;
     let last = performance.now();
     let acc = 0;
+    let watched: MatchState | null = null;
     let renderedTick = -1;
     let renderedNews = 0;
 
-    const loop = (now: number) => {
+    const frame = (now: number) => {
       const dt = Math.min(now - last, 250);
       last = now;
       const st = stateRef.current;
+
+      // A restart swaps in a fresh state, and these counters are about the old
+      // one. Left stale, the news check below would read past the end of an
+      // empty array.
+      if (st !== watched) {
+        watched = st;
+        renderedTick = -1;
+        renderedNews = st.news.length;
+        acc = 0;
+      }
 
       if (!st.finished && !ui.current.paused) {
         acc += dt * ui.current.speed;
@@ -171,12 +182,25 @@ export default function App() {
       if (st.news.length !== renderedNews) {
         renderedNews = st.news.length;
         const n = st.news[st.news.length - 1];
-        setNewsFlash(n.text);
-        window.setTimeout(() => setNewsFlash(null), 2200);
+        if (n) {
+          setNewsFlash(n.text);
+          window.setTimeout(() => setNewsFlash(null), 2200);
+        }
       }
       if (st.tick !== renderedTick) {
         renderedTick = st.tick;
         setVersion((v) => v + 1);
+      }
+    };
+
+    // An exception thrown inside the callback would skip the line that queues
+    // the next frame, and the game would freeze with no way back. Never let one
+    // frame's failure end the loop.
+    const loop = (now: number) => {
+      try {
+        frame(now);
+      } catch (err) {
+        console.error('game loop frame failed', err);
       }
       raf = requestAnimationFrame(loop);
     };
