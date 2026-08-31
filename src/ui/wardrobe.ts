@@ -72,7 +72,7 @@ interface Layer {
 /**
  * Bottom-to-top draw order. The two-piece garments straddle the neck item:
  * shirt body, then the chain that tucks under the collar, then the collar,
- * then whatever hangs in front.
+ * then whatever hangs in front. The bare hand caps the stack.
  */
 export function buildLayers(outfit: Outfit): Layer[] {
   const out: Layer[] = [];
@@ -96,9 +96,11 @@ export function buildLayers(outfit: Outfit): Layer[] {
   push('face', tex('face'));
   push('hair', tex('hair-1'));
   whole('hat');
-  push('hand-base', tex('hand'));
   whole('hand');
   whole('access');
+  // the bare hand goes last: it grips whatever the hand slot is holding, so the
+  // fingers have to sit in front of it and of everything else
+  push('hand-base', tex('hand'));
   return out;
 }
 

@@ -380,6 +380,7 @@ export default function App() {
         <TraderCard
           name={me.name}
           portrait={PORTRAITS[0]}
+          outfit={outfit}
           netWorth={me.netWorth}
           startCash={cfg.match.startingCash}
           bankrupt={me.bankrupt}

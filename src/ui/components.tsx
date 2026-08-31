@@ -1,5 +1,7 @@
 import React from 'react';
 import type { StockConfig } from '../sim/config';
+import Character from './Character';
+import type { Outfit } from './wardrobe';
 
 export const tex = (name: string) => `${import.meta.env.BASE_URL}textures/${name}`;
 
@@ -47,13 +49,17 @@ export function Star({ size = 18 }: { size?: number }) {
 export function TraderCard({
   name,
   portrait,
+  outfit,
   netWorth,
   startCash,
   bankrupt,
   mirrored,
 }: {
   name: string;
+  /** flat sprite for the bot; ignored when an outfit is supplied */
   portrait: string;
+  /** the player wears what they bought, the rival keeps its own art */
+  outfit?: Outfit;
   netWorth: number;
   startCash: number;
   bankrupt: boolean;
@@ -76,7 +82,11 @@ export function TraderCard({
         </div>
       </div>
       <div className={`portrait ${mood}`}>
-        <img src={tex(portrait)} alt="" style={mirrored ? { transform: 'scaleX(-1)' } : undefined} />
+        {outfit ? (
+          <Character outfit={outfit} />
+        ) : (
+          <img src={tex(portrait)} alt="" style={mirrored ? { transform: 'scaleX(-1)' } : undefined} />
+        )}
       </div>
     </div>
   );

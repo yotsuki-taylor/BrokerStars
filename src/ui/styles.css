@@ -209,19 +209,24 @@ body {
   pointer-events: none;
 }
 
-.portrait img {
+/* Direct children only: a layered character would otherwise stack one drop
+   shadow per sprite. */
+.portrait > img,
+.portrait > .character {
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
   transition: filter 0.3s, transform 0.3s;
 }
 
-.portrait.winning img {
+.portrait.winning > img,
+.portrait.winning > .character {
   transform: scale(1.07) translateY(-2px);
   filter: drop-shadow(0 0 6px rgba(90, 255, 140, 0.8));
 }
 
-.portrait.losing img {
+.portrait.losing > img,
+.portrait.losing > .character {
   transform: scale(0.93) translateY(3px);
   filter: grayscale(0.55) brightness(0.8);
 }
