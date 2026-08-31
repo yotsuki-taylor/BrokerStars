@@ -42,24 +42,51 @@ export const SPRITE_H = 732;
 
 const tex = (name: string) => `${import.meta.env.BASE_URL}textures/shop/${name}.png`;
 
+export type Piece = 'single' | 'up' | 'down';
+
 /**
- * Garments the artist split in two, so one piece can sit under the neck item
- * and the other over it. Everything else is a single sprite.
+ * Which halves each item was exported as, and therefore where it lands
+ * relative to the neck item. Three shapes exist in the art:
+ *
+ *   'both' — split in two, so a chain can pass under a collar and the collar
+ *            draws over it;
+ *   'up'   — one sprite that must sit above the collar anyway (a bow tie);
+ *   'down' — one sprite that must sit below it.
+ *
+ * Anything absent from this map is a single sprite drawn in the lower pass.
+ * The keys must match the filenames: `<slot>-<rarity>[-up|-down].png`.
  */
-const TWO_PIECE = new Set(['torso-common', 'torso-uncommon', 'torso-rare', 'torso-legend', 'torso-mythic', 'neck-common']);
+const PIECES: Record<string, 'both' | 'up' | 'down'> = {
+  'torso-common': 'both',
+  'torso-uncommon': 'both',
+  'torso-rare': 'both',
+  'torso-legend': 'both',
+  'torso-mythic': 'both',
+  'neck-common': 'both',
+  'neck-mythic': 'both',
+  'neck-legend': 'up',
+};
 
 export function itemId(slot: Slot, rarity: Rarity): string {
   return `${slot}-${rarity}`;
 }
 
-export function isTwoPiece(slot: Slot, rarity: Rarity): boolean {
-  return TWO_PIECE.has(itemId(slot, rarity));
+export function piecesOf(slot: Slot, rarity: Rarity): 'both' | 'up' | 'down' | 'single' {
+  return PIECES[itemId(slot, rarity)] ?? 'single';
 }
 
 /** Sprite for one half of a garment, or the whole thing when it is single. */
-export function pieceUrl(slot: Slot, rarity: Rarity, piece: 'up' | 'down' | 'single'): string {
+export function pieceUrl(slot: Slot, rarity: Rarity, piece: Piece): string {
   const id = itemId(slot, rarity);
   return tex(piece === 'single' ? id : `${id}-${piece}`);
+}
+
+/** The half worth showing on a shop card. */
+export function thumbPiece(slot: Slot, rarity: Rarity): Piece {
+  const p = piecesOf(slot, rarity);
+  if (p !== 'both') return p;
+  // a torso's lower half is the whole garment; a neck item's upper half is the jewel
+  return slot === 'torso' ? 'down' : 'up';
 }
 
 export type Outfit = Partial<Record<Slot, Rarity>>;
@@ -77,15 +104,17 @@ interface Layer {
 export function buildLayers(outfit: Outfit): Layer[] {
   const out: Layer[] = [];
   const push = (key: string, url: string) => out.push({ key, url });
+  /** Draws the part of a layered slot that belongs in this pass, if any. */
   const half = (slot: Slot, piece: 'up' | 'down') => {
     const r = outfit[slot];
     if (!r) return;
-    if (isTwoPiece(slot, r)) push(`${slot}-${piece}`, pieceUrl(slot, r, piece));
-    else if (piece === 'down') push(slot, pieceUrl(slot, r, 'single'));
+    const shape = piecesOf(slot, r);
+    if (shape === 'both' || shape === piece) push(`${slot}-${piece}`, pieceUrl(slot, r, piece));
+    else if (shape === 'single' && piece === 'down') push(slot, pieceUrl(slot, r, 'single'));
   };
   const whole = (slot: Slot) => {
     const r = outfit[slot];
-    if (r && !isTwoPiece(slot, r)) push(slot, pieceUrl(slot, r, 'single'));
+    if (r && piecesOf(slot, r) === 'single') push(slot, pieceUrl(slot, r, 'single'));
   };
 
   push('body', tex('body'));

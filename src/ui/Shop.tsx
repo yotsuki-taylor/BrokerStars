@@ -11,8 +11,8 @@ import {
   SPRITE_H,
   SPRITE_W,
   itemId,
-  isTwoPiece,
   pieceUrl,
+  thumbPiece,
   type Outfit,
   type Rarity,
   type Slot,
@@ -25,7 +25,7 @@ import {
  */
 function thumbStyle(slot: Slot, rarity: Rarity): React.CSSProperties {
   const f = SLOT_FOCUS[slot];
-  const url = pieceUrl(slot, rarity, isTwoPiece(slot, rarity) ? 'down' : 'single');
+  const url = pieceUrl(slot, rarity, thumbPiece(slot, rarity));
   return {
     backgroundImage: `url(${url})`,
     backgroundSize: `${(SPRITE_W / f.w) * 100}% auto`,
