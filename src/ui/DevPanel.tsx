@@ -188,12 +188,6 @@ export default function DevPanel(p: DevProps) {
             onChange={(v) => p.onPatch((x) => (x.impact.decayPerTick = v))}
           />
           <Num
-            label="leverage"
-            value={c.match.maxLeverage}
-            step={0.1}
-            onChange={(v) => p.onPatch((x) => (x.match.maxLeverage = v))}
-          />
-          <Num
             label="commission"
             value={c.match.commissionRate}
             step={0.001}

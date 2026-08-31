@@ -52,7 +52,6 @@ export const CONFIG = {
     tickMs: 500,
     startingCash: 10000,
     commissionRate: 0.003,
-    maxLeverage: 1.5,
     bankruptcyEnabled: true,
     autoLiquidateAtEnd: true, // no slippage, no commission
   },

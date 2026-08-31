@@ -7,6 +7,7 @@ export function positionValue(state: MatchState, t: TraderState): number {
   return v;
 }
 
+/** Total size of everything held, longs and shorts alike. Reported, not enforced. */
 export function grossExposure(state: MatchState, t: TraderState): number {
   let v = 0;
   for (let i = 0; i < state.stocks.length; i++) {
@@ -19,11 +20,14 @@ export function netWorth(state: MatchState, t: TraderState): number {
   return t.cash + positionValue(state, t);
 }
 
-/** How much notional the trader may still put on, given the leverage limit. */
+/**
+ * What the trader can commit right now: the cash actually on hand. There is no
+ * leverage ceiling — a position is limited by money, not by a multiple of net
+ * worth. Note that a short pays its proceeds into cash, so shorting first and
+ * buying after is a way to build exposure well past the starting capital.
+ */
 export function buyingPower(state: MatchState, t: TraderState): number {
-  const nw = netWorth(state, t);
-  if (nw <= 0) return 0;
-  return Math.max(0, nw * state.cfg.match.maxLeverage - grossExposure(state, t));
+  return Math.max(0, t.cash);
 }
 
 /** A fraction that rounds down to nothing still buys one share if it is affordable. */
@@ -70,22 +74,6 @@ export function applyAction(state: MatchState, action: Action): Trade | null {
   let q = plannedQty(state, action);
   if (!Number.isFinite(q) || q === 0) return null;
 
-  // never let a trade break the leverage ceiling
-  const guard = () => {
-    const nw = netWorth(state, t);
-    const limit = nw * cfg.match.maxLeverage;
-    for (let i = 0; i < 40 && q !== 0; i++) {
-      const after = Math.abs((t.positions[action.stock] + q) * stock.price);
-      let others = 0;
-      for (let s = 0; s < state.stocks.length; s++) {
-        if (s !== action.stock) others += Math.abs(t.positions[s] * state.stocks[s].price);
-      }
-      if (after + others <= limit + 1e-6) return;
-      q = Math.trunc(q * 0.75);
-    }
-  };
-  guard();
-  if (q === 0) return null;
 
   const p = stock.price;
   const slip = (cfg.impact.slippageCoef * Math.abs(q)) / cfg.impact.refQty;
