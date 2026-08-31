@@ -145,6 +145,35 @@ export const SLOT_FOCUS: Record<Slot, { x: number; y: number; w: number; h: numb
   access: { x: 120, y: 150, w: 240, h: 240 },
 };
 
+/**
+ * A look for the opponent. Weighted so the rare tiers stay rare — a rival in
+ * head-to-toe mythic should feel like an event, not the average Tuesday.
+ */
+const RARITY_WEIGHTS: [Rarity, number][] = [
+  ['common', 35],
+  ['uncommon', 27],
+  ['rare', 20],
+  ['legend', 13],
+  ['mythic', 5],
+];
+
+export function randomOutfit(rand: () => number): Outfit {
+  const total = RARITY_WEIGHTS.reduce((sum, [, w]) => sum + w, 0);
+  const out: Outfit = {};
+  for (const slot of SLOTS) {
+    let roll = rand() * total;
+    for (const [rarity, weight] of RARITY_WEIGHTS) {
+      roll -= weight;
+      if (roll <= 0) {
+        out[slot] = rarity;
+        break;
+      }
+    }
+    out[slot] ??= 'common';
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------- persistence */
 
 const OWNED_KEY = 'brokerstars.owned';

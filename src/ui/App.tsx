@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
 import { createMatch, resign, step } from '../sim/match';
-import { hashSeed } from '../sim/rng';
+import { Rng, hashSeed } from '../sim/rng';
 import { applyAction, isShortSide, plannedQty } from '../sim/trading';
 import type { MatchState } from '../sim/types';
 import { drawChart } from './chart';
@@ -18,6 +18,7 @@ import DevPanel from './DevPanel';
 import Menu from './Menu';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
+import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, type Award } from './progress';
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
@@ -27,6 +28,7 @@ import {
   loadOutfit,
   loadOwned,
   saveOutfit,
+  randomOutfit,
   saveOwned,
   type Outfit,
   type Rarity,
@@ -34,9 +36,6 @@ import {
 } from './wardrobe';
 
 const HUMAN = 0;
-/** The bot's own art. The player has no sprite — they are drawn from their outfit. */
-const RIVAL_SPRITE = 'player2.png';
-
 function haptic(kind: 'light' | 'heavy' = 'light') {
   const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
   if (tg?.impactOccurred) tg.impactOccurred(kind === 'heavy' ? 'medium' : 'light');
@@ -110,12 +109,15 @@ export default function App() {
   const [pauseOpen, setPauseOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
-  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'match'>('menu');
+  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'vs' | 'match'>('menu');
   const [stars, setStars] = useState(loadStars);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
   const [roomDone, setRoomDone] = useState(loadRoom);
   const [freeMode, setFreeMode] = useState(loadFreeMode);
+  const [rivalOutfit, setRivalOutfit] = useState<Outfit>(() => randomOutfit(Math.random));
+  /** 3, 2, 1 before the first tick; the match is frozen while it runs */
+  const [countdown, setCountdown] = useState<number | null>(null);
   const admin = isAdmin();
   const [award, setAward] = useState<Award | null>(null);
   const awarded = useRef(false);
@@ -124,7 +126,8 @@ export default function App() {
   const ui = useRef({ speed, showTruth, paused: false });
   ui.current.speed = speed;
   ui.current.showTruth = showTruth;
-  ui.current.paused = devOpen || helpOpen || pauseOpen || screen !== 'match';
+  ui.current.paused =
+    devOpen || helpOpen || pauseOpen || countdown !== null || screen !== 'match';
 
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
@@ -218,6 +221,13 @@ export default function App() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // 3, 2, 1 — the loop stays paused until this clears
+  useEffect(() => {
+    if (countdown === null) return;
+    const t = window.setTimeout(() => setCountdown(countdown > 1 ? countdown - 1 : null), 800);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
   /* ----------------------------------------------------------------- dev panel */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -245,10 +255,14 @@ export default function App() {
       if (nextSeed) setSeed(s);
       if (nextPreset) setBotPreset(p);
       stateRef.current = makeMatch(baseCfg.current, s, p);
+      // seeded off the match, so replaying a seed brings back the same opponent
+      const look = new Rng(hashSeed(s) ^ 0x5bd1e995);
+      setRivalOutfit(randomOutfit(() => look.next()));
       progressRef.current = 0;
       awarded.current = false;
       setAward(null);
       setPauseOpen(false);
+      setCountdown(null);
       setFloats({});
       rerender();
     },
@@ -387,6 +401,24 @@ export default function App() {
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
 
+  if (screen === 'vs') {
+    return (
+      <div className="app">
+        <VersusScreen
+          playerName={me.name}
+          playerOutfit={outfit}
+          rivalName={rival.name}
+          rivalOutfit={rivalOutfit}
+          onReady={() => {
+            setScreen('match');
+            setCountdown(3);
+          }}
+          onCancel={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'shop' || screen === 'equip') {
     return (
       <div className="app">
@@ -421,7 +453,7 @@ export default function App() {
           onToggleFree={toggleFree}
           onPlay={() => {
             restart(String(Math.floor(Math.random() * 1e6)));
-            setScreen('match');
+            setScreen('vs');
           }}
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
@@ -506,18 +538,16 @@ export default function App() {
           netWorth={me.netWorth}
           startCash={cfg.match.startingCash}
           bankrupt={me.bankrupt}
-          mirrored={false}
         />
         <div className={`timer${remaining <= 15 ? ' urgent' : ''}`}>
           {mm}:{ss}
         </div>
         <TraderCard
           name={rival.name}
-          portrait={RIVAL_SPRITE}
+          outfit={rivalOutfit}
           netWorth={rival.netWorth}
           startCash={cfg.match.startingCash}
           bankrupt={rival.bankrupt}
-          mirrored
         />
       </div>
 
@@ -547,12 +577,21 @@ export default function App() {
         })}
       </div>
 
+      {countdown !== null && (
+        <div className="countdown" key={countdown}>
+          <b>{countdown}</b>
+        </div>
+      )}
+
       {st.finished && (
         <ResultScreen
           state={st}
           humanIdx={HUMAN}
           award={award}
-          onRestart={() => restart(String(Math.floor(Math.random() * 1e6)))}
+          onRestart={() => {
+            restart(String(Math.floor(Math.random() * 1e6)));
+            setScreen('vs');
+          }}
           onMenu={() => setScreen('menu')}
         />
       )}

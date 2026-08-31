@@ -79,21 +79,16 @@ export function Cross({ size = 20 }: { size?: number }) {
 export function TraderCard({
   name,
   outfit,
-  portrait,
   netWorth,
   startCash,
   bankrupt,
-  mirrored,
 }: {
   name: string;
-  /** the player: wears whatever was bought */
-  outfit?: Outfit;
-  /** the bot: one flat sprite. Exactly one of the two is ever given. */
-  portrait?: string;
+  /** both traders are dressed figures — the rival's look comes from the versus screen */
+  outfit: Outfit;
   netWorth: number;
   startCash: number;
   bankrupt: boolean;
-  mirrored: boolean;
 }) {
   const delta = netWorth - startCash;
   const pct = (delta / startCash) * 100;
@@ -112,11 +107,7 @@ export function TraderCard({
         </div>
       </div>
       <div className={`portrait ${mood}`}>
-        {outfit ? (
-          <Character outfit={outfit} />
-        ) : portrait ? (
-          <img src={tex(portrait)} alt="" style={mirrored ? { transform: 'scaleX(-1)' } : undefined} />
-        ) : null}
+        <Character outfit={outfit} />
       </div>
     </div>
   );
