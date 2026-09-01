@@ -23,8 +23,8 @@ export const ROOM_STEPS: RoomStep[] = [
   { slot: 'bg', label: 'WALLS & FLOOR', price: 3 },
   { slot: 'bed', label: 'BED', price: 6 },
   { slot: 'door', label: 'DOOR', price: 10 },
-  { slot: 'table', label: 'TABLE', price: 15 },
-  { slot: 'window', label: 'WINDOW', price: 20 },
+  { slot: 'window', label: 'WINDOW', price: 15 },
+  { slot: 'table', label: 'TABLE', price: 20 },
   { slot: 'shelf', label: 'SHELF', price: 25 },
   { slot: 'rug', label: 'RUG', price: 30 },
 ];
