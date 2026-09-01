@@ -22,11 +22,11 @@ export const SLOT_LABEL: Record<Slot, string> = {
 };
 
 export const PRICES: Record<Rarity, number> = {
-  common: 5,
-  uncommon: 12,
-  rare: 25,
-  legend: 50,
-  mythic: 100,
+  common: 5, // granted at the start, so this is never actually charged
+  uncommon: 5,
+  rare: 10,
+  legend: 20,
+  mythic: 40,
 };
 
 export const RARITY_COLOR: Record<Rarity, string> = {

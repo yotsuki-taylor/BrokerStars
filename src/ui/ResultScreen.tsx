@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { drawNetWorthChart } from './chart';
 import { Star, money, signed } from './components';
 import type { MatchState } from '../sim/types';
-import type { Award } from './progress';
+import { REWARDS, type Award } from './progress';
 
 export default function ResultScreen({
   state,
@@ -62,7 +62,9 @@ export default function ResultScreen({
           <b>+{award.total}</b>
           <span>
             {award.win > 0 ? `WIN +${award.win}` : 'NO WIN'}
-            {award.profit > 0 ? `  ·  IN PROFIT +${award.profit}` : ''}
+            {award.profit > 0
+              ? `  ·  +${Math.round(REWARDS.profitBar * 100)}% GAIN +${award.profit}`
+              : ''}
           </span>
         </div>
       )}

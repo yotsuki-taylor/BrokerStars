@@ -19,7 +19,7 @@ import Menu from './Menu';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import VersusScreen from './VersusScreen';
-import { NO_AWARD, awardFor, loadStars, saveStars, type Award } from './progress';
+import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import {
@@ -180,7 +180,7 @@ export default function App() {
             : awardFor(
                 st.winner === HUMAN,
                 st.winner === null,
-                me.netWorth > st.cfg.match.startingCash,
+                tradedWell(me.netWorth, st.cfg.match.startingCash),
               );
         setAward(a);
         if (a.total > 0) {

@@ -9,8 +9,14 @@ export const REWARDS = {
   win: 3,
   draw: 1,
   loss: 0,
-  /** paid on top when you end the match with more money than you started */
-  profit: 1,
+  /**
+   * Paid on top for a well traded match, whoever won. The bar is a grown
+   * capital, not merely a positive one: the market drifts up on its own, so
+   * 96% of matches end above the starting cash and a bonus for that is not a
+   * bonus at all. Clearing +40% happens in roughly a third of matches.
+   */
+  profit: 2,
+  profitBar: 0.4,
 };
 
 export interface Award {
@@ -22,10 +28,15 @@ export interface Award {
 /** Surrendering pays nothing — otherwise an early lead could be cashed out. */
 export const NO_AWARD: Award = { win: 0, profit: 0, total: 0 };
 
-export function awardFor(won: boolean, drew: boolean, inProfit: boolean): Award {
+export function awardFor(won: boolean, drew: boolean, tradedWell: boolean): Award {
   const win = won ? REWARDS.win : drew ? REWARDS.draw : REWARDS.loss;
-  const profit = inProfit ? REWARDS.profit : 0;
+  const profit = tradedWell ? REWARDS.profit : 0;
   return { win, profit, total: win + profit };
+}
+
+/** Did the match clear the bar the profit bonus is paid for? */
+export function tradedWell(netWorth: number, startingCash: number): boolean {
+  return netWorth >= startingCash * (1 + REWARDS.profitBar);
 }
 
 /** Private browsing and locked-down webviews throw on access, so never assume. */

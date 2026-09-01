@@ -20,13 +20,13 @@ export interface RoomStep {
  * numbers live here and nowhere else.
  */
 export const ROOM_STEPS: RoomStep[] = [
-  { slot: 'bg', label: 'WALLS & FLOOR', price: 10 },
-  { slot: 'bed', label: 'BED', price: 20 },
-  { slot: 'door', label: 'DOOR', price: 35 },
-  { slot: 'table', label: 'TABLE', price: 55 },
-  { slot: 'window', label: 'WINDOW', price: 80 },
-  { slot: 'shelf', label: 'SHELF', price: 110 },
-  { slot: 'rug', label: 'RUG', price: 150 },
+  { slot: 'bg', label: 'WALLS & FLOOR', price: 3 },
+  { slot: 'bed', label: 'BED', price: 6 },
+  { slot: 'door', label: 'DOOR', price: 10 },
+  { slot: 'table', label: 'TABLE', price: 15 },
+  { slot: 'window', label: 'WINDOW', price: 20 },
+  { slot: 'shelf', label: 'SHELF', price: 25 },
+  { slot: 'rug', label: 'RUG', price: 30 },
 ];
 
 /** Bottom to top: walls, then the rug on the floor, wall fittings, furniture. */
