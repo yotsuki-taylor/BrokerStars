@@ -27,6 +27,55 @@ function fit(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
   return ctx;
 }
 
+/**
+ * Eased vertical domain, one entry per canvas.
+ *
+ * The auto-scale fits whatever is on screen and the window slides every frame,
+ * so the instant an old extreme scrolls off the left edge the domain snaps and
+ * the whole chart lurches under a line that never moved. Playtesters read that
+ * as the chart changing too fast. Gliding the drawn domain toward the fitted
+ * one turns the lurch into a drift. Kept weakly, so a discarded canvas takes
+ * its entry with it.
+ */
+const axisEase = new WeakMap<
+  HTMLCanvasElement,
+  { lo: number; hi: number; at: number; tick: number }
+>();
+
+/** Glide constant: slow enough to kill the lurch, quick enough to feel attached. */
+export const AXIS_TAU_MS = 260;
+
+export interface AxisDomain {
+  lo: number;
+  hi: number;
+}
+
+/**
+ * One frame of that glide.
+ *
+ * `target` is the fitted domain plus its headroom, `fit` the bare range the
+ * visible points occupy. Slack is what lags: the result is never allowed to
+ * narrow past `fit`, so widening lands on the same frame it is needed and a
+ * spike is never clipped — only the shrink back down is slowed. A frame longer
+ * than 250 ms (a backgrounded tab, a stalled main thread) is capped, or the
+ * first frame after the stall would jump the whole way and undo the point. A
+ * frame time that is not a number at all holds the axis still: letting NaN
+ * through would poison the domain and blank the chart for the rest of the match.
+ */
+export function easeAxis(
+  prev: AxisDomain,
+  target: AxisDomain,
+  fit: AxisDomain,
+  dtMs: number,
+): AxisDomain {
+  const ms = Number.isFinite(dtMs) ? Math.min(Math.max(dtMs, 0), 250) : 0;
+  const k = 1 - Math.exp(-ms / AXIS_TAU_MS);
+  return {
+    lo: Math.min(prev.lo + (target.lo - prev.lo) * k, fit.lo),
+    hi: Math.max(prev.hi + (target.hi - prev.hi) * k, fit.hi),
+  };
+}
+
 function niceStep(span: number): number {
   const raw = span / 4;
   const mag = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1e-6))));
@@ -89,6 +138,10 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
       lo = percent ? -5 : 0;
       hi = percent ? 5 : 100;
     }
+    // what is actually on screen, before any headroom: the glide below may
+    // never narrow past this, or it would hide a point the player can see
+    const fitLo = lo;
+    const fitHi = hi;
     const minSpan = percent ? 6 : cfg.stocks[0].basePrice * 0.06;
     if (hi - lo < minSpan) {
       const mid = (hi + lo) / 2;
@@ -98,6 +151,17 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
     const pad = (hi - lo) * 0.12;
     lo -= pad;
     hi += pad;
+
+    const now = performance.now();
+    const prev = axisEase.get(canvas);
+    // A fresh match rewinds the tick. Snap then, rather than gliding down from
+    // whatever scale the previous match happened to end on.
+    if (prev && state.tick >= prev.tick) {
+      const eased = easeAxis(prev, { lo, hi }, { lo: fitLo, hi: fitHi }, now - prev.at);
+      lo = eased.lo;
+      hi = eased.hi;
+    }
+    axisEase.set(canvas, { lo, hi, at: now, tick: state.tick });
   } else {
     [lo, hi] = percent ? cfg.chart.percentRange : cfg.chart.absoluteRange;
     if (hi - lo < 1) hi = lo + 1;
@@ -157,19 +221,6 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
         );
       }
     });
-  }
-
-  // --- news markers
-  for (const n of state.news) {
-    if (n.tick < xMin || n.tick > xMax) continue;
-    const x = px(n.tick);
-    ctx.strokeStyle = 'rgba(255,214,64,0.55)';
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.moveTo(x, padT);
-    ctx.lineTo(x, padT + plotH);
-    ctx.stroke();
-    ctx.setLineDash([]);
   }
 
   // --- break-even lines for open positions

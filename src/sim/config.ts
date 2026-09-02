@@ -56,7 +56,13 @@ export const CONFIG = {
     autoLiquidateAtEnd: true, // no slippage, no commission
   },
   chart: {
-    windowTicks: 60,
+    /**
+     * How much history the plot holds. 60 ticks is 30 seconds, and the line
+     * crossed the panel fast enough that playtesters could not read it; 90 is
+     * 45 seconds, which both slows the scroll and compresses the tick-to-tick
+     * chop into something legible. Presentation only — the market is unchanged.
+     */
+    windowTicks: 90,
     mode: 'percent' as 'percent' | 'absolute',
     /**
      * The vertical axis fits whatever is on screen. A fixed frame was tried and
