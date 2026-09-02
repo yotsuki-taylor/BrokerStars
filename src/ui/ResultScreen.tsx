@@ -8,12 +8,18 @@ export default function ResultScreen({
   state,
   humanIdx,
   award,
+  leagueName,
+  unlockedName,
   onRestart,
   onMenu,
 }: {
   state: MatchState;
   humanIdx: number;
   award: Award | null;
+  /** the league this match was played in — it decides what the payout was worth */
+  leagueName: string;
+  /** the league this win just opened, if it opened one */
+  unlockedName: string | null;
   onRestart: () => void;
   onMenu: () => void;
 }) {
@@ -53,7 +59,8 @@ export default function ResultScreen({
     <div className="overlay">
       <h2>{title}</h2>
       <div className="sub">
-        {money(me.netWorth)} vs {money(rival.netWorth)} · gap {(gapPct * 100).toFixed(1)}%
+        {leagueName} · {money(me.netWorth)} vs {money(rival.netWorth)} · gap{' '}
+        {(gapPct * 100).toFixed(1)}%
       </div>
 
       {award && (
@@ -68,6 +75,8 @@ export default function ResultScreen({
           </span>
         </div>
       )}
+
+      {unlockedName && <div className="unlocked">{unlockedName} UNLOCKED</div>}
 
       <canvas ref={ref} className="result-chart" />
 

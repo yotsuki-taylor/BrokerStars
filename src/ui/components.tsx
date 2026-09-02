@@ -74,6 +74,22 @@ export function Cross({ size = 20 }: { size?: number }) {
   );
 }
 
+/** Padlock on a league that is not open yet. Drawn, like the marks above. */
+export function Lock({ size = 20 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M7.5 10V7.5a4.5 4.5 0 019 0V10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+      <rect x="4.5" y="10" width="15" height="10.5" rx="2.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------- trader card */
 
 export function TraderCard({

@@ -44,7 +44,7 @@ function Num({
 export default function DevPanel(p: DevProps) {
   const c = p.cfg;
   const flagKeys = ['marketImpact', 'shorting', 'phases'] as const;
-  const presets = ['easy', 'medium', 'hard', 'random', 'holder'];
+  const presets = ['rookie', 'easy', 'medium', 'hard', 'elite', 'random', 'holder'];
 
   return (
     <div className="dev">

@@ -1462,3 +1462,220 @@ body {
     opacity: 1;
   }
 }
+
+/* ---------- league select ---------- */
+
+.leagues {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vh, 12px);
+  padding-bottom: 6px;
+}
+
+.league-title {
+  flex: 0 0 auto;
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #cfe0f5;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* The shelf itself. Side padding of half the track minus half a card is what
+   lets the first and last badge reach the middle — without it the ladder
+   could never centre its ends. */
+.league-track {
+  --card-w: clamp(150px, 54vw, 230px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  padding-inline: calc(50% - var(--card-w) / 2);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.league-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* --near is written by LeagueSelect on every scroll frame: 1 dead centre,
+   0 a full card away. Everything below reads off it, so the badge grows under
+   the thumb rather than snapping between two states. */
+.league-card {
+  --near: 0;
+  flex: 0 0 var(--card-w);
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transform: scale(calc(0.66 + 0.34 * var(--near)));
+  opacity: calc(0.5 + 0.5 * var(--near));
+}
+
+.league-badge {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.league-badge img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* the glow tracks the badge forward, so the centred one lifts off the page */
+  filter: drop-shadow(0 calc(4px + 10px * var(--near)) calc(6px + 12px * var(--near))
+    rgba(0, 0, 0, 0.5));
+}
+
+.league-badge.locked img {
+  filter: grayscale(1) brightness(0.55) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  opacity: 0.75;
+}
+
+.league-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8f3ff;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.75));
+}
+
+.league-name {
+  font-size: calc(11px + 5px * var(--near));
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.league-info {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  background: rgba(8, 34, 70, 0.72);
+  padding: 10px 12px;
+}
+
+.league-blurb {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.3px;
+  color: #cfe0f5;
+  text-align: center;
+}
+
+.league-pay {
+  display: flex;
+  gap: 8px;
+}
+
+.pay-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #cfe0f5;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(#1d5ea6, #10427c);
+  padding: 3px 10px 3px 6px;
+}
+
+.pay-chip b {
+  font-size: 15px;
+  color: #ffc02e;
+}
+
+.league-gate {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #9fb8d6;
+}
+
+.league-gate.locked {
+  color: #ffc02e;
+}
+
+.gate-bar {
+  width: 100%;
+  height: 7px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: rgba(4, 20, 44, 0.7);
+  overflow: hidden;
+}
+
+.gate-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(#ffc02e, #f08322);
+  transition: width 0.25s;
+}
+
+.leagues .menu-btn.play {
+  flex: 0 0 auto;
+  min-height: 54px;
+}
+
+.leagues .menu-btn.play:disabled {
+  background: linear-gradient(#5b6d88, #35455d);
+  color: #93a6bf;
+  cursor: default;
+}
+
+/* The one moment the ladder moves: a win that opened the next league. The pop
+   bounces the scale rather than fading in — a tab backgrounded mid-animation
+   freezes the timeline where it stands, and a half-faded banner would stay
+   half-faded. */
+.unlocked {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  padding: 5px 16px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(#ffc02e, #f08322);
+  color: #2a1600;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  animation: unlocked-pop 0.45s ease-out;
+}
+
+@keyframes unlocked-pop {
+  from {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}

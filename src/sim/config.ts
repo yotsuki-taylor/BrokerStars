@@ -115,6 +115,21 @@ export const CONFIG = {
     { id: 'close', fromSec: 80, toSec: 120, volMult: 1.6, truthShift: -0.1 },
   ] as PhaseConfig[],
   bot: {
+    /**
+     * Five rungs, one per league. `holdTicks` is the main lever (see README):
+     * a bot that sits on a position past the move it caught hands the profit
+     * back to mean reversion, so the ladder tightens it from 26 down to 8.
+     */
+    rookie: {
+      reactionMs: [2200, 4000] as [number, number],
+      ignoreChance: 0.78,
+      sizeFraction: 0.1,
+      lookbackTicks: 11,
+      triggerSigmas: 2.6,
+      holdTicks: 26,
+      panicChance: 0.35,
+      mode: 'momentum' as const,
+    },
     easy: {
       reactionMs: [1200, 2400] as [number, number],
       ignoreChance: 0.55,
@@ -143,6 +158,16 @@ export const CONFIG = {
       triggerSigmas: 1.0,
       holdTicks: 9,
       panicChance: 0.05,
+      mode: 'momentum' as const,
+    },
+    elite: {
+      reactionMs: [150, 450] as [number, number],
+      ignoreChance: 0.03,
+      sizeFraction: 0.4,
+      lookbackTicks: 3,
+      triggerSigmas: 0.85,
+      holdTicks: 8,
+      panicChance: 0.02,
       mode: 'momentum' as const,
     },
     /** control group for balance runs */

@@ -15,11 +15,20 @@ import {
   type FloatPnl,
 } from './components';
 import DevPanel from './DevPanel';
+import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
+import {
+  LEAGUES,
+  loadPick,
+  loadWins,
+  savePick,
+  saveWins,
+  unlockedCount,
+} from './leagues';
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import {
@@ -81,7 +90,8 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
       </p>
       <p>
         Dashed line on the chart is your average entry: above it you are in profit. Win a match to
-        earn stars.
+        earn stars — the tougher the league, the bigger the payout. Bank enough wins in a league
+        and the next one opens.
       </p>
       <button className="big-btn" onClick={onClose}>
         GOT IT
@@ -93,7 +103,9 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
 export default function App() {
   const baseCfg = useRef<Config>(cloneConfig(CONFIG));
   const [seed, setSeed] = useState(() => String(Math.floor(Math.random() * 1e6)));
-  const [botPreset, setBotPreset] = useState('medium');
+  const [leagueWins, setLeagueWins] = useState(loadWins);
+  const [league, setLeague] = useState(() => loadPick(leagueWins));
+  const [botPreset, setBotPreset] = useState(() => LEAGUES[league].preset);
   const stateRef = useRef<MatchState>(makeMatch(baseCfg.current, seed, botPreset));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
@@ -109,7 +121,9 @@ export default function App() {
   const [pauseOpen, setPauseOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
-  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'vs' | 'match'>('menu');
+  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'leagues' | 'vs' | 'match'>(
+    'menu',
+  );
   const [stars, setStars] = useState(loadStars);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
@@ -120,7 +134,16 @@ export default function App() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const admin = isAdmin();
   const [award, setAward] = useState<Award | null>(null);
+  /** name of the league this match's win opened, shown once on the result screen */
+  const [unlockedName, setUnlockedName] = useState<string | null>(null);
   const awarded = useRef(false);
+
+  // The game loop is built once and never sees a re-render, so the league it
+  // has to pay out and the wins it has to bank reach it through refs.
+  const leagueRef = useRef(league);
+  leagueRef.current = league;
+  const winsRef = useRef(leagueWins);
+  winsRef.current = leagueWins;
 
   // latest UI values for the animation loop, which is created only once
   const ui = useRef({ speed, showTruth, paused: false });
@@ -174,6 +197,7 @@ export default function App() {
       if (st.finished && !awarded.current) {
         awarded.current = true;
         const me = st.traders[HUMAN];
+        const li = leagueRef.current;
         const a =
           st.resigned === HUMAN
             ? NO_AWARD
@@ -181,6 +205,7 @@ export default function App() {
                 st.winner === HUMAN,
                 st.winner === null,
                 tradedWell(me.netWorth, st.cfg.match.startingCash),
+                LEAGUES[li].reward,
               );
         setAward(a);
         if (a.total > 0) {
@@ -189,6 +214,18 @@ export default function App() {
             saveStars(next);
             return next;
           });
+        }
+        // A surrendered match is a loss, and a loss banks nothing: the ladder
+        // is climbed by winning, not by starting matches.
+        if (st.winner === HUMAN && st.resigned === null) {
+          const before = winsRef.current;
+          const after = before.slice();
+          after[li] = (after[li] ?? 0) + 1;
+          saveWins(after);
+          winsRef.current = after;
+          setLeagueWins(after);
+          const opened = unlockedCount(after);
+          setUnlockedName(opened > unlockedCount(before) ? LEAGUES[opened - 1].name : null);
         }
       }
 
@@ -251,6 +288,7 @@ export default function App() {
       progressRef.current = 0;
       awarded.current = false;
       setAward(null);
+      setUnlockedName(null);
       setPauseOpen(false);
       setCountdown(null);
       setFloats({});
@@ -391,6 +429,26 @@ export default function App() {
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
 
+  if (screen === 'leagues') {
+    return (
+      <div className="app">
+        <LeagueSelect
+          stars={stars}
+          wins={leagueWins}
+          initial={league}
+          onBack={() => setScreen('menu')}
+          onPlay={(i) => {
+            setLeague(i);
+            savePick(i);
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset);
+            setScreen('vs');
+            haptic('heavy');
+          }}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'vs') {
     return (
       <div className="app">
@@ -441,10 +499,7 @@ export default function App() {
           onUndoRenovate={undoRenovate}
           onToggleFree={toggleFree}
           onOpenDev={() => setDevOpen(true)}
-          onPlay={() => {
-            restart(String(Math.floor(Math.random() * 1e6)));
-            setScreen('vs');
-          }}
+          onPlay={() => setScreen('leagues')}
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
           onHelp={() => setHelpOpen(true)}
@@ -592,11 +647,13 @@ export default function App() {
           state={st}
           humanIdx={HUMAN}
           award={award}
+          leagueName={LEAGUES[league].name}
+          unlockedName={unlockedName}
           onRestart={() => {
-            restart(String(Math.floor(Math.random() * 1e6)));
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset);
             setScreen('vs');
           }}
-          onMenu={() => setScreen('menu')}
+          onMenu={() => setScreen('leagues')}
         />
       )}
 
