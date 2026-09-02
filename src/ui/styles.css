@@ -1307,23 +1307,32 @@ body {
   z-index: 4;
 }
 
+/* Sized off the viewport, so the figure and its overhang shrink together. At
+   92% the two portraits filled the screen edge to edge and the phone cropped
+   them to heads and shoulders — the whole point of the shot is two dressed
+   characters, and you could not see what either was wearing.
+   The second cap is on height: width alone let a short, wide window (a desktop
+   browser, a phone in landscape) blow the figures back up to 87% of the screen,
+   because 72% of a wide viewport is a very tall sprite. It bites only there —
+   on a portrait phone the 72% is still the smaller of the two. */
 .versus-side {
   position: absolute;
-  width: 92%;
+  width: min(72%, 38vh);
+  width: min(72%, 38dvh);
   display: flex;
   justify-content: center;
 }
 
 /* the two figures straddle the diagonal, the player nearer the camera */
 .versus-side.rival {
-  top: 2%;
-  right: -22%;
+  top: 5%;
+  right: -13%;
   z-index: 2;
 }
 
 .versus-side.player {
-  bottom: -6%;
-  left: -22%;
+  bottom: -3%;
+  left: -13%;
   z-index: 3;
 }
 
