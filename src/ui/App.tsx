@@ -5,7 +5,14 @@ import { segmentAt } from '../sim/market';
 import { createMatch, resign, step } from '../sim/match';
 import type { TraderPerks } from '../sim/perks';
 import { Rng, hashSeed } from '../sim/rng';
-import { applyAction, buyingPower, canUndo, isShortSide, plannedQty, undoLast } from '../sim/trading';
+import {
+  applyAction,
+  canUndo,
+  isShortSide,
+  plannedQty,
+  positionValue,
+  undoLast,
+} from '../sim/trading';
 import type { MatchState } from '../sim/types';
 import { drawChart } from './chart';
 import {
@@ -540,6 +547,7 @@ export default function App() {
   // three seconds of warning, in ticks, which is what the headset promises
   const warning = perks.ui.headlineWarning && !st.finished ? comingHeadline(st, 6) : null;
   const undoOffered = perks.ui.undos > 0 && canUndo(st, HUMAN);
+  const cheapestShare = Math.min(...st.stocks.map((s) => s.price));
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
 
@@ -753,7 +761,10 @@ export default function App() {
           name={me.name}
           outfit={outfit}
           netWorth={me.netWorth}
+          cash={me.cash}
+          held={positionValue(st, me)}
           startCash={cfg.match.startingCash}
+          cheapestShare={cheapestShare}
           bankrupt={me.bankrupt}
         />
         <div className={`timer${remaining <= 15 ? ' urgent' : ''}`}>
@@ -763,17 +774,15 @@ export default function App() {
           name={rival.name}
           outfit={rivalOutfit}
           netWorth={rival.netWorth}
+          cash={rival.cash}
+          held={positionValue(st, rival)}
           startCash={cfg.match.startingCash}
+          cheapestShare={cheapestShare}
           bankrupt={rival.bankrupt}
         />
       </div>
 
-      <SizeSelector
-        value={fraction}
-        power={buyingPower(st, me)}
-        cheapestShare={Math.min(...st.stocks.map((s) => s.price))}
-        onChange={setFraction}
-      />
+      <SizeSelector value={fraction} onChange={setFraction} />
 
       {undoOffered && (
         <button className="undo-btn" onClick={takeBack}>

@@ -96,19 +96,30 @@ export function TraderCard({
   name,
   outfit,
   netWorth,
+  cash,
+  held,
   startCash,
+  cheapestShare,
   bankrupt,
 }: {
   name: string;
   /** both traders are dressed figures — the rival's look comes from the versus screen */
   outfit: Outfit;
   netWorth: number;
+  /** money on hand, which is the only thing a new position can be bought with */
+  cash: number;
+  /** what the open positions are worth, negative while short */
+  held: number;
   startCash: number;
+  /** price of the cheapest share, so a cash pile too small to buy anything shows */
+  cheapestShare: number;
   bankrupt: boolean;
 }) {
   const delta = netWorth - startCash;
   const pct = (delta / startCash) * 100;
   const mood = bankrupt ? 'losing' : pct > 1 ? 'winning' : pct < -1 ? 'losing' : 'level';
+  // the moment buying stops being possible, and the reason the split is here
+  const spent = !bankrupt && cash < cheapestShare;
   return (
     <div className="trader">
       <div className="trader-card">
@@ -120,6 +131,17 @@ export function TraderCard({
           ) : (
             <span className={`delta ${deltaClass(pct)}`}>{signed(pct, 1)}%</span>
           )}
+        </div>
+        {/* Net worth is the score, but it is two very different things added
+            together: only the cash half can buy anything. Shown raw, negatives
+            included, so the two numbers always add back up to the total. */}
+        <div className="split">
+          <span className={`part cash${spent ? ' spent' : ''}`}>
+            CASH <b>{money(cash)}</b>
+          </span>
+          <span className="part held">
+            HELD <b>{money(held)}</b>
+          </span>
         </div>
       </div>
       <div className={`portrait ${mood}`}>
@@ -138,26 +160,21 @@ export const SIZES: { label: string; value: number }[] = [
   { label: 'MAX', value: 1 },
 ];
 
+/**
+ * How much of the cash on hand one tap commits. The free cash itself used to
+ * sit beside these buttons as POWER, but the trader card now carries it as
+ * CASH — and the two disagreed on sight, since POWER was clamped at zero while
+ * CASH shows the overdraft. One number for one thing.
+ */
 export function SizeSelector({
   value,
-  power,
-  cheapestShare,
   onChange,
 }: {
   value: number;
-  /** what the leverage cap still allows, which is not the same as cash */
-  power: number;
-  /** price of the cheapest share, so "cannot afford anything" is visible */
-  cheapestShare: number;
   onChange: (v: number) => void;
 }) {
-  const spent = power < cheapestShare;
   return (
     <div className="sizes">
-      <span className={`label power${spent ? ' spent' : ''}`}>
-        POWER
-        <b>{money(power)}</b>
-      </span>
       {SIZES.map((s) => (
         <button
           key={s.label}

@@ -279,6 +279,39 @@ body {
   color: var(--neutral);
 }
 
+/* The half of the book that can still buy something, beside the half that
+   cannot. One line, because the card sits above a portrait in a column that
+   has no room for two. */
+.trader-card .split {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  margin-top: 1px;
+  font-size: 7px;
+  letter-spacing: 0.4px;
+  opacity: 0.6;
+}
+
+.trader-card .part {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.trader-card .part b {
+  font-size: 10px;
+  font-weight: inherit;
+  letter-spacing: 0;
+}
+
+/* nothing left to buy with: the same red the POWER readout uses */
+.trader-card .part.cash.spent {
+  opacity: 1;
+  color: var(--down);
+}
+
 .bankrupt-tag {
   font-size: 10px;
   color: var(--down);
@@ -292,35 +325,6 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.sizes .label {
-  font-size: 10px;
-  opacity: 0.7;
-  letter-spacing: 0.6px;
-  margin-right: 2px;
-}
-
-/* What the leverage cap still allows. Cash alone does not decide whether a buy
-   is possible, and a greyed-out BUY needs a reason on screen. */
-.sizes .label.power {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-  opacity: 0.75;
-  min-width: 46px;
-}
-
-.sizes .label.power b {
-  font-size: 13px;
-  font-weight: inherit;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
-.sizes .label.power.spent {
-  opacity: 1;
-  color: var(--down);
 }
 
 .size-btn {
