@@ -506,6 +506,13 @@ body {
   cursor: default;
 }
 
+/* NO CASH is two words where SELL is one, so it gives up a little type size
+   rather than running past the button's edge. */
+.trade-btn.broke span {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
 /* floating P&L number on a trade — starts over the middle of the row so it
    never lands on the position badge sitting at the top edge */
 .float-pnl {

@@ -788,6 +788,9 @@ export default function App() {
           const buyQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'buy', fraction });
           const sellQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'sell', fraction });
           const held = me.positions[i] !== 0;
+          // a side that plans nothing while the match is still on is a side
+          // with no money behind it: buying power is cash and nothing else
+          const live = !st.finished && !me.bankrupt;
           return (
             <StockRow
               key={s.id}
@@ -796,8 +799,10 @@ export default function App() {
               changePct={(price / s.basePrice - 1) * 100}
               position={me.positions[i]}
               shortSide={short}
-              canBuy={!st.finished && !me.bankrupt && buyQty > 0}
-              canSell={!st.finished && !me.bankrupt && sellQty < 0}
+              canBuy={live && buyQty > 0}
+              canSell={live && sellQty < 0}
+              buyNeedsCash={live && buyQty === 0}
+              sellNeedsCash={live && sellQty === 0}
               floats={floats[i] ?? []}
               kind={perks.ui.showKind ? TRAIT_SHORT[s.trait?.kind ?? 'plain'] : undefined}
               hint={

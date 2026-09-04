@@ -190,6 +190,8 @@ export function StockRow({
   floats,
   kind,
   hint,
+  buyNeedsCash,
+  sellNeedsCash,
   onBuy,
   onSell,
 }: {
@@ -205,6 +207,14 @@ export function StockRow({
   kind?: string;
   /** which way it is committed to going, for a position the player holds */
   hint?: -1 | 0 | 1;
+  /**
+   * The match is still live and the only thing stopping this side is money.
+   * Buying power is the cash on hand, so a book fully committed to positions
+   * kills BUY on every row at once — worth saying out loud, because a greyed
+   * button with no reason on it reads as the game being broken.
+   */
+  buyNeedsCash?: boolean;
+  sellNeedsCash?: boolean;
   onBuy: () => void;
   onSell: () => void;
 }) {
@@ -225,8 +235,12 @@ export function StockRow({
         </div>
       ))}
 
-      <button className="trade-btn sell" onClick={onSell} disabled={!canSell}>
-        <span>{shortSide ? 'SHORT' : 'SELL'}</span>
+      <button
+        className={`trade-btn sell${sellNeedsCash ? ' broke' : ''}`}
+        onClick={onSell}
+        disabled={!canSell}
+      >
+        <span>{sellNeedsCash ? 'NO CASH' : shortSide ? 'SHORT' : 'SELL'}</span>
       </button>
 
       <div className="info" style={{ boxShadow: `inset 0 0 0 2px ${stock.color}` }}>
@@ -252,8 +266,12 @@ export function StockRow({
         </div>
       </div>
 
-      <button className="trade-btn buy" onClick={onBuy} disabled={!canBuy}>
-        <span>BUY</span>
+      <button
+        className={`trade-btn buy${buyNeedsCash ? ' broke' : ''}`}
+        onClick={onBuy}
+        disabled={!canBuy}
+      >
+        <span>{buyNeedsCash ? 'NO CASH' : 'BUY'}</span>
       </button>
     </div>
   );
