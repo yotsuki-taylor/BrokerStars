@@ -7,7 +7,7 @@
  * revealed, what a match pays — and never reaches sim/ at all.
  *
  * One slot is one kind of power and the rarity scales it, so every table below
- * is indexed the same way: 0 is a bare slot, 1 is common, up to 5 for mythic.
+ * is indexed the same way: 0 is a bare slot, 1 is common, up to 5 for legend.
  * The catalogue in wardrobe.ts is the text for these numbers; the two have to
  * be changed together.
  */
@@ -63,7 +63,7 @@ const at = <T,>(table: readonly T[], i: number): T => table[Math.min(i, table.le
 
 /* --------------------------------------------------------------- the tables */
 
-//                                bare  common uncommon rare  legend mythic
+//                                bare  common uncommon rare  mythic legend
 const COMMISSION = [1, 0.85, 0.7, 0.55, 0.4, 0] as const;
 const SLIPPAGE = [1, 1, 1, 0.8, 0.65, 0.65] as const;
 const BANKRUPT_AT = [0, -500, NEVER_BUST, NEVER_BUST, NEVER_BUST, NEVER_BUST] as const;

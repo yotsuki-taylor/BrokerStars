@@ -8,10 +8,10 @@
  */
 
 export type Slot = 'hat' | 'neck' | 'torso' | 'hand' | 'access';
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'legend' | 'mythic';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'mythic' | 'legend';
 
 export const SLOTS: Slot[] = ['hat', 'neck', 'torso', 'hand', 'access'];
-export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legend', 'mythic'];
+export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'mythic', 'legend'];
 
 export const SLOT_LABEL: Record<Slot, string> = {
   hat: 'HEAD',
@@ -26,7 +26,7 @@ export const SLOT_LABEL: Record<Slot, string> = {
  *
  * Rarities inside a slot are a ladder, bought in order, so these are step
  * prices rather than the price of an item standing alone: taking a slot from
- * bare to mythic is 4+7+12+20+40 = 83 stars whichever way you come at it.
+ * bare to legend is 4+7+12+20+40 = 83 stars whichever way you come at it.
  * Skipping used to be strictly better — buy the rare for 10 and the common and
  * uncommon you passed over were 10 stars thrown away — which meant the shop
  * punished you for buying what you could afford today.
@@ -41,24 +41,24 @@ export const PRICES: Record<Rarity, number> = {
   common: 4,
   uncommon: 7,
   rare: 12,
-  legend: 20,
-  mythic: 40,
+  mythic: 20,
+  legend: 40,
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   common: 'COMMON',
   uncommon: 'UNCOMMON',
   rare: 'RARE',
-  legend: 'LEGEND',
   mythic: 'MYTHIC',
+  legend: 'LEGEND',
 };
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   common: '#9aa9bf',
   uncommon: '#5fd08a',
   rare: '#4aa8ff',
-  legend: '#c56bff',
-  mythic: '#ffb020',
+  mythic: '#c56bff',
+  legend: '#ffb020',
 };
 
 export interface ItemCard {
@@ -103,11 +103,11 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
       name: 'PIT CAP',
       text: 'Twice a match, and you can bar one company from this league for good.',
     },
-    legend: {
+    mythic: {
       name: 'BLACK BRIM',
       text: 'Name one company you always want on the board, and it is always there.',
     },
-    mythic: {
+    legend: {
       name: 'TEN GALLON',
       text: 'You choose all three companies yourself.',
     },
@@ -119,11 +119,11 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
       name: 'SILK TIE',
       text: 'Matches pay 15% more, and the bonus for a well traded match comes sooner.',
     },
-    legend: {
+    mythic: {
       name: 'BOW TIE',
       text: 'Matches pay 20% more, and that bonus comes sooner still.',
     },
-    mythic: {
+    legend: {
       name: 'GOLD PENDANT',
       text: 'Matches pay 25% more, the bonus comes sooner again, and a loss still pays.',
     },
@@ -141,11 +141,11 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
       name: 'FLOOR SUIT',
       text: 'That, and once a match a position 15% under water gets out on its own.',
     },
-    legend: {
+    mythic: {
       name: 'HOUSE TUXEDO',
       text: 'Twice a match, and the first losing trade you close hands half of it back.',
     },
-    mythic: {
+    legend: {
       name: 'EARLY RETIREMENT',
       text: 'Once a match you can take back your last trade, at the price you paid.',
     },
@@ -157,11 +157,11 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
       name: 'WAD OF CASH',
       text: 'Trading costs you 45% less, and a big order moves the price against you less.',
     },
-    legend: {
+    mythic: {
       name: 'BURNER PHONE',
       text: 'Trading costs you 60% less, and big orders barely move the price at all.',
     },
-    mythic: {
+    legend: {
       name: 'THE TERMINAL',
       text: 'You trade for free, and getting out of a position never costs you a worse price.',
     },
@@ -179,11 +179,11 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
       name: 'TRADING HEADSET',
       text: 'Three seconds before a headline lands, you hear which company it lands on.',
     },
-    legend: {
+    mythic: {
       name: 'EARPIECE',
       text: 'The company you are holding tells you which way it is about to go.',
     },
-    mythic: {
+    legend: {
       name: 'ORACLE LENS',
       text: 'The next two seconds of the company you hold are drawn ahead of the line.',
     },
@@ -214,11 +214,11 @@ const PIECES: Record<string, 'both' | 'up' | 'down'> = {
   'torso-common': 'both',
   'torso-uncommon': 'both',
   'torso-rare': 'both',
-  'torso-legend': 'both',
   'torso-mythic': 'both',
+  'torso-legend': 'both',
   'neck-common': 'both',
-  'neck-mythic': 'both',
   'neck-legend': 'both',
+  'neck-mythic': 'both',
 };
 
 export function itemId(slot: Slot, rarity: Rarity): string {
@@ -334,14 +334,14 @@ export const SLOT_FOCUS: Record<Slot, { x: number; y: number; w: number; h: numb
 
 /**
  * A look for the opponent. Weighted so the rare tiers stay rare — a rival in
- * head-to-toe mythic should feel like an event, not the average Tuesday.
+ * head-to-toe legend should feel like an event, not the average Tuesday.
  */
 const RARITY_WEIGHTS: [Rarity, number][] = [
   ['common', 35],
   ['uncommon', 27],
   ['rare', 20],
-  ['legend', 13],
-  ['mythic', 5],
+  ['mythic', 13],
+  ['legend', 5],
 ];
 
 export function randomOutfit(rand: () => number): Outfit {

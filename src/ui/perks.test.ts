@@ -34,8 +34,8 @@ describe('a bare trader', () => {
 
   it('is not helped by a slot it has nothing in', () => {
     // a full set of hats must leave the commission alone
-    expect(perksFor(wearing('hat', 'mythic'), CASH).trader.commissionMult).toBe(1);
-    expect(perksFor(wearing('hand', 'mythic'), CASH).ui.pickAll).toBe(false);
+    expect(perksFor(wearing('hat', 'legend'), CASH).trader.commissionMult).toBe(1);
+    expect(perksFor(wearing('hand', 'legend'), CASH).ui.pickAll).toBe(false);
   });
 });
 
@@ -44,8 +44,8 @@ describe('every ladder climbs the right way', () => {
     const costs = ladder('hand', (p) => p.trader.commissionMult);
     for (let i = 1; i < costs.length; i++) expect(costs[i]).toBeLessThan(costs[i - 1]);
     expect(costs[costs.length - 1]).toBe(0);
-    expect(perksFor(wearing('hand', 'mythic'), CASH).trader.freeExits).toBe(true);
-    expect(perksFor(wearing('hand', 'legend'), CASH).trader.freeExits).toBe(false);
+    expect(perksFor(wearing('hand', 'legend'), CASH).trader.freeExits).toBe(true);
+    expect(perksFor(wearing('hand', 'mythic'), CASH).trader.freeExits).toBe(false);
   });
 
   it('never makes slippage worse up the HANDS slot', () => {
@@ -61,8 +61,8 @@ describe('every ladder climbs the right way', () => {
     expect(perksFor(wearing('torso', 'uncommon'), CASH).trader.minResult).toBe(CASH * 0.1);
     const stops = ladder('torso', (p) => p.trader.stopLossUses);
     for (let i = 1; i < stops.length; i++) expect(stops[i]).toBeGreaterThanOrEqual(stops[i - 1]);
-    expect(perksFor(wearing('torso', 'mythic'), CASH).trader.undos).toBe(1);
-    expect(perksFor(wearing('torso', 'legend'), CASH).trader.undos).toBe(0);
+    expect(perksFor(wearing('torso', 'legend'), CASH).trader.undos).toBe(1);
+    expect(perksFor(wearing('torso', 'mythic'), CASH).trader.undos).toBe(0);
   });
 
   it('pays more and asks less up the NECK slot', () => {
@@ -74,8 +74,8 @@ describe('every ladder climbs the right way', () => {
     }
     expect(pay[pay.length - 1]).toBeCloseTo(1.25, 6);
     expect(bar[bar.length - 1]).toBeCloseTo(0.3, 6);
-    expect(perksFor(wearing('neck', 'mythic'), CASH).ui.lossPaysDraw).toBe(true);
-    expect(perksFor(wearing('neck', 'legend'), CASH).ui.lossPaysDraw).toBe(false);
+    expect(perksFor(wearing('neck', 'legend'), CASH).ui.lossPaysDraw).toBe(true);
+    expect(perksFor(wearing('neck', 'mythic'), CASH).ui.lossPaysDraw).toBe(false);
   });
 
   it('reveals one more thing per rung up the EXTRA slot', () => {
@@ -96,9 +96,9 @@ describe('every ladder climbs the right way', () => {
     }
     expect(perksFor(wearing('hat', 'rare'), CASH).ui.bans).toBe(1);
     expect(perksFor(wearing('hat', 'uncommon'), CASH).ui.bans).toBe(0);
-    expect(perksFor(wearing('hat', 'legend'), CASH).ui.pins).toBe(1);
+    expect(perksFor(wearing('hat', 'mythic'), CASH).ui.pins).toBe(1);
     expect(perksFor(wearing('hat', 'rare'), CASH).ui.pins).toBe(0);
-    expect(perksFor(wearing('hat', 'mythic'), CASH).ui.pickAll).toBe(true);
+    expect(perksFor(wearing('hat', 'legend'), CASH).ui.pickAll).toBe(true);
   });
 });
 
@@ -108,7 +108,7 @@ describe('the board screen', () => {
     expect(wantsBoardScreen(perksFor(wearing('access', 'uncommon'), CASH).ui)).toBe(true);
     // the reading glasses only write on the rows during the match
     expect(wantsBoardScreen(perksFor(wearing('access', 'common'), CASH).ui)).toBe(false);
-    expect(wantsBoardScreen(perksFor(wearing('torso', 'mythic'), CASH).ui)).toBe(false);
+    expect(wantsBoardScreen(perksFor(wearing('torso', 'legend'), CASH).ui)).toBe(false);
   });
 });
 
@@ -141,7 +141,7 @@ describe('the catalogue and the numbers', () => {
   });
 
   it('stacks the whole wardrobe without any slot cancelling another', () => {
-    const { trader, ui } = perksFor(dressed('mythic'), CASH);
+    const { trader, ui } = perksFor(dressed('legend'), CASH);
     expect(trader.commissionMult).toBe(0);
     expect(trader.freeExits).toBe(true);
     expect(trader.bankruptAt).toBe(NEVER_BUST);
