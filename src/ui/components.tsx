@@ -188,6 +188,8 @@ export function StockRow({
   canBuy,
   canSell,
   floats,
+  kind,
+  hint,
   onBuy,
   onSell,
 }: {
@@ -199,6 +201,10 @@ export function StockRow({
   canBuy: boolean;
   canSell: boolean;
   floats: FloatPnl[];
+  /** what sort of company this is, once the player owns the glasses that say */
+  kind?: string;
+  /** which way it is committed to going, for a position the player holds */
+  hint?: -1 | 0 | 1;
   onBuy: () => void;
   onSell: () => void;
 }) {
@@ -226,10 +232,22 @@ export function StockRow({
       <div className="info" style={{ boxShadow: `inset 0 0 0 2px ${stock.color}` }}>
         <LogoMask file={stock.logo} color={stock.color} className="logo" />
         <div className="meta">
-          <div className="tick-name">{stock.name}</div>
+          {/* The row is barely wide enough for the name on its own, so the
+              kind keeps its whole word and the name is the part that gives
+              way: the name is spelled out in full on the board screen and in
+              the archive, and the kind is what the player paid to see. */}
+          <div className="tick-name">
+            <span className="tick-label">{stock.name}</span>
+            {kind && <em className="kind-tag">{kind}</em>}
+          </div>
           <div className="price-line">
             <span className="price">{money(price)}</span>
             <span className={`chg delta ${deltaClass(changePct)}`}>{signed(changePct, 1)}%</span>
+            {hint !== undefined && (
+              <em className={`hint-tag ${hint > 0 ? 'up' : hint < 0 ? 'down' : 'flat'}`}>
+                {hint > 0 ? '\u25b2' : hint < 0 ? '\u25bc' : '\u2014'}
+              </em>
+            )}
           </div>
         </div>
       </div>

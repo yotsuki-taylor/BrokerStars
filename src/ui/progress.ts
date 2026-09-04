@@ -37,6 +37,16 @@ export interface Award {
   total: number;
 }
 
+/** What the trader's neck is worth at the pay window. See ui/perks.ts. */
+export interface AwardMods {
+  /** multiplies the whole payout */
+  starMult: number;
+  /** a defeat pays what a draw would */
+  lossPaysDraw: boolean;
+}
+
+export const NO_MODS: AwardMods = { starMult: 1, lossPaysDraw: false };
+
 /** Surrendering pays nothing — otherwise an early lead could be cashed out. */
 export const NO_AWARD: Award = { win: 0, profit: 0, total: 0 };
 
@@ -45,15 +55,27 @@ export function awardFor(
   drew: boolean,
   tradedWell: boolean,
   table: RewardTable = REWARDS,
+  mods: AwardMods = NO_MODS,
 ): Award {
-  const win = won ? table.win : drew ? table.draw : REWARDS.loss;
-  const profit = tradedWell ? table.profit : 0;
+  const base = won ? table.win : drew || mods.lossPaysDraw ? table.draw : REWARDS.loss;
+  const bonus = tradedWell ? table.profit : 0;
+  // rounded a part at a time, so the two numbers on the result screen still
+  // add up to the total the player is handed
+  const win = Math.round(base * mods.starMult);
+  const profit = Math.round(bonus * mods.starMult);
   return { win, profit, total: win + profit };
 }
 
-/** Did the match clear the bar the profit bonus is paid for? */
-export function tradedWell(netWorth: number, startingCash: number): boolean {
-  return netWorth >= startingCash * (1 + REWARDS.profitBar);
+/**
+ * Did the match clear the bar the profit bonus is paid for? The bar itself is
+ * a perk: a good enough chain moves it down from +40% towards +30%.
+ */
+export function tradedWell(
+  netWorth: number,
+  startingCash: number,
+  bar: number = REWARDS.profitBar,
+): boolean {
+  return netWorth >= startingCash * (1 + bar);
 }
 
 /** Private browsing and locked-down webviews throw on access, so never assume. */

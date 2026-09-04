@@ -71,24 +71,48 @@ export function applyAction(state: MatchState, action: Action): Trade | null {
 
   const stock = state.stocks[action.stock];
   const cfg: Config = state.cfg;
+  const perks = t.perks;
   let q = plannedQty(state, action);
   if (!Number.isFinite(q) || q === 0) return null;
 
-
-  const p = stock.price;
-  const slip = (cfg.impact.slippageCoef * Math.abs(q)) / cfg.impact.refQty;
-  const execPrice = p * (1 + Math.sign(q) * slip);
-  const cost = q * execPrice;
-  const commission = cfg.match.commissionRate * Math.abs(cost);
-
   const posBefore = t.positions[action.stock];
   const posAfter = posBefore + q;
+  const reducing = posBefore !== 0 && Math.sign(q) !== Math.sign(posBefore);
+
+  // An undo restores the book, so the snapshot has to be taken before the
+  // trade touches it — and only while an undo is actually on offer.
+  if (t.undosLeft > 0) {
+    t.undoPoint = {
+      tick: state.tick,
+      cash: t.cash,
+      positions: [...t.positions],
+      avgEntry: [...t.avgEntry],
+    };
+  }
+
+  const p = stock.price;
+  // An automatic exit and a perk that pays for the spread both price at the
+  // mid; everything else pays slippage scaled by how much of it there is.
+  const free = action.noSlip || (perks.freeExits && reducing);
+  const slip = free
+    ? 0
+    : (cfg.impact.slippageCoef * perks.slippageMult * Math.abs(q)) / cfg.impact.refQty;
+  const execPrice = p * (1 + Math.sign(q) * slip);
+  const cost = q * execPrice;
+  const commission = cfg.match.commissionRate * perks.commissionMult * Math.abs(cost);
 
   // realised P&L on the part of the trade that reduces an existing position
   let realized = 0;
-  if (posBefore !== 0 && Math.sign(q) !== Math.sign(posBefore)) {
+  if (reducing) {
     const closed = Math.min(Math.abs(q), Math.abs(posBefore));
     realized = (execPrice - t.avgEntry[action.stock]) * closed * Math.sign(posBefore);
+  }
+
+  // the house pays part of the first loss you take, once a match
+  let refund = 0;
+  if (realized < 0 && perks.firstLossRefund > 0 && !t.refundUsed) {
+    t.refundUsed = true;
+    refund = -realized * perks.firstLossRefund;
   }
 
   // average entry: keep it on the surviving side of the position
@@ -100,7 +124,7 @@ export function applyAction(state: MatchState, action: Action): Trade | null {
       (t.avgEntry[action.stock] * Math.abs(posBefore) + execPrice * Math.abs(q)) / total;
   }
 
-  t.cash -= cost + commission;
+  t.cash -= cost + commission - refund;
   t.positions[action.stock] = posAfter;
 
   if (cfg.flags.marketImpact) {
@@ -115,10 +139,68 @@ export function applyAction(state: MatchState, action: Action): Trade | null {
     price: execPrice,
     commission,
     realized,
+    refund,
   };
   t.trades.push(trade);
   t.netWorth = netWorth(state, t);
   return trade;
+}
+
+/**
+ * Take back the last trade at the price it was done at.
+ *
+ * The book is restored from the snapshot rather than replayed backwards: the
+ * average-entry maths is lossy in reverse, and an undo that quietly moved your
+ * break-even line would be worse than no undo at all. What the trade did to
+ * the market is deliberately left alone — the impact it printed is already in
+ * everyone else's prices, and it decays on its own within a few ticks.
+ */
+export function undoLast(state: MatchState, traderIdx: number): boolean {
+  const t = state.traders[traderIdx];
+  const point = t.undoPoint;
+  if (state.finished || t.bankrupt || !point || t.undosLeft <= 0) return false;
+  if (state.tick - point.tick > t.perks.undoWindowTicks) return false;
+  t.cash = point.cash;
+  t.positions = [...point.positions];
+  t.avgEntry = [...point.avgEntry];
+  t.trades.pop();
+  t.undosLeft--;
+  t.undoPoint = null;
+  t.netWorth = netWorth(state, t);
+  return true;
+}
+
+/** True while the last trade is still inside its taking-back window. */
+export function canUndo(state: MatchState, traderIdx: number): boolean {
+  const t = state.traders[traderIdx];
+  if (state.finished || t.bankrupt || t.undosLeft <= 0 || !t.undoPoint) return false;
+  return state.tick - t.undoPoint.tick <= t.perks.undoWindowTicks;
+}
+
+/**
+ * Positions far enough under water get out on their own, at the mid, as many
+ * times a match as the trader's perks allow. Run once per tick, after the
+ * prices for that tick are in.
+ */
+export function runStops(state: MatchState): void {
+  for (const t of state.traders) {
+    if (t.bankrupt || t.stopsLeft <= 0 || t.perks.stopLossAt <= 0) continue;
+    for (let i = 0; i < state.stocks.length && t.stopsLeft > 0; i++) {
+      const pos = t.positions[i];
+      const entry = t.avgEntry[i];
+      if (!pos || !entry) continue;
+      const pnl = ((state.stocks[i].price - entry) / entry) * Math.sign(pos);
+      if (pnl > -t.perks.stopLossAt) continue;
+      const done = applyAction(state, {
+        trader: t.idx,
+        stock: i,
+        side: pos > 0 ? 'sell' : 'buy',
+        fraction: 1,
+        noSlip: true,
+      });
+      if (done) t.stopsLeft--;
+    }
+  }
 }
 
 /** Flatten everything at the last tick price — no slippage, no commission. */

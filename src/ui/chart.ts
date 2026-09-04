@@ -1,4 +1,4 @@
-import { quarterTicks } from '../sim/market';
+import { quarterTicks, segmentAt } from '../sim/market';
 import type { MatchState } from '../sim/types';
 
 export interface ChartOpts {
@@ -6,6 +6,12 @@ export interface ChartOpts {
   progress: number;
   showTruth: boolean;
   humanIdx: number;
+  /**
+   * Perk overlay: this many ticks of the committed future are drawn ahead of
+   * the line, and only for a company the player is actually holding. Zero, and
+   * nothing is drawn — which is what everyone without the lens sees.
+   */
+  peekTicks?: number;
 }
 
 const FONT_FAMILY =
@@ -106,7 +112,8 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
   const plotH = H - padT - padB;
 
   const win = cfg.chart.windowTicks;
-  const ahead = opts.showTruth ? Math.round(win * 0.35) : 0;
+  const peek = Math.max(0, opts.peekTicks ?? 0);
+  const ahead = opts.showTruth ? Math.round(win * 0.35) : peek;
   const liveX = state.tick - 1 + opts.progress;
   const xMax = Math.max(win, liveX) + ahead;
   const xMin = xMax - win - ahead;
@@ -304,6 +311,40 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
       offScale: liveVal < lo || liveVal > hi,
     });
   });
+
+  // --- the peeked future: the drift the market has already committed to for a
+  // company the player is holding, walked forward without its noise. It is the
+  // expected path rather than the printed one — nobody is promised the exact
+  // tick — but the direction and the weight of it are real.
+  if (peek > 0) {
+    const phase = cfg.flags.phases
+      ? (cfg.phases.find((ph) => {
+          const sec = (state.tick * cfg.match.tickMs) / 1000;
+          return sec >= ph.fromSec && sec < ph.toSec;
+        })?.volMult ?? 1)
+      : 1;
+    state.stocks.forEach((st, i) => {
+      if (state.traders[opts.humanIdx].positions[i] === 0) return;
+      const last = st.history.length - 1;
+      let price = st.history[last];
+      ctx.beginPath();
+      ctx.moveTo(px(last), py(val(i, price)));
+      for (let k = 1; k <= peek; k++) {
+        const seg = segmentAt(st.segments, state.tick + k);
+        const drift =
+          (seg?.dir ?? 0) * (seg?.strength ?? 0) * cfg.stocks[i].driftPerStrength * phase;
+        price = seg?.frozen ? price : price * (1 + drift);
+        ctx.lineTo(px(last + k), py(val(i, price)));
+      }
+      ctx.strokeStyle = cfg.stocks[i].color;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    });
+  }
 
   ctx.restore();
 

@@ -72,9 +72,9 @@ export interface ItemCard {
  * Five curves are something a player can hold in their head; twenty-five
  * unrelated effects are not, and could not be balanced either.
  *
- * NOTE: the effects below are the catalogue, not the code. Nothing here is
- * wired into the simulation yet — the shop describes what each rung will do,
- * and the abilities themselves land after it.
+ * This is the text. The numbers behind it live in ui/perks.ts and the two have
+ * to be changed together — there is a test that checks the discounts and the
+ * payouts named below are the ones the game actually applies.
  */
 export const SLOT_THEME: Record<Slot, string> = {
   hat: 'THE BOARD YOU GET',

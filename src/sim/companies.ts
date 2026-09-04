@@ -596,6 +596,40 @@ export const COMPANIES: Company[] = [
   },
 ];
 
+/** A word for each quirk, short enough for a stock row. Player-facing. */
+export const TRAIT_LABEL: Record<TraitKind, string> = {
+  plain: 'STANDARD',
+  locked: 'TRENDING',
+  regulated: 'REGULATED',
+  bubble: 'BUBBLE',
+  stall: 'STREAKY',
+  floor: 'PROTECTED',
+  moonshot: 'LONG SHOT',
+  luxury: 'LUXURY',
+  dividend: 'PAYS OUT',
+  headline: 'IN THE NEWS',
+  ratchet: 'RATCHET',
+};
+
+/**
+ * The same words again, cut to fit a stock row. The row gives a label about
+ * forty pixels beside a company name and a price, so TRAIT_LABEL's wording is
+ * for the archive and the board screen, and this one is for the match.
+ */
+export const TRAIT_SHORT: Record<TraitKind, string> = {
+  plain: 'PLAIN',
+  locked: 'TREND',
+  regulated: 'STATE',
+  bubble: 'BUBBLE',
+  stall: 'STALLS',
+  floor: 'FLOOR',
+  moonshot: 'SHOT',
+  luxury: 'LUXURY',
+  dividend: 'DIV',
+  headline: 'NEWS',
+  ratchet: 'HOLDS',
+};
+
 /** The board a match falls back to when nobody picked one: the three staples. */
 export const DEFAULT_STOCKS: StockConfig[] = COMPANIES.filter((c) => c.staple);
 
@@ -613,6 +647,16 @@ export interface Picker {
   int(a: number, b: number): number;
 }
 
+/** What the player's own hat lets them dictate about the draw. */
+export interface PickOptions {
+  /** a company that must be on the board whenever the league offers it */
+  pin?: string | null;
+  /** a company that must not be */
+  ban?: string | null;
+  /** the whole board, named by the player; ids the league does not offer are ignored */
+  force?: readonly string[] | null;
+}
+
 /**
  * The three companies for one match.
  *
@@ -620,11 +664,26 @@ export interface Picker {
  * the two strange ones against, and a board of three quirks at once is soup.
  * The other two come from the rest of the league's pool, and no two picks may
  * share a colour family, or the chart hands you two lines of the same shade.
+ *
+ * Anything the player has pinned, banned or named outright is honoured first
+ * and the rest of the board is filled around it. A board they chose in full
+ * skips the staple rule: it is their soup to eat.
  */
-export function pickCompanies(leagueIndex: number, rng: Picker, count = 3): Company[] {
-  const pool = poolFor(leagueIndex);
+export function pickCompanies(
+  leagueIndex: number,
+  rng: Picker,
+  count = 3,
+  opts: PickOptions = {},
+): Company[] {
+  const pool = poolFor(leagueIndex).filter((c) => c.id !== opts.ban);
   const out: Company[] = [];
   const families = new Set<ColorFamily>();
+
+  const add = (c: Company | undefined): void => {
+    if (!c || out.includes(c) || out.length >= count) return;
+    out.push(c);
+    families.add(c.family);
+  };
 
   const take = (from: Company[]): boolean => {
     const fresh = from.filter((c) => !out.includes(c));
@@ -633,13 +692,14 @@ export function pickCompanies(leagueIndex: number, rng: Picker, count = 3): Comp
     // it still has to hand back a full board.
     const clear = fresh.filter((c) => !families.has(c.family));
     const src = clear.length ? clear : fresh;
-    const pick = src[rng.int(0, src.length - 1)];
-    out.push(pick);
-    families.add(pick.family);
+    add(src[rng.int(0, src.length - 1)]);
     return true;
   };
 
-  take(pool.filter((c) => c.staple));
+  for (const id of opts.force ?? []) add(pool.find((c) => c.id === id));
+  if (opts.pin) add(pool.find((c) => c.id === opts.pin));
+
+  if (out.length < count && !out.some((c) => c.staple)) take(pool.filter((c) => c.staple));
   const rest = pool.filter((c) => !c.staple);
   while (out.length < count) {
     if (!take(rest) && !take(pool)) break; // pool exhausted: hand back what there is

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { COMPANIES, type Company, type TraitKind } from '../sim/companies';
+import { COMPANIES, TRAIT_LABEL, type Company } from '../sim/companies';
 import { LogoMask, Lock, money } from './components';
 import { LEAGUES } from './leagues';
 
@@ -8,21 +8,6 @@ import { LEAGUES } from './leagues';
  * player has actually run into. A card unlocks the moment its company goes up
  * in a match — nothing is bought, and nothing is spoiled in advance.
  */
-
-/** A word for the quirk, so a card reads at a glance before the line does. */
-const TRAIT_LABEL: Record<TraitKind, string> = {
-  plain: 'STANDARD',
-  locked: 'TRENDING',
-  regulated: 'REGULATED',
-  bubble: 'BUBBLE',
-  stall: 'STREAKY',
-  floor: 'PROTECTED',
-  moonshot: 'LONG SHOT',
-  luxury: 'LUXURY',
-  dividend: 'PAYS OUT',
-  headline: 'IN THE NEWS',
-  ratchet: 'RATCHET',
-};
 
 function whereFound(c: Company): string {
   if (c.staple) return 'EVERY LEAGUE';

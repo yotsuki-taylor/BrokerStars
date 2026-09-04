@@ -11,13 +11,16 @@ import {
 } from './market';
 import { Rng } from './rng';
 import { initTraitState, traitStep } from './traits';
-import { liquidate, netWorth } from './trading';
+import { liquidate, netWorth, runStops } from './trading';
+import { NO_PERKS, perksOrDefault, type TraderPerks } from './perks';
 import type { MatchState, StockState, TraderState } from './types';
 
 export interface TraderSpec {
   name: string;
   kind: 'human' | 'bot';
   preset: string;
+  /** the terms this seat trades on; left out means the ordinary ones */
+  perks?: Partial<TraderPerks>;
 }
 
 export interface MatchOptions {
@@ -73,6 +76,11 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     trades: [],
     pending: [],
     exitAt: config.stocks.map(() => -1),
+    perks: spec.perks ? perksOrDefault(spec.perks) : NO_PERKS,
+    stopsLeft: spec.perks?.stopLossUses ?? 0,
+    undosLeft: spec.perks?.undos ?? 0,
+    refundUsed: false,
+    undoPoint: null,
   }));
 
   const state: MatchState = {
@@ -135,10 +143,12 @@ export function step(state: MatchState): MatchState {
     st.history.push(res.price);
   }
 
+  runStops(state);
+
   for (const t of state.traders) {
     t.netWorth = netWorth(state, t);
     t.netWorthHistory.push(t.netWorth);
-    if (state.cfg.match.bankruptcyEnabled && !t.bankrupt && t.netWorth <= 0) {
+    if (state.cfg.match.bankruptcyEnabled && !t.bankrupt && t.netWorth <= t.perks.bankruptAt) {
       t.bankrupt = true;
       for (let i = 0; i < state.stocks.length; i++) {
         t.positions[i] = 0;
@@ -157,6 +167,10 @@ export function finish(state: MatchState): MatchState {
   if (state.finished) return state;
   if (state.cfg.match.autoLiquidateAtEnd) {
     for (const t of state.traders) if (!t.bankrupt) liquidate(state, t);
+  }
+  // a floor under the result is paid out here, so it counts towards the win
+  for (const t of state.traders) {
+    if (t.perks.minResult > 0) t.netWorth = Math.max(t.netWorth, t.perks.minResult);
   }
   state.finished = true;
   const [a, b] = state.traders;
@@ -178,5 +192,5 @@ export function runToEnd(state: MatchState): MatchState {
   return state;
 }
 
-export { applyAction, buyingPower, isShortSide, plannedQty } from './trading';
+export { applyAction, buyingPower, canUndo, isShortSide, plannedQty, undoLast } from './trading';
 export type { MatchState, TraderState } from './types';

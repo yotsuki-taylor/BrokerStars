@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
-import { pickCompanies } from '../sim/companies';
+import { TRAIT_SHORT, pickCompanies, type PickOptions } from '../sim/companies';
+import { segmentAt } from '../sim/market';
 import { createMatch, resign, step } from '../sim/match';
+import type { TraderPerks } from '../sim/perks';
 import { Rng, hashSeed } from '../sim/rng';
-import { applyAction, buyingPower, isShortSide, plannedQty } from '../sim/trading';
+import { applyAction, buyingPower, canUndo, isShortSide, plannedQty, undoLast } from '../sim/trading';
 import type { MatchState } from '../sim/types';
 import { drawChart } from './chart';
 import {
@@ -15,6 +17,7 @@ import {
   tex,
   type FloatPnl,
 } from './components';
+import BoardScreen from './BoardScreen';
 import Companies from './Companies';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
@@ -24,6 +27,8 @@ import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
+import { loadPrefs, savePrefs, type BoardPrefs } from './board';
+import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
   loadPick,
@@ -72,15 +77,38 @@ function playerName(): string {
  * off the match seed too, so replaying a seed brings back the same three
  * companies as well as the same prices.
  */
-function makeMatch(cfg: Config, seed: string, preset: string, league: number): MatchState {
+function makeMatch(
+  cfg: Config,
+  seed: string,
+  preset: string,
+  league: number,
+  perks: TraderPerks,
+  board: PickOptions,
+): MatchState {
   const h = hashSeed(seed);
   return createMatch(h, cfg, {
     traders: [
-      { name: playerName(), kind: 'human', preset: 'medium' },
+      { name: playerName(), kind: 'human', preset: 'medium', perks },
       { name: 'RIVAL', kind: 'bot', preset },
     ],
-    stocks: pickCompanies(league, new Rng(h ^ 0x1b873593)),
+    stocks: pickCompanies(league, new Rng(h ^ 0x1b873593), 3, board),
   });
+}
+
+/**
+ * The next headline the market has already scheduled, if it lands inside the
+ * warning window. The schedule is generated up front, so this is a look at the
+ * truth — which is exactly what the perk buys.
+ */
+function comingHeadline(state: MatchState, within: number): string | null {
+  for (let i = 0; i < state.stocks.length; i++) {
+    for (const seg of state.stocks[i].segments) {
+      if (!seg.isNews) continue;
+      const away = seg.start - state.tick;
+      if (away > 0 && away <= within) return state.cfg.stocks[i].name;
+    }
+  }
+  return null;
 }
 
 function HelpOverlay({ onClose }: { onClose: () => void }) {
@@ -124,7 +152,20 @@ export default function App() {
   const [leagueWins, setLeagueWins] = useState(loadWins);
   const [league, setLeague] = useState(() => loadPick(leagueWins));
   const [botPreset, setBotPreset] = useState(() => LEAGUES[league].preset);
-  const stateRef = useRef<MatchState>(makeMatch(baseCfg.current, seed, botPreset, league));
+  const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
+  const [boardPrefs, setBoardPrefs] = useState<BoardPrefs>(loadPrefs);
+  /** everything the clothes change, rebuilt whenever the player changes them */
+  const perks = useMemo(
+    () => perksFor(outfit, baseCfg.current.match.startingCash),
+    [outfit],
+  );
+  const perksRef = useRef(perks);
+  perksRef.current = perks;
+  const prefsRef = useRef(boardPrefs);
+  prefsRef.current = boardPrefs;
+  const stateRef = useRef<MatchState>(
+    makeMatch(baseCfg.current, seed, botPreset, league, perks.trader, {}),
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
 
@@ -140,13 +181,15 @@ export default function App() {
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<
-    'menu' | 'shop' | 'equip' | 'archive' | 'leagues' | 'vs' | 'match'
+    'menu' | 'shop' | 'equip' | 'archive' | 'leagues' | 'board' | 'vs' | 'match'
   >('menu');
+  /** rerolls of the board still owed this match, and a board the player named */
+  const [rerollsLeft, setRerollsLeft] = useState(0);
+  const forcedRef = useRef<readonly string[] | null>(null);
   const [stars, setStars] = useState(loadStars);
   /** companies the player has met — filed by the match that put them up */
   const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
-  const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
   const [roomDone, setRoomDone] = useState(loadRoom);
   const [freeMode, setFreeMode] = useState(loadFreeMode);
   const [rivalOutfit, setRivalOutfit] = useState<Outfit>(() => randomOutfit(Math.random));
@@ -166,9 +209,10 @@ export default function App() {
   winsRef.current = leagueWins;
 
   // latest UI values for the animation loop, which is created only once
-  const ui = useRef({ speed, showTruth, paused: false });
+  const ui = useRef({ speed, showTruth, paused: false, peekTicks: 0 });
   ui.current.speed = speed;
   ui.current.showTruth = showTruth;
+  ui.current.peekTicks = perks.ui.truthTicks;
   ui.current.paused =
     devOpen || helpOpen || pauseOpen || countdown !== null || screen !== 'match';
 
@@ -211,6 +255,7 @@ export default function App() {
           progress: progressRef.current,
           showTruth: ui.current.showTruth,
           humanIdx: HUMAN,
+          peekTicks: ui.current.peekTicks,
         });
       }
 
@@ -218,14 +263,16 @@ export default function App() {
         awarded.current = true;
         const me = st.traders[HUMAN];
         const li = leagueRef.current;
+        const mods = perksRef.current.ui;
         const a =
           st.resigned === HUMAN
             ? NO_AWARD
             : awardFor(
                 st.winner === HUMAN,
                 st.winner === null,
-                tradedWell(me.netWorth, st.cfg.match.startingCash),
+                tradedWell(me.netWorth, st.cfg.match.startingCash, mods.profitBar),
                 LEAGUES[li].reward,
+                { starMult: mods.starMult, lossPaysDraw: mods.lossPaysDraw },
               );
         setAward(a);
         if (a.total > 0) {
@@ -296,14 +343,29 @@ export default function App() {
 
   /* ------------------------------------------------------------------- actions */
   const restart = useCallback(
-    (nextSeed?: string, nextPreset?: string, nextLeague?: number) => {
+    (
+      nextSeed?: string,
+      nextPreset?: string,
+      nextLeague?: number,
+      /** a board the player named, or null to draw one */
+      force?: readonly string[] | null,
+      /** a reroll redraws without handing back another reroll */
+      keepRerolls = false,
+    ) => {
       const s = nextSeed ?? seed;
       const p = nextPreset ?? botPreset;
       // the league decides the board, and a restart from the dev panel names none
       const li = nextLeague ?? leagueRef.current;
       if (nextSeed) setSeed(s);
       if (nextPreset) setBotPreset(p);
-      const match = makeMatch(baseCfg.current, s, p, li);
+      if (force !== undefined) forcedRef.current = force;
+      if (!keepRerolls) setRerollsLeft(perksRef.current.ui.rerolls);
+      const prefs = prefsRef.current;
+      const match = makeMatch(baseCfg.current, s, p, li, perksRef.current.trader, {
+        pin: prefs.pin,
+        ban: prefs.ban,
+        force: forcedRef.current,
+      });
       stateRef.current = match;
       // meeting a company in a match is what files it in the archive
       setSeenCompanies((prev) => {
@@ -325,6 +387,14 @@ export default function App() {
     },
     [seed, botPreset, rerender],
   );
+
+  /** Take the last trade back, if the coat is still offering. */
+  const takeBack = () => {
+    if (!undoLast(stateRef.current, HUMAN)) return;
+    haptic('heavy');
+    setFloats({});
+    rerender();
+  };
 
   const floatId = useRef(1);
   const act = (stockIdx: number, side: 'buy' | 'sell') => {
@@ -351,6 +421,8 @@ export default function App() {
     rerender();
   };
 
+  // Changing clothes changes the terms, but not for a match that already
+  // exists: perks are read when restart() builds the next one.
   const equip = (slot: Slot, rarity: Rarity) => {
     setOutfit((prev) => {
       const next = { ...prev, [slot]: rarity };
@@ -465,6 +537,9 @@ export default function App() {
   const me = st.traders[HUMAN];
   const rival = st.traders[1];
   const remaining = Math.max(0, (st.totalTicks - st.tick) * cfg.match.tickMs) / 1000;
+  // three seconds of warning, in ticks, which is what the headset promises
+  const warning = perks.ui.headlineWarning && !st.finished ? comingHeadline(st, 6) : null;
+  const undoOffered = perks.ui.undos > 0 && canUndo(st, HUMAN);
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
 
@@ -479,10 +554,46 @@ export default function App() {
           onPlay={(i) => {
             setLeague(i);
             savePick(i);
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset, i);
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset, i, null);
+            setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
+            haptic('heavy');
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (screen === 'board') {
+    return (
+      <div className="app">
+        <BoardScreen
+          leagueName={LEAGUES[league].name}
+          leagueIndex={league}
+          stocks={cfg.stocks}
+          ui={perks.ui}
+          prefs={boardPrefs}
+          rerollsLeft={rerollsLeft}
+          onReroll={() => {
+            setRerollsLeft((n) => Math.max(0, n - 1));
+            restart(String(Math.floor(Math.random() * 1e6)), undefined, league, null, true);
+            haptic();
+          }}
+          onPrefs={(next) => {
+            setBoardPrefs(next);
+            prefsRef.current = next;
+            savePrefs(next);
+            // redraw at once, so the standing order is something you can see
+            restart(undefined, undefined, league, null, true);
+          }}
+          onForce={(ids) => {
+            restart(undefined, undefined, league, ids, true);
+            haptic('heavy');
+          }}
+          onPlay={() => {
             setScreen('vs');
             haptic('heavy');
           }}
+          onBack={() => setScreen('leagues')}
         />
       </div>
     );
@@ -629,7 +740,11 @@ export default function App() {
       <div className="chart-card">
         <div className="chart-wrap">
           <canvas ref={canvasRef} />
-          {newsFlash && <div className="news-flash">{newsFlash}</div>}
+          {newsFlash ? (
+            <div className="news-flash">{newsFlash}</div>
+          ) : (
+            warning && <div className="news-flash warning">{warning}: SOMETHING IS COMING</div>
+          )}
         </div>
       </div>
 
@@ -660,12 +775,19 @@ export default function App() {
         onChange={setFraction}
       />
 
+      {undoOffered && (
+        <button className="undo-btn" onClick={takeBack}>
+          TAKE THAT BACK
+        </button>
+      )}
+
       <div className="rows">
         {cfg.stocks.map((s, i) => {
           const price = st.stocks[i].price;
           const short = isShortSide(st, HUMAN, i);
           const buyQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'buy', fraction });
           const sellQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'sell', fraction });
+          const held = me.positions[i] !== 0;
           return (
             <StockRow
               key={s.id}
@@ -677,6 +799,12 @@ export default function App() {
               canBuy={!st.finished && !me.bankrupt && buyQty > 0}
               canSell={!st.finished && !me.bankrupt && sellQty < 0}
               floats={floats[i] ?? []}
+              kind={perks.ui.showKind ? TRAIT_SHORT[s.trait?.kind ?? 'plain'] : undefined}
+              hint={
+                perks.ui.holdDirection && held
+                  ? (segmentAt(st.stocks[i].segments, st.tick)?.dir ?? 0)
+                  : undefined
+              }
               onBuy={() => act(i, 'buy')}
               onSell={() => act(i, 'sell')}
             />
@@ -698,8 +826,8 @@ export default function App() {
           leagueName={LEAGUES[league].name}
           unlockedName={unlockedName}
           onRestart={() => {
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset, league);
-            setScreen('vs');
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset, league, null);
+            setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
           }}
           onMenu={() => setScreen('leagues')}
         />

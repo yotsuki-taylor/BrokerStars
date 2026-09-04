@@ -2,6 +2,7 @@ import type { Config } from './config';
 import type { Segment } from './market';
 import type { Rng } from './rng';
 import type { TraitState } from './traits';
+import type { TraderPerks } from './perks';
 
 export interface Trade {
   tick: number;
@@ -12,6 +13,8 @@ export interface Trade {
   commission: number;
   /** realised P&L booked when this trade reduced an existing position */
   realized: number;
+  /** part of a realised loss handed straight back by a perk, if any */
+  refund: number;
 }
 
 export interface TraderState {
@@ -31,6 +34,18 @@ export interface TraderState {
   pending: { atTick: number; stock: number; dir: -1 | 1; fraction: number }[];
   /** bot scratch space: tick at which it plans to take the position off, per stock */
   exitAt: number[];
+  /** the terms this trader trades on; bots get NO_PERKS */
+  perks: TraderPerks;
+  /** what is left of the per-match allowances the perks grant */
+  stopsLeft: number;
+  undosLeft: number;
+  refundUsed: boolean;
+  /**
+   * The book as it stood before the last trade, kept only while an undo is
+   * still on offer. Restoring a snapshot is exact, where replaying a trade
+   * backwards through the average-entry maths is not.
+   */
+  undoPoint: { tick: number; cash: number; positions: number[]; avgEntry: number[] } | null;
 }
 
 export interface StockState {
@@ -71,4 +86,6 @@ export interface Action {
   stock: number;
   side: ActionSide;
   fraction: number;
+  /** an automatic exit prices at the mid, whatever the trader's slippage is */
+  noSlip?: boolean;
 }
