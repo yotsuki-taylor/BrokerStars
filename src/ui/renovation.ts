@@ -6,7 +6,7 @@
  * plain image stacking with no per-item placement.
  */
 
-export type RoomSlot = 'bg' | 'bed' | 'door' | 'table' | 'window' | 'shelf' | 'rug';
+export type RoomSlot = 'bg' | 'bed' | 'door' | 'table' | 'window' | 'shelf' | 'rug' | 'picture';
 
 export interface RoomStep {
   slot: RoomSlot;
@@ -16,8 +16,8 @@ export interface RoomStep {
 
 /**
  * Renovation order, exactly as it is offered. Prices climb so the room stays
- * something to work towards rather than a first-evening purchase — all seven
- * numbers live here and nowhere else.
+ * something to work towards rather than a first-evening purchase — all eight
+ * numbers live here and nowhere else, and they come to 144 stars.
  */
 export const ROOM_STEPS: RoomStep[] = [
   { slot: 'bg', label: 'WALLS & FLOOR', price: 3 },
@@ -27,20 +27,40 @@ export const ROOM_STEPS: RoomStep[] = [
   { slot: 'table', label: 'TABLE', price: 20 },
   { slot: 'shelf', label: 'SHELF', price: 25 },
   { slot: 'rug', label: 'RUG', price: 30 },
+  { slot: 'picture', label: 'PICTURE', price: 35 },
 ];
 
-/** Bottom to top: walls, then the rug on the floor, wall fittings, furniture. */
-const DRAW_ORDER: RoomSlot[] = ['bg', 'rug', 'window', 'door', 'shelf', 'bed', 'table'];
+/**
+ * Bottom to top: walls, then what hangs flat on them, the rug on the floor,
+ * wall fittings, and furniture last. The picture goes in early — it is paint
+ * on a wall, and anything in the room stands in front of it.
+ */
+const DRAW_ORDER: RoomSlot[] = [
+  'bg',
+  'picture',
+  'rug',
+  'window',
+  'door',
+  'shelf',
+  'bed',
+  'table',
+];
 
-/** The starting room has no rug at all — laying one is the last step. */
+/**
+ * What the starting room already has, in some shabby form. Three slots have no
+ * poor sprite at all and stay empty until they are bought: there is no rug on
+ * the floor, nothing on the wall, and nowhere to work — the table is the one
+ * piece of furniture the room is missing rather than merely a bad version of.
+ */
 const POOR_HAS: Record<RoomSlot, boolean> = {
   bg: true,
   bed: true,
   door: true,
-  table: true,
+  table: false,
   window: true,
   shelf: true,
   rug: false,
+  picture: false,
 };
 
 const tex = (name: string) => `${import.meta.env.BASE_URL}textures/room/${name}.png`;
