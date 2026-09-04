@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import Character from './Character';
-import { Check, Cross, Star } from './components';
+import { Check, Cross, Lock, Star } from './components';
 import {
+  CATALOGUE,
   PRICES,
   RARITIES,
   RARITY_COLOR,
+  RARITY_LABEL,
   SLOTS,
   SLOT_FOCUS,
   SLOT_LABEL,
+  SLOT_THEME,
   SPRITE_H,
   SPRITE_W,
+  highestOwned,
   itemId,
+  nextRarity,
   pieceUrl,
   thumbPiece,
   type Outfit,
@@ -64,15 +69,28 @@ export default function Shop({
   const [picked, setPicked] = useState<Rarity | null>(null);
   const [confirming, setConfirming] = useState(false);
 
+  const top = highestOwned(owned, slot);
+  const next = nextRarity(owned, slot);
+
+  // The shop shows the whole ladder, locked rungs included — what is coming is
+  // half of why you would save for it. Equip only lists what is actually owned.
   const rarities = mode === 'equip' ? RARITIES.filter((r) => owned.has(itemId(slot, r))) : RARITIES;
-  const selected = picked && rarities.includes(picked) ? picked : (outfit[slot] ?? rarities[0] ?? null);
+  const fallback = mode === 'equip' ? (outfit[slot] ?? top) : (next ?? top);
+  const selected = picked && rarities.includes(picked) ? picked : fallback;
+
+  const card = selected ? CATALOGUE[slot][selected] : null;
+  const isOwned = selected ? owned.has(itemId(slot, selected)) : false;
+  const isWorn = selected != null && outfit[slot] === selected;
+  const isNext = selected != null && selected === next;
+  const price = freeMode ? 0 : selected ? PRICES[selected] : 0;
+  const canAfford = stars >= price;
   // preview wears whatever is highlighted, so you see it before paying for it
   const preview: Outfit = selected ? { ...outfit, [slot]: selected } : outfit;
 
-  const isOwned = selected ? owned.has(itemId(slot, selected)) : false;
-  const isWorn = selected != null && outfit[slot] === selected;
-  const price = freeMode ? 0 : selected ? PRICES[selected] : 0;
-  const canAfford = stars >= price;
+  const pick = (r: Rarity) => {
+    setPicked(r);
+    setConfirming(false);
+  };
 
   return (
     <div className="shop">
@@ -87,8 +105,12 @@ export default function Shop({
         </div>
       </header>
 
+      {/* The preview always wears whatever is highlighted, which is the point
+          of a fitting room — but on a bare slot that puts an unbought garment
+          on the biggest thing on screen, and it reads as already owned. */}
       <div className="shop-preview">
         <Character outfit={preview} />
+        {selected && !isOwned && <span className="try-tag">TRYING ON</span>}
       </div>
 
       <div className="slot-tabs">
@@ -111,15 +133,14 @@ export default function Shop({
         {rarities.map((r) => {
           const own = owned.has(itemId(slot, r));
           const worn = outfit[slot] === r;
+          // in the shop, anything past the next rung is out of reach for now
+          const locked = mode === 'shop' && !own && r !== next;
           return (
             <button
               key={r}
-              className={`item${r === selected ? ' picked' : ''}${own ? ' owned' : ''}`}
+              className={`item${r === selected ? ' picked' : ''}${own ? ' owned' : ''}${locked ? ' locked' : ''}`}
               style={{ borderColor: RARITY_COLOR[r] }}
-              onClick={() => {
-              setPicked(r);
-              setConfirming(false);
-            }}
+              onClick={() => pick(r)}
             >
               <i style={thumbStyle(slot, r)} />
               {worn && <em className="worn-tag">ON</em>}
@@ -130,6 +151,8 @@ export default function Shop({
                   ) : (
                     'OWNED'
                   )
+                ) : locked ? (
+                  <Lock size={10} />
                 ) : (
                   <>
                     <Star size={9} /> {PRICES[r]}
@@ -142,7 +165,19 @@ export default function Shop({
         {rarities.length === 0 && <p className="empty-note">Nothing owned in this slot yet.</p>}
       </div>
 
-      {selected && admin && isOwned && selected !== 'common' && (
+      {/* What the thing actually does. Fixed height, so stepping along the
+          ladder never shuffles the buttons under the player's thumb. */}
+      {card && selected && (
+        <div className="item-desc">
+          <div className="desc-head">
+            <b style={{ color: RARITY_COLOR[selected] }}>{card.name}</b>
+            <span className="desc-kicker">{SLOT_THEME[slot]}</span>
+          </div>
+          <p>{card.text}</p>
+        </div>
+      )}
+
+      {selected && admin && top === selected && (
         <button className="admin-btn wide" onClick={() => onRefund(slot, selected)}>
           DEV · REFUND THIS
         </button>
@@ -168,14 +203,16 @@ export default function Shop({
 
       {selected && !confirming && (
         <button
-          className={`menu-btn play action${!isOwned && !canAfford ? ' broke' : ''}`}
-          disabled={isWorn || (!isOwned && !canAfford)}
+          className={`menu-btn play action${!isOwned && (!isNext || !canAfford) ? ' broke' : ''}`}
+          disabled={isWorn || (!isOwned && (!isNext || !canAfford))}
           onClick={() => (isOwned ? onEquip(slot, selected) : setConfirming(true))}
         >
           {isWorn ? (
             'WEARING'
           ) : isOwned ? (
             'WEAR'
+          ) : !isNext ? (
+            `BUY ${RARITY_LABEL[next ?? 'common']} FIRST`
           ) : price === 0 ? (
             'BUY FREE'
           ) : canAfford ? (

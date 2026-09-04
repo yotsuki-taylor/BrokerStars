@@ -36,9 +36,12 @@ import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import {
   PRICES,
+  highestOwned,
+  isBuyable,
   itemId,
   loadOutfit,
   loadOwned,
+  rarityBelow,
   saveOutfit,
   randomOutfit,
   saveOwned,
@@ -357,13 +360,14 @@ export default function App() {
     haptic();
   };
 
+  /** A slot is climbed a rung at a time, so only one rarity is ever for sale. */
   const buy = (slot: Slot, rarity: Rarity) => {
+    if (!isBuyable(owned, slot, rarity)) return;
     const price = freeMode ? 0 : PRICES[rarity];
-    const id = itemId(slot, rarity);
-    if (owned.has(id) || stars < price) return;
+    if (stars < price) return;
     addStars(-price);
     setOwned((prev) => {
-      const next = new Set(prev).add(id);
+      const next = new Set(prev).add(itemId(slot, rarity));
       saveOwned(next);
       return next;
     });
@@ -371,19 +375,28 @@ export default function App() {
     haptic('heavy');
   };
 
-  /** Dev only: give an item back and refund it. */
+  /**
+   * Dev only: hand the top item of a slot back and refund it. Only the top,
+   * or the ladder would end up with a hole in it that nothing could fill.
+   */
   const refund = (slot: Slot, rarity: Rarity) => {
-    if (!admin || rarity === 'common') return; // the starter set cannot be sold back
-    const id = itemId(slot, rarity);
-    if (!owned.has(id)) return;
+    if (!admin || highestOwned(owned, slot) !== rarity) return;
     addStars(PRICES[rarity]);
     setOwned((prev) => {
       const next = new Set(prev);
-      next.delete(id);
+      next.delete(itemId(slot, rarity));
       saveOwned(next);
       return next;
     });
-    if (outfit[slot] === rarity) equip(slot, 'common');
+    if (outfit[slot] !== rarity) return;
+    const below = rarityBelow(rarity);
+    setOutfit((prev) => {
+      const next = { ...prev };
+      if (below) next[slot] = below;
+      else delete next[slot];
+      saveOutfit(next);
+      return next;
+    });
   };
 
   const addStars = (delta: number) =>
