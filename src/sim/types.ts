@@ -1,6 +1,7 @@
 import type { Config } from './config';
 import type { Segment } from './market';
 import type { Rng } from './rng';
+import type { TraitState } from './traits';
 
 export interface Trade {
   tick: number;
@@ -38,6 +39,8 @@ export interface StockState {
   impact: number;
   history: number[];
   segments: Segment[];
+  /** whatever this company's quirk has to remember across the match */
+  trait: TraitState;
 }
 
 export interface NewsBanner {
@@ -58,7 +61,7 @@ export interface MatchState {
   winner: number | null;
   /** index of the trader who gave up, if the match ended that way */
   resigned: number | null;
-  rng: { price: Rng; bot: Rng };
+  rng: { price: Rng; bot: Rng; trait: Rng };
 }
 
 export type ActionSide = 'buy' | 'sell';

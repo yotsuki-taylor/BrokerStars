@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
+import { pickCompanies } from '../sim/companies';
 import { createMatch, resign, step } from '../sim/match';
 import { Rng, hashSeed } from '../sim/rng';
 import { applyAction, buyingPower, isShortSide, plannedQty } from '../sim/trading';
@@ -14,6 +15,7 @@ import {
   tex,
   type FloatPnl,
 } from './components';
+import Companies from './Companies';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
@@ -21,6 +23,7 @@ import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
+import { loadSeen, saveSeen, withSeen } from './archive';
 import {
   LEAGUES,
   loadPick,
@@ -61,12 +64,19 @@ function playerName(): string {
   return name ? name.slice(0, 12).toUpperCase() : 'YOU';
 }
 
-function makeMatch(cfg: Config, seed: string, preset: string): MatchState {
-  return createMatch(hashSeed(seed), cfg, {
+/**
+ * One match, with its board drawn for the league being played. The draw runs
+ * off the match seed too, so replaying a seed brings back the same three
+ * companies as well as the same prices.
+ */
+function makeMatch(cfg: Config, seed: string, preset: string, league: number): MatchState {
+  const h = hashSeed(seed);
+  return createMatch(h, cfg, {
     traders: [
       { name: playerName(), kind: 'human', preset: 'medium' },
       { name: 'RIVAL', kind: 'bot', preset },
     ],
+    stocks: pickCompanies(league, new Rng(h ^ 0x1b873593)),
   });
 }
 
@@ -80,8 +90,13 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
         the finish is never a race to sell.
       </p>
       <p>
-        TET CORP is expensive and slow, URANUS swings hard in both directions, NOVA sits between
-        them. Read the chart: a move that has just started usually has further to run.
+        The three companies change from match to match, and each one has a habit of its own — one
+        commits to a trend, one goes dead for seconds at a time, one climbs until the day it
+        doesn&rsquo;t. COMPANIES on the menu keeps every one you have met and what it does.
+      </p>
+      <p>
+        The year runs in four quarters, ruled off on the chart. Some companies only do their trick
+        at a quarter close, so watch the line as one goes by.
       </p>
       <p>
         SIZE sets how much of your buying power one tap commits. BUY goes long. SELL closes a
@@ -106,7 +121,7 @@ export default function App() {
   const [leagueWins, setLeagueWins] = useState(loadWins);
   const [league, setLeague] = useState(() => loadPick(leagueWins));
   const [botPreset, setBotPreset] = useState(() => LEAGUES[league].preset);
-  const stateRef = useRef<MatchState>(makeMatch(baseCfg.current, seed, botPreset));
+  const stateRef = useRef<MatchState>(makeMatch(baseCfg.current, seed, botPreset, league));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
 
@@ -121,10 +136,12 @@ export default function App() {
   const [pauseOpen, setPauseOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
-  const [screen, setScreen] = useState<'menu' | 'shop' | 'equip' | 'leagues' | 'vs' | 'match'>(
-    'menu',
-  );
+  const [screen, setScreen] = useState<
+    'menu' | 'shop' | 'equip' | 'archive' | 'leagues' | 'vs' | 'match'
+  >('menu');
   const [stars, setStars] = useState(loadStars);
+  /** companies the player has met — filed by the match that put them up */
+  const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
   const [roomDone, setRoomDone] = useState(loadRoom);
@@ -276,12 +293,21 @@ export default function App() {
 
   /* ------------------------------------------------------------------- actions */
   const restart = useCallback(
-    (nextSeed?: string, nextPreset?: string) => {
+    (nextSeed?: string, nextPreset?: string, nextLeague?: number) => {
       const s = nextSeed ?? seed;
       const p = nextPreset ?? botPreset;
+      // the league decides the board, and a restart from the dev panel names none
+      const li = nextLeague ?? leagueRef.current;
       if (nextSeed) setSeed(s);
       if (nextPreset) setBotPreset(p);
-      stateRef.current = makeMatch(baseCfg.current, s, p);
+      const match = makeMatch(baseCfg.current, s, p, li);
+      stateRef.current = match;
+      // meeting a company in a match is what files it in the archive
+      setSeenCompanies((prev) => {
+        const next = withSeen(prev, match.cfg.stocks.map((x) => x.id));
+        if (next !== prev) saveSeen(next);
+        return next;
+      });
       // seeded off the match, so replaying a seed brings back the same opponent
       const look = new Rng(hashSeed(s) ^ 0x5bd1e995);
       setRivalOutfit(randomOutfit(() => look.next()));
@@ -440,7 +466,7 @@ export default function App() {
           onPlay={(i) => {
             setLeague(i);
             savePick(i);
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset);
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset, i);
             setScreen('vs');
             haptic('heavy');
           }}
@@ -463,6 +489,14 @@ export default function App() {
           }}
           onCancel={() => setScreen('menu')}
         />
+      </div>
+    );
+  }
+
+  if (screen === 'archive') {
+    return (
+      <div className="app">
+        <Companies seen={seenCompanies} onBack={() => setScreen('menu')} />
       </div>
     );
   }
@@ -502,6 +536,7 @@ export default function App() {
           onPlay={() => setScreen('leagues')}
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
+          onArchive={() => setScreen('archive')}
           onHelp={() => setHelpOpen(true)}
         />
         {pauseOpen && !st.finished && (
@@ -650,7 +685,7 @@ export default function App() {
           leagueName={LEAGUES[league].name}
           unlockedName={unlockedName}
           onRestart={() => {
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset);
+            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset, league);
             setScreen('vs');
           }}
           onMenu={() => setScreen('leagues')}

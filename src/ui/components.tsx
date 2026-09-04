@@ -15,8 +15,8 @@ export const signed = (n: number, digits = 0) =>
 
 export const deltaClass = (n: number) => (n > 0.5 ? 'up' : n < -0.5 ? 'down' : 'flat');
 
-/** White silhouette PNG tinted with the company colour via a CSS mask. */
-function LogoMask({ file, color, className }: { file: string; color: string; className: string }) {
+/** White silhouette tinted with the company colour via a CSS mask. */
+export function LogoMask({ file, color, className }: { file: string; color: string; className: string }) {
   return (
     <i
       className={className}

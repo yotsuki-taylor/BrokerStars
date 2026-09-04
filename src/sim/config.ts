@@ -1,21 +1,15 @@
 /**
- * ALL balance parameters live here. Pure data, no imports.
- * The dev panel edits a clone of this object at runtime.
+ * ALL balance parameters live here. The dev panel edits a clone of this object
+ * at runtime, so everything below has to survive a JSON round trip.
+ *
+ * The one import is the company roster, which is pure data too: `stocks` is
+ * only the default board — a real match asks companies.ts for three drawn from
+ * the league being played.
  */
 
-export interface StockConfig {
-  id: string;
-  name: string;
-  basePrice: number;
-  noiseSigma: number;
-  driftPerStrength: number;
-  segmentTicks: [number, number];
-  meanReversion: number;
-  /** Company identity colour: chart line, icon, its button row. Never means buy/sell. */
-  color: string;
-  /** White silhouette used as a CSS mask so the icon takes the company colour. */
-  logo: string;
-}
+import { DEFAULT_STOCKS } from './companies';
+
+export type { Company, StockConfig, Trait, TraitKind } from './companies';
 
 export interface PhaseConfig {
   id: string;
@@ -50,6 +44,12 @@ export const CONFIG = {
   match: {
     durationSec: 120,
     tickMs: 500,
+    /**
+     * The match is a business year. Four quarters of 30 seconds, two half-years
+     * of 60: the chart rules them off and several companies key their behaviour
+     * to the closes, so nothing may assume this is 4 except by reading it here.
+     */
+    quarters: 4,
     startingCash: 10000,
     commissionRate: 0.003,
     bankruptcyEnabled: true,
@@ -73,52 +73,23 @@ export const CONFIG = {
     percentRange: [-50, 50] as [number, number],
     absoluteRange: [0, 2000] as [number, number],
   },
-  stocks: [
-    {
-      id: 'tet',
-      name: 'TET CORP',
-      basePrice: 1000,
-      noiseSigma: 0.008,
-      driftPerStrength: 0.0035,
-      segmentTicks: [16, 24] as [number, number],
-      meanReversion: 0.05,
-      color: '#FFB020',
-      logo: 'logo0.png',
-    },
-    {
-      id: 'uranus',
-      name: 'URANUS',
-      basePrice: 500,
-      noiseSigma: 0.022,
-      driftPerStrength: 0.008,
-      segmentTicks: [8, 16] as [number, number],
-      meanReversion: 0.04,
-      color: '#C56BFF',
-      logo: 'logo1.png',
-    },
-    // the middle ground: neither the safe bet nor the lottery ticket
-    {
-      id: 'nova',
-      name: 'NOVA',
-      basePrice: 750,
-      noiseSigma: 0.014,
-      driftPerStrength: 0.005,
-      segmentTicks: [12, 18] as [number, number],
-      meanReversion: 0.045,
-      color: '#3FD2F5',
-      logo: 'logo2.png',
-    },
-  ] as StockConfig[],
+  stocks: DEFAULT_STOCKS,
   impact: {
     refQty: 12,
     slippageCoef: 0.02,
     permanentCoef: 0.012,
     decayPerTick: 0.15,
   },
+  /**
+   * One phase per quarter, so the year the chart draws and the volatility the
+   * market runs at are the same four boxes. The two headlines are spread one
+   * per middle quarter rather than both landing in the same 40 seconds.
+   */
   phases: [
-    { id: 'open', fromSec: 0, toSec: 40, volMult: 0.7, truthShift: 0.05 },
-    { id: 'news', fromSec: 40, toSec: 80, volMult: 1.0, truthShift: 0.0, newsEvents: 2 },
-    { id: 'close', fromSec: 80, toSec: 120, volMult: 1.6, truthShift: -0.1 },
+    { id: 'q1', fromSec: 0, toSec: 30, volMult: 0.7, truthShift: 0.05 },
+    { id: 'q2', fromSec: 30, toSec: 60, volMult: 1.0, truthShift: 0.0, newsEvents: 1 },
+    { id: 'q3', fromSec: 60, toSec: 90, volMult: 1.25, truthShift: 0.0, newsEvents: 1 },
+    { id: 'q4', fromSec: 90, toSec: 120, volMult: 1.6, truthShift: -0.1 },
   ] as PhaseConfig[],
   bot: {
     /**

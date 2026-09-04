@@ -850,7 +850,14 @@ body {
 .menu-left {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* three buttons stack against one PLAY, so they give up a little height and a
+   little type size rather than pushing the room out of the menu */
+.menu-left .menu-btn {
+  min-height: 42px;
+  font-size: 15px;
 }
 
 .menu-btn {
@@ -1687,4 +1694,188 @@ body {
   to {
     transform: scale(1);
   }
+}
+
+
+/* ---------- company archive ---------- */
+
+.archive {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vh, 12px);
+  padding-bottom: 6px;
+}
+
+.arch-count {
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(#1d5ea6, #10427c);
+  padding: 3px 14px;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.arch-count b {
+  font-size: 18px;
+}
+
+/* the card for whichever company is selected: fixed height, so picking a
+   company with a longer line never shuffles the grid below it */
+.arch-detail {
+  flex: 0 0 auto;
+  height: 150px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  background: rgba(8, 34, 70, 0.72);
+  padding: 10px 12px;
+}
+
+.arch-big {
+  flex: 0 0 auto;
+  width: 62px;
+  height: 62px;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+
+.arch-text {
+  min-width: 0;
+}
+
+.arch-name {
+  font-size: 19px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.arch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 5px 0;
+}
+
+.arch-chip {
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+.arch-blurb {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 700;
+  opacity: 0.88;
+}
+
+.arch-where {
+  margin-top: 5px;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  opacity: 0.55;
+}
+
+.arch-empty {
+  margin: 0 auto;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.7;
+  max-width: 30ch;
+}
+
+.arch-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  align-content: start;
+  padding-bottom: 4px;
+}
+
+.arch-card {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(8, 34, 70, 0.6);
+  padding: 6px 3px 5px;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  opacity: 0.85;
+  transition: transform 0.08s, opacity 0.15s;
+}
+
+.arch-card.picked {
+  background: rgba(30, 90, 160, 0.85);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.arch-card.locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.arch-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 34px;
+  aspect-ratio: 1 / 1;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+
+/* the locked card has no logo to mask, just a padlock sitting in the same box */
+.arch-thumb.hidden {
+  background: none;
+  color: rgba(255, 255, 255, 0.55);
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* Two lines, always: the longest names cannot fit one, and clipping every
+   card to the same height keeps the grid rows even whatever is in them. */
+.arch-tag {
+  font-size: 8px;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+  text-align: center;
+  opacity: 0.85;
+  max-width: 100%;
+  height: 2.3em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }

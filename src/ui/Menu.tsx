@@ -19,6 +19,7 @@ export default function Menu({
   onPlay,
   onShop,
   onEquip,
+  onArchive,
   onHelp,
 }: {
   stars: number;
@@ -33,6 +34,7 @@ export default function Menu({
   onPlay: () => void;
   onShop: () => void;
   onEquip: () => void;
+  onArchive: () => void;
   onHelp: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
@@ -136,6 +138,9 @@ export default function Menu({
           </button>
           <button className="menu-btn" onClick={onEquip}>
             EQUIP
+          </button>
+          <button className="menu-btn" onClick={onArchive}>
+            COMPANIES
           </button>
         </div>
         <button className="menu-btn play" onClick={onPlay}>

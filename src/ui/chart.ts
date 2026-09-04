@@ -1,3 +1,4 @@
+import { quarterTicks } from '../sim/market';
 import type { MatchState } from '../sim/types';
 
 export interface ChartOpts {
@@ -194,6 +195,34 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
   ctx.beginPath();
   ctx.rect(padL, padT, plotW, plotH);
   ctx.clip();
+
+  // --- quarter rules: the match is a business year, and several companies do
+  // something at a close, so the boxes have to be on the chart and not just in
+  // the player's head. Dashed and dim — they are a frame, not data.
+  const qt = quarterTicks(cfg);
+  ctx.textBaseline = 'top';
+  ctx.font = font(9);
+  for (let q = 0; q <= cfg.match.quarters; q++) {
+    const t = q * qt;
+    if (t < xMin || t > xMax) continue;
+    const x = px(t);
+    if (q > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (q < cfg.match.quarters) {
+      ctx.fillStyle = 'rgba(255,255,255,0.34)';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Q${q + 1}`, x + 4, padT + 2);
+    }
+  }
+  ctx.textBaseline = 'middle';
 
   // --- truth overlay: the future the market has already committed to
   if (opts.showTruth) {

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG, cloneConfig } from './config';
-import { buildSchedule, phaseAtTick, planNewsEvents, segmentAt, totalTicks } from './market';
+import {
+  buildSchedule,
+  halfProgress,
+  isQuarterClose,
+  phaseAtTick,
+  planNewsEvents,
+  quarterCloses,
+  quarterOf,
+  quarterTicks,
+  segmentAt,
+  totalTicks,
+} from './market';
 import { createMatch, runToEnd } from './match';
 import { Rng, hashSeed } from './rng';
 
@@ -68,11 +79,50 @@ describe('segment schedule', () => {
   });
 });
 
+describe('quarters', () => {
+  it('cuts the match into four equal boxes', () => {
+    expect(quarterTicks(CONFIG)).toBe(TOTAL / CONFIG.match.quarters);
+    expect(quarterCloses(CONFIG)).toEqual([60, 120, 180, 240]);
+    expect(quarterCloses(CONFIG)[CONFIG.match.quarters - 1]).toBe(TOTAL);
+  });
+
+  it('puts every tick in exactly one quarter, first to last', () => {
+    expect(quarterOf(CONFIG, 0)).toBe(0);
+    expect(quarterOf(CONFIG, quarterTicks(CONFIG) - 1)).toBe(0);
+    expect(quarterOf(CONFIG, quarterTicks(CONFIG))).toBe(1);
+    // the closing tick belongs to the last quarter rather than a fifth one
+    expect(quarterOf(CONFIG, TOTAL)).toBe(CONFIG.match.quarters - 1);
+  });
+
+  it('flags the closes and nothing else', () => {
+    expect(isQuarterClose(CONFIG, 0)).toBe(false);
+    for (const t of quarterCloses(CONFIG)) expect(isQuarterClose(CONFIG, t)).toBe(true);
+    expect(isQuarterClose(CONFIG, 59)).toBe(false);
+    expect(isQuarterClose(CONFIG, 61)).toBe(false);
+  });
+
+  it('runs the half-year from 0 at the open to 1 at the close', () => {
+    const half = quarterTicks(CONFIG) * 2;
+    expect(halfProgress(CONFIG, 0)).toBe(0);
+    expect(halfProgress(CONFIG, half / 2)).toBeCloseTo(0.5, 6);
+    expect(halfProgress(CONFIG, half)).toBe(1);
+    // and starts over for the second half
+    expect(halfProgress(CONFIG, half + 1)).toBeCloseTo(1 / half, 6);
+    expect(halfProgress(CONFIG, TOTAL)).toBe(1);
+  });
+});
+
 describe('phases', () => {
-  it('walks through the three phases in order', () => {
-    expect(phaseAtTick(CONFIG, 0).id).toBe('open');
-    expect(phaseAtTick(CONFIG, TOTAL / 2).id).toBe('news');
-    expect(phaseAtTick(CONFIG, TOTAL - 1).id).toBe('close');
+  it('walks through the four quarters in order', () => {
+    expect(phaseAtTick(CONFIG, 0).id).toBe('q1');
+    expect(phaseAtTick(CONFIG, TOTAL / 2).id).toBe('q3');
+    expect(phaseAtTick(CONFIG, TOTAL - 1).id).toBe('q4');
+  });
+
+  it('gives every quarter a phase of its own', () => {
+    expect(CONFIG.phases).toHaveLength(CONFIG.match.quarters);
+    const qt = quarterTicks(CONFIG);
+    CONFIG.phases.forEach((p, i) => expect(phaseAtTick(CONFIG, i * qt).id).toBe(p.id));
   });
 
   it('gets more volatile towards the end', () => {
@@ -87,15 +137,17 @@ describe('phases', () => {
     }
   });
 
-  it('schedules the news events inside the news phase', () => {
+  it('schedules every news event inside the quarter that asked for it', () => {
     const events = planNewsEvents(CONFIG, new Rng(4));
-    const phase = CONFIG.phases.find((p) => p.newsEvents)!;
-    const from = (phase.fromSec * 1000) / CONFIG.match.tickMs;
-    const to = (phase.toSec * 1000) / CONFIG.match.tickMs;
-    expect(events).toHaveLength(phase.newsEvents!);
+    const loud = CONFIG.phases.filter((p) => p.newsEvents);
+    expect(events).toHaveLength(loud.reduce((n, p) => n + (p.newsEvents ?? 0), 0));
     for (const e of events) {
-      expect(e.tick).toBeGreaterThanOrEqual(from);
-      expect(e.tick).toBeLessThan(to);
+      const phase = loud.find((p) => {
+        const from = (p.fromSec * 1000) / CONFIG.match.tickMs;
+        const to = (p.toSec * 1000) / CONFIG.match.tickMs;
+        return e.tick >= from && e.tick < to;
+      });
+      expect(phase).toBeDefined();
       expect(e.stockIdx).toBeGreaterThanOrEqual(0);
       expect(e.stockIdx).toBeLessThan(CONFIG.stocks.length);
     }

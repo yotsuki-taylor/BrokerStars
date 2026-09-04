@@ -1,5 +1,6 @@
 import { CONFIG, cloneConfig, type Config } from './config';
 import { botStep } from './bot';
+import type { StockConfig } from './companies';
 import {
   buildSchedule,
   phaseAtTick,
@@ -9,6 +10,7 @@ import {
   totalTicks,
 } from './market';
 import { Rng } from './rng';
+import { initTraitState, traitStep } from './traits';
 import { liquidate, netWorth } from './trading';
 import type { MatchState, StockState, TraderState } from './types';
 
@@ -20,6 +22,11 @@ export interface TraderSpec {
 
 export interface MatchOptions {
   traders?: [TraderSpec, TraderSpec];
+  /**
+   * The board for this match. Leave it out and the config's default three go
+   * up; the game hands in whatever the league drew (see companies.ts).
+   */
+  stocks?: StockConfig[];
 }
 
 const DEFAULT_TRADERS: [TraderSpec, TraderSpec] = [
@@ -29,11 +36,14 @@ const DEFAULT_TRADERS: [TraderSpec, TraderSpec] = [
 
 export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptions = {}): MatchState {
   const config = cloneConfig(cfg);
+  // cloned too: a match must never be able to edit the roster it was dealt
+  if (opts.stocks?.length) config.stocks = JSON.parse(JSON.stringify(opts.stocks));
   const total = totalTicks(config);
 
   const scheduleRng = new Rng(seed ^ 0x9e3779b9);
   const priceRng = new Rng(seed ^ 0xc2b2ae35);
   const botRng = new Rng(seed ^ 0x27d4eb2f);
+  const traitRng = new Rng(seed ^ 0x85ebca6b);
 
   const news = planNewsEvents(config, scheduleRng);
   const stocks: StockState[] = config.stocks.map((s, idx) => {
@@ -44,6 +54,7 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
       impact: 0,
       history: [s.basePrice],
       segments: buildSchedule(s, scheduleRng, total, ticks),
+      trait: initTraitState(s),
     };
   });
 
@@ -75,7 +86,7 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     finished: false,
     winner: null,
     resigned: null,
-    rng: { price: priceRng, bot: botRng },
+    rng: { price: priceRng, bot: botRng, trait: traitRng },
   };
   return state;
 }
@@ -100,6 +111,14 @@ export function step(state: MatchState): MatchState {
         text: `${state.cfg.stocks[i].name}: BREAKING`,
       });
     }
+    const plan = traitStep(
+      state.cfg,
+      state.cfg.stocks[i],
+      st.trait,
+      st.price,
+      state.tick,
+      state.rng.trait,
+    );
     const res = stepPrice({
       price: st.price,
       impact: st.impact,
@@ -108,6 +127,7 @@ export function step(state: MatchState): MatchState {
       volMult: phase.volMult,
       decayPerTick: state.cfg.impact.decayPerTick,
       rng: state.rng.price,
+      plan,
     });
     st.prevPrice = st.price;
     st.price = res.price;
