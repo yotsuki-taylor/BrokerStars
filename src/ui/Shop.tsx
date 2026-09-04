@@ -17,6 +17,7 @@ import {
   itemId,
   nextRarity,
   pieceUrl,
+  rarityBelow,
   thumbPiece,
   type Outfit,
   type Rarity,
@@ -82,6 +83,13 @@ export default function Shop({
   const isOwned = selected ? owned.has(itemId(slot, selected)) : false;
   const isWorn = selected != null && outfit[slot] === selected;
   const isNext = selected != null && selected === next;
+  /**
+   * The rung directly under the one being looked at, which is what a locked
+   * card should send you to. Naming the next rung the player owes instead gave
+   * every locked card in a bare slot the same "BUY COMMON FIRST" — three steps
+   * of advice at once, and none of them about the card in front of you.
+   */
+  const below = selected ? rarityBelow(selected) : null;
   const price = freeMode ? 0 : selected ? PRICES[selected] : 0;
   const canAfford = stars >= price;
   // preview wears whatever is highlighted, so you see it before paying for it
@@ -212,7 +220,7 @@ export default function Shop({
           ) : isOwned ? (
             'WEAR'
           ) : !isNext ? (
-            `BUY ${RARITY_LABEL[next ?? 'common']} FIRST`
+            `BUY ${RARITY_LABEL[below ?? next ?? 'common']} FIRST`
           ) : price === 0 ? (
             'BUY FREE'
           ) : canAfford ? (
