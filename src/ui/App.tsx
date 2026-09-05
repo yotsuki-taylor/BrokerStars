@@ -36,6 +36,7 @@ import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
+import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -92,7 +93,7 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
 function playerName(): string {
   const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
   const name = String(u?.first_name ?? u?.username ?? '').trim();
-  return name ? name.slice(0, 12).toUpperCase() : 'YOU';
+  return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
 /**
@@ -116,7 +117,7 @@ function makeMatch(
       // The rival brings the same one. Anything else moves the ladder: the
       // league win rates were measured with neither side holding an ability,
       // and handing one to the player alone quietly makes every rung easier.
-      { name: 'RIVAL', kind: 'bot', preset, ability },
+      { name: t('match.rival'), kind: 'bot', preset, ability },
     ],
     stocks: pickCompanies(league, new Rng(h ^ 0x1b873593), 3, board),
   });
@@ -141,33 +142,61 @@ function comingHeadline(state: MatchState, within: number): string | null {
 function HelpOverlay({ onClose }: { onClose: () => void }) {
   return (
     <div className="overlay">
-      <h2>HOW TO PLAY</h2>
-      <p>
-        80 seconds. You and your rival trade the same three stocks. Whoever ends with the bigger
-        net worth — cash plus positions — wins. Positions close automatically at the whistle, so
-        the finish is never a race to sell.
-      </p>
-      <p>
-        The three companies change from match to match, and each one has a habit of its own — one
-        commits to a trend, one goes dead for seconds at a time, one climbs until the day it
-        doesn&rsquo;t. COMPANIES on the menu keeps every one you have met and what it does.
-      </p>
-      <p>
-        The year runs in four quarters, ruled off on the chart. Some companies only do their trick
-        at a quarter close, so watch the line as one goes by.
-      </p>
-      <p>
-        BUY goes long, and one tap commits a quarter of your cash. SELL closes a long, or opens
-        a short when you hold nothing — then you profit when the price falls. Big orders move the
-        price against you, so the rival feels every trade you make.
-      </p>
-      <p>
-        Dashed line on the chart is your average entry: a long is in profit above it, a short
-        below. Win a match to earn stars — the tougher the league, the bigger the payout. Bank
-        enough wins in a league and the next one opens.
-      </p>
+      <h2>{t('help.title')}</h2>
+      <p>{t('help.match')}</p>
+      <p>{t('help.companies')}</p>
+      <p>{t('help.quarters')}</p>
+      <p>{t('help.trading')}</p>
+      <p>{t('help.entry')}</p>
       <button className="big-btn" onClick={onClose}>
-        GOT IT
+        {t('help.gotIt')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * What the corner of the menu opens: help, and the language the game is in.
+ * The language names are never translated — a player who has landed in the
+ * wrong one needs to recognise their own, not read ours.
+ */
+function SettingsOverlay({
+  onHelp,
+  onPickLang,
+  onClose,
+}: {
+  onHelp: () => void;
+  onPickLang: (l: Lang) => void;
+  onClose: () => void;
+}) {
+  const [langOpen, setLangOpen] = useState(false);
+  return (
+    <div className="overlay settings">
+      <h2>{langOpen ? t('settings.language') : t('settings.title')}</h2>
+      {langOpen ? (
+        <div className="settings-list">
+          {LANGS.map((l) => (
+            <button
+              key={l}
+              className={`big-btn${l === lang() ? '' : ' ghost'}`}
+              onClick={() => onPickLang(l)}
+            >
+              {LANG_NAME[l]}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="settings-list">
+          <button className="big-btn ghost" onClick={onHelp}>
+            {t('settings.help')}
+          </button>
+          <button className="big-btn ghost" onClick={() => setLangOpen(true)}>
+            {t('settings.language')}
+          </button>
+        </div>
+      )}
+      <button className="big-btn" onClick={onClose}>
+        {t('settings.close')}
       </button>
     </div>
   );
@@ -212,6 +241,7 @@ export default function App() {
   const [devOpen, setDevOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<
@@ -248,7 +278,7 @@ export default function App() {
   ui.current.showTruth = showTruth;
   ui.current.peekTicks = perks.ui.truthTicks;
   ui.current.paused =
-    devOpen || helpOpen || pauseOpen || countdown !== null || screen !== 'match';
+    devOpen || helpOpen || pauseOpen || settingsOpen || countdown !== null || screen !== 'match';
 
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
@@ -729,11 +759,11 @@ export default function App() {
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
-          onHelp={() => setHelpOpen(true)}
+          onSettings={() => setSettingsOpen(true)}
         />
         {pauseOpen && !st.finished && (
         <div className="overlay pause">
-          <h2>PAUSED</h2>
+          <h2>{t('match.paused')}</h2>
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
@@ -757,15 +787,30 @@ export default function App() {
                 rerender();
               }}
             >
-              SURRENDER
+              {t('match.surrender')}
             </button>
             <button className="big-btn" onClick={() => setPauseOpen(false)}>
-              RESUME
+              {t('match.resume')}
             </button>
           </div>
         </div>
       )}
 
+      {settingsOpen && (
+        <SettingsOverlay
+          onHelp={() => {
+            setSettingsOpen(false);
+            setHelpOpen(true);
+          }}
+          onPickLang={(l) => {
+            setLang(l);
+            // module state, so every screen reads the new language on the next
+            // render — and this is the render
+            rerender();
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
         {devOpen && (
           <DevPanel
@@ -853,7 +898,7 @@ export default function App() {
 
       {undoOffered && (
         <button className="undo-btn" onClick={takeBack}>
-          TAKE THAT BACK
+          {t('match.takeBack')}
         </button>
       )}
 
@@ -882,7 +927,14 @@ export default function App() {
               buyNeedsCash={live && buyQty === 0}
               sellNeedsCash={live && sellQty === 0}
               floats={floats[i] ?? []}
-              kind={perks.ui.showKind ? TRAIT_SHORT[s.trait?.kind ?? 'plain'] : undefined}
+              kind={
+                perks.ui.showKind
+                  ? tr(
+                      `trait.${s.trait?.kind ?? 'plain'}.short`,
+                      TRAIT_SHORT[s.trait?.kind ?? 'plain'],
+                    )
+                  : undefined
+              }
               hint={
                 perks.ui.holdDirection && held
                   ? (segmentAt(st.stocks[i].segments, st.tick)?.dir ?? 0)
@@ -920,7 +972,7 @@ export default function App() {
 
       {pauseOpen && !st.finished && (
         <div className="overlay pause">
-          <h2>PAUSED</h2>
+          <h2>{t('match.paused')}</h2>
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
@@ -944,15 +996,30 @@ export default function App() {
                 rerender();
               }}
             >
-              SURRENDER
+              {t('match.surrender')}
             </button>
             <button className="big-btn" onClick={() => setPauseOpen(false)}>
-              RESUME
+              {t('match.resume')}
             </button>
           </div>
         </div>
       )}
 
+      {settingsOpen && (
+        <SettingsOverlay
+          onHelp={() => {
+            setSettingsOpen(false);
+            setHelpOpen(true);
+          }}
+          onPickLang={(l) => {
+            setLang(l);
+            // module state, so every screen reads the new language on the next
+            // render — and this is the render
+            rerender();
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
 
       {devOpen && (

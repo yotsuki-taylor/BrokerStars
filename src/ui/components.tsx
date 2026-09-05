@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import React from 'react';
 import type { StockConfig } from '../sim/config';
 import Character from './Character';
@@ -74,6 +75,25 @@ export function Cross({ size = 20 }: { size?: number }) {
   );
 }
 
+/**
+ * Three bars for the corner of the menu. Drawn rather than a texture, like the
+ * marks above: the corner used to hold the help sprite, and the sprite said
+ * "help" when what is behind it now is a menu with help inside it.
+ */
+export function Gear({ size = 20 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Padlock on a league that is not open yet. Drawn, like the marks above. */
 export function Lock({ size = 20 }: { size?: number }) {
   return (
@@ -130,7 +150,7 @@ export function TraderCard({
         <div className="nw">
           <b>{money(netWorth)}</b>
           {bankrupt ? (
-            <span className="bankrupt-tag">BUST</span>
+            <span className="bankrupt-tag">{t('match.bust')}</span>
           ) : (
             <span className={`delta ${deltaClass(pct)}`}>{signed(pct, 1)}%</span>
           )}
@@ -140,10 +160,10 @@ export function TraderCard({
             included, so the two numbers always add back up to the total. */}
         <div className="split">
           <span className={`part cash${spent ? ' spent' : ''}`}>
-            CASH <b>{money(cash)}</b>
+            {t('match.cash')} <b>{money(cash)}</b>
           </span>
           <span className="part held">
-            HELD <b>{money(held)}</b>
+            {t('match.held')} <b>{money(held)}</b>
           </span>
         </div>
       </div>
@@ -184,7 +204,7 @@ export function AbilityBar({
         onClick={onUse}
         disabled={!ready}
       >
-        {spent ? `${name} · USED` : name}
+        {spent ? t('match.abilityUsed', { name }) : name}
       </button>
     </div>
   );
@@ -241,7 +261,7 @@ export function StockRow({
     <div className="row">
       {position !== 0 && (
         <div className={`pos-badge ${position > 0 ? 'long' : 'short'}`}>
-          {position > 0 ? `+${position}` : `-${-position}`} SH
+          {position > 0 ? `+${position}` : `-${-position}`} {t('match.shares')}
         </div>
       )}
       {floats.map((f) => (
@@ -259,7 +279,9 @@ export function StockRow({
         onClick={onSell}
         disabled={!canSell}
       >
-        <span>{sellNeedsCash ? 'NO CASH' : shortSide ? 'SHORT' : 'SELL'}</span>
+        <span>
+          {sellNeedsCash ? t('match.noCash') : shortSide ? t('match.short') : t('match.sell')}
+        </span>
       </button>
 
       <div className="info" style={{ boxShadow: `inset 0 0 0 2px ${stock.color}` }}>
@@ -290,7 +312,7 @@ export function StockRow({
         onClick={onBuy}
         disabled={!canBuy}
       >
-        <span>{buyNeedsCash ? 'NO CASH' : 'BUY'}</span>
+        <span>{buyNeedsCash ? t('match.noCash') : t('match.buy')}</span>
       </button>
     </div>
   );

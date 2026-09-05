@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Character from './Character';
 import { Check, Cross, Lock, Star } from './components';
+import { t, tr } from './i18n';
 import {
   CATALOGUE,
   PRICES,
@@ -104,7 +105,7 @@ export default function Shop({
     <div className="shop">
       <header className="menu-top">
         <button className="menu-btn back" onClick={onBack}>
-          BACK
+          {t('common.back')}
         </button>
         <span className="spacer" />
         <div className="star-count">
@@ -118,7 +119,7 @@ export default function Shop({
           on the biggest thing on screen, and it reads as already owned. */}
       <div className="shop-preview">
         <Character outfit={preview} />
-        {selected && !isOwned && <span className="try-tag">TRYING ON</span>}
+        {selected && !isOwned && <span className="try-tag">{t('shop.tryingOn')}</span>}
       </div>
 
       <div className="slot-tabs">
@@ -132,7 +133,7 @@ export default function Shop({
               setConfirming(false);
             }}
           >
-            {SLOT_LABEL[s]}
+            {tr(`slot.${s}.label`, SLOT_LABEL[s])}
           </button>
         ))}
       </div>
@@ -155,9 +156,9 @@ export default function Shop({
               <span className="tag" style={{ color: RARITY_COLOR[r] }}>
                 {own ? (
                   worn ? (
-                    'WORN'
+                    t('shop.worn')
                   ) : (
-                    'OWNED'
+                    t('shop.owned')
                   )
                 ) : locked ? (
                   <Lock size={10} />
@@ -170,7 +171,7 @@ export default function Shop({
             </button>
           );
         })}
-        {rarities.length === 0 && <p className="empty-note">Nothing owned in this slot yet.</p>}
+        {rarities.length === 0 && <p className="empty-note">{t('shop.emptySlot')}</p>}
       </div>
 
       {/* What the thing actually does. Fixed height, so stepping along the
@@ -178,10 +179,12 @@ export default function Shop({
       {card && selected && (
         <div className="item-desc">
           <div className="desc-head">
-            <b style={{ color: RARITY_COLOR[selected] }}>{card.name}</b>
-            <span className="desc-kicker">{SLOT_THEME[slot]}</span>
+            <b style={{ color: RARITY_COLOR[selected] }}>
+              {tr(`item.${slot}.${selected}.name`, card.name)}
+            </b>
+            <span className="desc-kicker">{tr(`slot.${slot}.theme`, SLOT_THEME[slot])}</span>
           </div>
-          <p>{card.text}</p>
+          <p>{tr(`item.${slot}.${selected}.text`, card.text)}</p>
         </div>
       )}
 
@@ -216,20 +219,25 @@ export default function Shop({
           onClick={() => (isOwned ? onEquip(slot, selected) : setConfirming(true))}
         >
           {isWorn ? (
-            'WEARING'
+            t('shop.wearing')
           ) : isOwned ? (
-            'WEAR'
+            t('shop.wear')
           ) : !isNext ? (
-            `BUY ${RARITY_LABEL[below ?? next ?? 'common']} FIRST`
+            t('shop.buyFirst', {
+              rarity: tr(
+                `rarity.${below ?? next ?? 'common'}`,
+                RARITY_LABEL[below ?? next ?? 'common'],
+              ),
+            })
           ) : price === 0 ? (
-            'BUY FREE'
+            t('shop.buyFree')
           ) : canAfford ? (
             <>
-              BUY <Star size={16} /> {price}
+              {t('shop.buy')} <Star size={16} /> {price}
             </>
           ) : (
             <>
-              NEED <Star size={16} /> {price - stars} MORE
+              {t('shop.need')} <Star size={16} /> {price - stars} {t('shop.more')}
             </>
           )}
         </button>

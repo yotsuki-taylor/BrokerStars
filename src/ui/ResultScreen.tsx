@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { drawNetWorthChart } from './chart';
 import { Star, money, signed } from './components';
 import type { MatchState } from '../sim/types';
+import { t as tt } from './i18n';
 import { REWARDS, type Award } from './progress';
 
 export default function ResultScreen({
@@ -40,27 +41,32 @@ export default function ResultScreen({
   const winRate = closed.length
     ? (100 * closed.filter((t) => t.realized > 0).length) / closed.length
     : 0;
-  const title = state.resigned === humanIdx
-    ? 'SURRENDERED'
-    : me.bankrupt
-    ? 'BANKRUPT'
-    : state.winner === null
-      ? 'DRAW'
-      : state.winner === humanIdx
-        ? 'YOU WIN'
-        : 'YOU LOSE';
+  const title =
+    state.resigned === humanIdx
+      ? tt('result.surrendered')
+      : me.bankrupt
+        ? tt('result.bankrupt')
+        : state.winner === null
+          ? tt('result.draw')
+          : state.winner === humanIdx
+            ? tt('result.win')
+            : tt('result.lose');
   const gapPct =
     Math.abs(me.netWorth - rival.netWorth) / Math.max(1, Math.max(me.netWorth, rival.netWorth));
 
   const tradeLabel = (t?: (typeof closed)[number]) =>
-    t ? `${state.cfg.stocks[t.stock].name.split(' ')[0]} ${signed(t.realized)}` : 'NONE';
+    t ? `${state.cfg.stocks[t.stock].name.split(' ')[0]} ${signed(t.realized)}` : tt('common.none');
 
   return (
     <div className="overlay">
       <h2>{title}</h2>
       <div className="sub">
-        {leagueName} · {money(me.netWorth)} vs {money(rival.netWorth)} · gap{' '}
-        {(gapPct * 100).toFixed(1)}%
+        {tt('result.gap', {
+          league: leagueName,
+          mine: money(me.netWorth),
+          theirs: money(rival.netWorth),
+          gap: (gapPct * 100).toFixed(1),
+        })}
       </div>
 
       {award && (
@@ -68,21 +74,21 @@ export default function ResultScreen({
           <Star size={22} />
           <b>+{award.total}</b>
           <span>
-            {award.win > 0 ? `WIN +${award.win}` : 'NO WIN'}
+            {award.win > 0 ? tt('result.winPay', { n: award.win }) : tt('result.noWin')}
             {award.profit > 0
-              ? `  ·  +${Math.round(REWARDS.profitBar * 100)}% GAIN +${award.profit}`
+              ? `  ·  ${tt('result.gainPay', { n: Math.round(REWARDS.profitBar * 100), stars: award.profit })}`
               : ''}
           </span>
         </div>
       )}
 
-      {unlockedName && <div className="unlocked">{unlockedName} UNLOCKED</div>}
+      {unlockedName && <div className="unlocked">{tt('result.unlocked', { name: unlockedName })}</div>}
 
       <canvas ref={ref} className="result-chart" />
 
       <div className="result-grid">
         <div className="stat">
-          <div className="k">YOUR RESULT</div>
+          <div className="k">{tt('result.yourResult')}</div>
           <div className="v">
             {money(me.netWorth)}{' '}
             <span className={me.netWorth >= start ? 'delta up' : 'delta down'}>
@@ -100,23 +106,23 @@ export default function ResultScreen({
           </div>
         </div>
         <div className="stat">
-          <div className="k">BEST TRADE</div>
+          <div className="k">{tt('result.bestTrade')}</div>
           <div className="v" style={{ color: best ? 'var(--up)' : 'var(--neutral)' }}>
             {tradeLabel(best)}
           </div>
         </div>
         <div className="stat">
-          <div className="k">WORST TRADE</div>
+          <div className="k">{tt('result.worstTrade')}</div>
           <div className="v" style={{ color: worst ? 'var(--down)' : 'var(--neutral)' }}>
             {tradeLabel(worst)}
           </div>
         </div>
         <div className="stat">
-          <div className="k">TRADES</div>
+          <div className="k">{tt('result.trades')}</div>
           <div className="v">{me.trades.length}</div>
         </div>
         <div className="stat">
-          <div className="k">CLOSED IN PROFIT</div>
+          <div className="k">{tt('result.closedInProfit')}</div>
           <div
             className="v"
             style={{
@@ -130,10 +136,10 @@ export default function ResultScreen({
 
       <div className="result-actions">
         <button className="big-btn ghost" onClick={onMenu}>
-          MENU
+          {tt('common.menu')}
         </button>
         <button className="big-btn" onClick={onRestart}>
-          PLAY AGAIN
+          {tt('result.playAgain')}
         </button>
       </div>
     </div>

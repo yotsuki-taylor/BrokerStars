@@ -300,18 +300,27 @@ body {
 .trader-card .split {
   display: flex;
   justify-content: space-between;
-  gap: 5px;
-  margin-top: 1px;
+  gap: 6px;
+  margin-top: 2px;
   font-size: 7px;
   letter-spacing: 0.4px;
   opacity: 0.6;
 }
 
+/*
+ * Label over number rather than beside it. Side by side, the pair is as wide as
+ * both put together, and the row only ever had room for two four-letter English
+ * words: CASH 9 293 HELD 724 already ran three pixels over its box at the 320pt
+ * floor the layout is built to. Stacked, each half is as wide as the wider of
+ * its two lines, which fits with room to spare and stops the row being a
+ * hostage to how long a word is in whatever language is on.
+ */
 .trader-card .part {
   display: flex;
-  align-items: baseline;
-  gap: 3px;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
@@ -2242,4 +2251,20 @@ body {
 
 .board .arch-grid {
   flex: 1 1 auto;
+}
+
+/* ---------- settings ---------- */
+
+/* The overlay is the same box the help text uses; this only stacks the two or
+   three choices in it into full-width rows. */
+.overlay.settings .settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 6px 0 14px;
+}
+
+.overlay.settings .settings-list .big-btn {
+  width: 100%;
 }

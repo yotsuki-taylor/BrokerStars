@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Lock, Star, tex } from './components';
-import { LEAGUES, unlockedCount, winsOwed } from './leagues';
+import { t } from './i18n';
+import { LEAGUES, leagueBlurb, leagueName, unlockedCount, winsOwed } from './leagues';
 
 const badge = (file: string) => tex(`leagues/${file}`);
 
@@ -118,7 +119,7 @@ export default function LeagueSelect({
     <div className="leagues">
       <header className="menu-top">
         <button className="menu-btn back" onClick={onBack}>
-          BACK
+          {t('common.back')}
         </button>
         <span className="spacer" />
         <div className="star-count">
@@ -127,7 +128,7 @@ export default function LeagueSelect({
         </div>
       </header>
 
-      <h3 className="league-title">CHOOSE YOUR LEAGUE</h3>
+      <h3 className="league-title">{t('leagues.title')}</h3>
 
       <div className="league-track" ref={trackRef}>
         {LEAGUES.map((l, i) => (
@@ -147,29 +148,29 @@ export default function LeagueSelect({
                 </span>
               )}
             </div>
-            <div className="league-name">{l.name}</div>
+            <div className="league-name">{leagueName(l)}</div>
           </div>
         ))}
       </div>
 
       <div className="league-info">
-        <p className="league-blurb">{league.blurb}</p>
+        <p className="league-blurb">{leagueBlurb(league)}</p>
 
         <div className="league-pay">
           <span className="pay-chip">
             <Star size={16} />
-            <b>{league.reward.win}</b> WIN
+            <b>{league.reward.win}</b> {t('leagues.win')}
           </span>
           <span className="pay-chip">
             <Star size={16} />
-            <b>{league.reward.profit}</b> +40% GAIN
+            <b>{league.reward.profit}</b> {t('leagues.gain', { n: 40 })}
           </span>
         </div>
 
         {!unlocked && prev ? (
           <div className="league-gate locked">
             <span>
-              WIN {owed} MORE IN {prev.name}
+              {t('leagues.winMoreIn', { n: owed, name: leagueName(prev) })}
             </span>
             <div className="gate-bar">
               <i style={{ width: `${((prev.winsToNext - owed) / prev.winsToNext) * 100}%` }} />
@@ -179,8 +180,12 @@ export default function LeagueSelect({
           <div className="league-gate">
             <span>
               {banked >= gate
-                ? `${LEAGUES[center + 1].name} IS OPEN`
-                : `${banked}/${gate} WINS · UNLOCKS ${LEAGUES[center + 1].name}`}
+                ? t('leagues.isOpen', { name: leagueName(LEAGUES[center + 1]) })
+                : t('leagues.winsToNext', {
+                    n: banked,
+                    of: gate,
+                    name: leagueName(LEAGUES[center + 1]),
+                  })}
             </span>
             <div className="gate-bar">
               <i style={{ width: `${Math.min(100, (banked / gate) * 100)}%` }} />
@@ -189,7 +194,7 @@ export default function LeagueSelect({
         ) : (
           <div className="league-gate">
             <span>
-              TOP LEAGUE · {banked} WIN{banked === 1 ? '' : 'S'}
+              {t('leagues.topLeague', { n: banked })}
             </span>
             <div className="gate-bar">
               <i style={{ width: '100%' }} />
@@ -199,7 +204,7 @@ export default function LeagueSelect({
       </div>
 
       <button className="menu-btn play" disabled={!unlocked} onClick={() => onPlay(center)}>
-        {unlocked ? 'PLAY' : 'LOCKED'}
+        {unlocked ? t('menu.play') : t('leagues.locked')}
       </button>
     </div>
   );

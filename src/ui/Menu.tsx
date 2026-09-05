@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Character from './Character';
 import Room from './Room';
-import { Check, Cross, Star, tex } from './components';
+import { Check, Cross, Gear, Star } from './components';
+import { t, tr } from './i18n';
 import { ROOM_DONE, ROOM_STEPS } from './renovation';
 import type { Outfit } from './wardrobe';
 
@@ -20,7 +21,7 @@ export default function Menu({
   onShop,
   onEquip,
   onArchive,
-  onHelp,
+  onSettings,
 }: {
   stars: number;
   outfit: Outfit;
@@ -35,7 +36,7 @@ export default function Menu({
   onShop: () => void;
   onEquip: () => void;
   onArchive: () => void;
-  onHelp: () => void;
+  onSettings: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
   const [confirming, setConfirming] = useState(false);
@@ -50,15 +51,18 @@ export default function Menu({
       {/* while confirming, the room already shows what the upgrade would look like */}
       <Room done={confirming ? roomDone + 1 : roomDone} />
 
+      {/* The corner used to be the help button and nothing else. Help is one of
+          two things behind it now, so the corner opens a menu instead, and the
+          stars move across to give it the left-hand side. */}
       <header className="menu-top">
+        <button className="icon-btn accent" onClick={onSettings} aria-label="settings">
+          <Gear size={22} />
+        </button>
+        <span className="spacer" />
         <div className="star-count">
           <Star size={20} />
           <b>{stars}</b>
         </div>
-        <span className="spacer" />
-        <button className="icon-btn accent" onClick={onHelp} aria-label="help">
-          <img src={tex('help.png')} alt="" />
-        </button>
       </header>
 
       <div className="hero">
@@ -84,9 +88,11 @@ export default function Menu({
         <div className={`reno${confirming ? ' confirming' : ''}`}>
           <div className="reno-text">
             <span className="reno-kicker">
-              {confirming ? 'RENOVATE?' : `NEXT UPGRADE · ${roomDone + 1}/${ROOM_DONE}`}
+              {confirming
+                ? t('menu.renovate')
+                : t('menu.nextUpgrade', { n: roomDone + 1, of: ROOM_DONE })}
             </span>
-            <b>{step.label}</b>
+            <b>{tr(`room.${step.slot}`, step.label)}</b>
           </div>
 
           {confirming ? (
@@ -116,7 +122,7 @@ export default function Menu({
               onClick={() => setConfirming(true)}
             >
               {price === 0 ? (
-                'FREE'
+                t('menu.free')
               ) : (
                 <>
                   <Star size={15} /> {price}
@@ -127,24 +133,24 @@ export default function Menu({
         </div>
       ) : (
         <div className="reno done">
-          <b>ROOM COMPLETE</b>
+          <b>{t('menu.roomComplete')}</b>
         </div>
       )}
 
       <div className="menu-actions">
         <div className="menu-left">
           <button className="menu-btn" onClick={onShop}>
-            SHOP
+            {t('menu.shop')}
           </button>
           <button className="menu-btn" onClick={onEquip}>
-            EQUIP
+            {t('menu.equip')}
           </button>
           <button className="menu-btn" onClick={onArchive}>
-            COMPANIES
+            {t('menu.companies')}
           </button>
         </div>
         <button className="menu-btn play" onClick={onPlay}>
-          PLAY
+          {t('menu.play')}
         </button>
       </div>
     </div>

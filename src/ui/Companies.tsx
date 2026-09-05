@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { COMPANIES, TRAIT_LABEL, type Company } from '../sim/companies';
 import { LogoMask, Lock, money } from './components';
-import { LEAGUES } from './leagues';
+import { LEAGUES, leagueName } from './leagues';
+import { t, tr } from './i18n';
 
 /**
  * The company archive: everything the game can put on a board, and what the
@@ -10,9 +11,9 @@ import { LEAGUES } from './leagues';
  */
 
 function whereFound(c: Company): string {
-  if (c.staple) return 'EVERY LEAGUE';
+  if (c.staple) return t('archive.everyLeague');
   const league = LEAGUES[c.fromLeague];
-  return league ? `${league.name} AND UP` : 'UNKNOWN';
+  return league ? t('archive.andUp', { name: leagueName(league) }) : t('archive.unknown');
 }
 
 export default function Companies({ seen, onBack }: { seen: Set<string>; onBack: () => void }) {
@@ -24,7 +25,7 @@ export default function Companies({ seen, onBack }: { seen: Set<string>; onBack:
     <div className="archive">
       <header className="menu-top">
         <button className="menu-btn back" onClick={onBack}>
-          BACK
+          {t('common.back')}
         </button>
         <span className="spacer" />
         <div className="arch-count">
@@ -42,17 +43,19 @@ export default function Companies({ seen, onBack }: { seen: Set<string>; onBack:
               </div>
               <div className="arch-chips">
                 <span className="arch-chip" style={{ borderColor: picked.color }}>
-                  {TRAIT_LABEL[picked.trait.kind]}
+                  {tr(`trait.${picked.trait.kind}.label`, TRAIT_LABEL[picked.trait.kind])}
                 </span>
-                <span className="arch-chip">LISTS AT {money(picked.basePrice)}</span>
+                <span className="arch-chip">
+                  {t('archive.listsAt', { price: money(picked.basePrice) })}
+                </span>
               </div>
-              <p className="arch-blurb">{picked.tagline}</p>
+              <p className="arch-blurb">{tr(`company.${picked.id}.tagline`, picked.tagline)}</p>
               <div className="arch-where">{whereFound(picked)}</div>
             </div>
           </>
         ) : (
           <p className="arch-empty">
-            Nothing filed yet. Every company you trade against goes on this shelf.
+            {t('archive.empty')}
           </p>
         )}
       </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { t, tr } from './i18n';
 import { TRAIT_LABEL, poolFor, type Company, type StockConfig } from '../sim/companies';
 import { Check, Cross, LogoMask, Lock, Star } from './components';
 import type { BoardPrefs } from './board';
@@ -62,7 +63,7 @@ export default function BoardScreen({
               setChosen([]);
             }}
           >
-            BACK
+            {t('common.back')}
           </button>
           <span className="spacer" />
           <div className="arch-count">
@@ -70,7 +71,7 @@ export default function BoardScreen({
           </div>
         </header>
 
-        <h3 className="league-title">NAME YOUR THREE</h3>
+        <h3 className="league-title">{t('board.nameYours')}</h3>
 
         <div className="arch-grid">
           {pool.map((c) => {
@@ -99,7 +100,9 @@ export default function BoardScreen({
             setChosen([]);
           }}
         >
-          {chosen.length === 3 ? 'TAKE THIS BOARD' : `PICK ${3 - chosen.length} MORE`}
+          {chosen.length === 3
+            ? t('board.take')
+            : t('board.pickMore', { n: 3 - chosen.length })}
         </button>
       </div>
     );
@@ -109,13 +112,13 @@ export default function BoardScreen({
     <div className="board">
       <header className="menu-top">
         <button className="menu-btn back" onClick={onBack}>
-          BACK
+          {t('common.back')}
         </button>
         <span className="spacer" />
         <span className="board-league">{leagueName}</span>
       </header>
 
-      <h3 className="league-title">TODAY&rsquo;S BOARD</h3>
+      <h3 className="league-title">{t('board.title')}</h3>
 
       <div className="board-list">
         {stocks.map((s) => {
@@ -129,13 +132,20 @@ export default function BoardScreen({
                 <div className="board-name" style={{ color: s.color }}>
                   {s.name}
                   {ui.showQuirks && (
-                    <span className="board-kind">{TRAIT_LABEL[s.trait?.kind ?? 'plain']}</span>
+                    <span className="board-kind">
+                      {tr(
+                        `trait.${s.trait?.kind ?? 'plain'}.label`,
+                        TRAIT_LABEL[s.trait?.kind ?? 'plain'],
+                      )}
+                    </span>
                   )}
                 </div>
                 {ui.showQuirks ? (
-                  <p className="board-blurb">{c.tagline}</p>
+                  <p className="board-blurb">{tr(`company.${c.id}.tagline`, c.tagline)}</p>
                 ) : (
-                  <p className="board-blurb dim">Trades at {Math.round(s.basePrice)}.</p>
+                  <p className="board-blurb dim">
+                    {t('board.tradesAt', { price: Math.round(s.basePrice) })}
+                  </p>
                 )}
               </div>
               {(ui.pins > 0 || ui.bans > 0) && (
@@ -169,12 +179,12 @@ export default function BoardScreen({
         <div className="board-standing">
           {prefs.pin && (
             <span className="pay-chip">
-              <Star size={13} /> ALWAYS {nameOf(prefs.pin, pool)}
+              <Star size={13} /> {t('board.always', { name: nameOf(prefs.pin, pool) })}
             </span>
           )}
           {prefs.ban && (
             <span className="pay-chip">
-              <Cross size={13} /> NEVER {nameOf(prefs.ban, pool)}
+              <Cross size={13} /> {t('board.never', { name: nameOf(prefs.ban, pool) })}
             </span>
           )}
         </div>
@@ -182,21 +192,21 @@ export default function BoardScreen({
 
       <div className="board-actions">
         <button className="menu-btn" disabled={rerollsLeft <= 0} onClick={onReroll}>
-          {rerollsLeft > 0 ? `REROLL · ${rerollsLeft}` : 'NO REROLLS'}
+          {rerollsLeft > 0 ? t('board.rerollN', { n: rerollsLeft }) : t('board.noRerolls')}
         </button>
         {ui.pickAll ? (
           <button className="menu-btn" onClick={() => setChoosing(true)}>
-            PICK YOUR OWN
+            {t('board.pickYourOwn')}
           </button>
         ) : (
           <button className="menu-btn" disabled>
-            <Lock size={14} /> PICK
+            <Lock size={14} /> {t('board.pick')}
           </button>
         )}
       </div>
 
       <button className="menu-btn play" onClick={onPlay}>
-        <Check size={22} /> PLAY
+        <Check size={22} /> {t('menu.play')}
       </button>
     </div>
   );

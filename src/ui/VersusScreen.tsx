@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Character from './Character';
 import { tex } from './components';
+import { t } from './i18n';
 import type { Outfit } from './wardrobe';
 
 /**
@@ -71,7 +72,7 @@ export default function VersusScreen({
             onCancel();
           }}
         >
-          CANCEL
+          {t('common.cancel')}
         </button>
       )}
 
@@ -89,7 +90,7 @@ export default function VersusScreen({
 
       <div className="versus-mark">VS</div>
 
-      {!rivalIn && <div className="versus-status">SEARCHING FOR AN OPPONENT</div>}
+      {!rivalIn && <div className="versus-status">{t('versus.searching')}</div>}
 
       {rivalIn && <div className="name-plate top">{rivalName}</div>}
       <div className="name-plate bottom">{playerName}</div>

@@ -7,6 +7,7 @@
  * number of wins in that league before the next one opens.
  */
 
+import { tr } from './i18n';
 import type { RewardTable } from './progress';
 
 export interface League {
@@ -81,6 +82,13 @@ export const LEAGUES: League[] = [
 ];
 
 export const LEAGUE_COUNT = LEAGUES.length;
+
+/**
+ * The two player-facing strings on a league, in whatever language is on. The
+ * data above stays English — see ui/i18n.ts for why the Russian lives apart.
+ */
+export const leagueName = (l: League): string => tr(`league.${l.id}.name`, l.name);
+export const leagueBlurb = (l: League): string => tr(`league.${l.id}.blurb`, l.blurb);
 
 /** Index of the league a bot preset belongs to, or -1 for the dev-only presets. */
 export function leagueOfPreset(preset: string): number {
