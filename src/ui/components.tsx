@@ -101,6 +101,7 @@ export function TraderCard({
   startCash,
   cheapestShare,
   bankrupt,
+  hit,
 }: {
   name: string;
   /** both traders are dressed figures — the rival's look comes from the versus screen */
@@ -114,6 +115,8 @@ export function TraderCard({
   /** price of the cheapest share, so a cash pile too small to buy anything shows */
   cheapestShare: number;
   bankrupt: boolean;
+  /** an ability is landing on this trader right now */
+  hit: boolean;
 }) {
   const delta = netWorth - startCash;
   const pct = (delta / startCash) * 100;
@@ -144,7 +147,7 @@ export function TraderCard({
           </span>
         </div>
       </div>
-      <div className={`portrait ${mood}`}>
+      <div className={`portrait ${mood}${hit ? ' hit' : ''}`}>
         <Character outfit={outfit} />
       </div>
     </div>
@@ -154,17 +157,37 @@ export function TraderCard({
 /* ---------------------------------------------------------- ability bar */
 
 /**
- * Deliberately empty, and deliberately still here.
+ * The one ability the player brought, and the one press they get for it.
  *
- * A row of 10 / 25 / 50 / MAX buttons used to sit on this line, setting how
- * much of the cash one tap committed. Nobody used it — the choice was made
- * once and never revisited — so the size is fixed now (TRADE_FRACTION in
- * App.tsx) and the buttons are gone. Abilities are going in this slot, and
- * holding the space open means the rows below do not jump down the screen the
- * day they land.
+ * It takes no target — what it lands on is read off the board when it goes off
+ * — so the whole thing is a single button. The slot is kept even with a bare
+ * neck, so that putting a tie on does not shove the stock rows down the screen.
  */
-export function AbilityBar() {
-  return <div className="ability-bar" />;
+export function AbilityBar({
+  name,
+  ready,
+  spent,
+  onUse,
+}: {
+  /** null for a bare neck: the row stays, empty */
+  name: string | null;
+  /** live now — unspent, and whatever it needs is on the board */
+  ready: boolean;
+  spent: boolean;
+  onUse: () => void;
+}) {
+  if (!name) return <div className="ability-bar" />;
+  return (
+    <div className="ability-bar">
+      <button
+        className={`ability-btn${spent ? ' spent' : ''}`}
+        onClick={onUse}
+        disabled={!ready}
+      >
+        {spent ? `${name} · USED` : name}
+      </button>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------ stock row */

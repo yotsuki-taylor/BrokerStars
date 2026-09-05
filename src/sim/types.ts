@@ -3,6 +3,7 @@ import type { Segment } from './market';
 import type { Rng } from './rng';
 import type { TraitState } from './traits';
 import type { TraderPerks } from './perks';
+import type { AbilityId, AbilityState } from './abilities';
 
 export interface Trade {
   tick: number;
@@ -46,6 +47,9 @@ export interface TraderState {
    * backwards through the average-entry maths is not.
    */
   undoPoint: { tick: number; cash: number; positions: number[]; avgEntry: number[] } | null;
+  /** the one ability this trader brought, if any, and whether it is spent */
+  ability: AbilityId | null;
+  abilityUsed: boolean;
 }
 
 export interface StockState {
@@ -77,6 +81,8 @@ export interface MatchState {
   /** index of the trader who gave up, if the match ended that way */
   resigned: number | null;
   rng: { price: Rng; bot: Rng; trait: Rng };
+  /** what the abilities fired so far are still doing to the board */
+  abilities: AbilityState;
 }
 
 export type ActionSide = 'buy' | 'sell';
@@ -88,4 +94,10 @@ export interface Action {
   fraction: number;
   /** an automatic exit prices at the mid, whatever the trader's slippage is */
   noSlip?: boolean;
+  /**
+   * Push it through whatever an ability has shut. A margin call flattens a book
+   * that a halt has frozen; the freeze is there to stop the traders acting, not
+   * to protect them from each other.
+   */
+  force?: boolean;
 }

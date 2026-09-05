@@ -37,12 +37,28 @@ function atLeastOne(power: number, price: number, f: number): number {
   return power >= price ? 1 : 0;
 }
 
+/**
+ * What an ability has shut, read straight off the state rather than through
+ * abilities.ts — the same way the shorting flag is read straight off the config
+ * — so that the module which owns the effects can call applyAction without the
+ * two files importing each other.
+ */
+function shutOut(state: MatchState, action: Action, pos: number): boolean {
+  if (action.force) return false;
+  if (state.tick < state.abilities.frozenUntil[action.stock]) return true;
+  // a blocked trader keeps the right to get out of what they already hold;
+  // what they lose is opening anything or adding to it
+  const opening = action.side === 'buy' ? pos >= 0 : pos <= 0;
+  return opening && state.tick < state.abilities.blockedUntil[action.trader];
+}
+
 /** Share count a BUY/SELL of `fraction` would move, before any clamping. */
 export function plannedQty(state: MatchState, action: Action): number {
   const t = state.traders[action.trader];
   const price = state.stocks[action.stock].price;
   const pos = t.positions[action.stock];
   const f = Math.min(1, Math.max(0, action.fraction));
+  if (shutOut(state, action, pos)) return 0;
   if (action.side === 'buy') {
     if (pos < 0) {
       // buying back a short: close up to `fraction` of it first

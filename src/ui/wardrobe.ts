@@ -78,7 +78,7 @@ export interface ItemCard {
  */
 export const SLOT_THEME: Record<Slot, string> = {
   hat: 'THE BOARD YOU GET',
-  neck: 'WHAT A MATCH PAYS',
+  neck: 'WHAT YOU CAN DO ONCE',
   torso: 'HOW BAD IT CAN GET',
   hand: 'WHAT TRADING COSTS',
   access: 'WHAT YOU KNOW',
@@ -113,19 +113,25 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
   },
   neck: {
-    common: { name: 'STAFF LANYARD', text: 'Matches pay 5% more stars.' },
-    uncommon: { name: 'PLAIN TIE', text: 'Matches pay 10% more stars.' },
+    common: {
+      name: 'STAFF LANYARD',
+      text: 'STATIC — five seconds where your rival cannot open anything new.',
+    },
+    uncommon: {
+      name: 'PLAIN TIE',
+      text: 'HALT — ten seconds where nobody may trade what your rival is deepest in. You too.',
+    },
     rare: {
       name: 'SILK TIE',
-      text: 'Matches pay 15% more, and the bonus for a well traded match comes sooner.',
+      text: 'DOSSIER — see what your rival is holding for the rest of the match.',
     },
     mythic: {
       name: 'BOW TIE',
-      text: 'Matches pay 20% more, and that bonus comes sooner still.',
+      text: 'MARGIN CALL — close every position your rival has, where it stands.',
     },
     legend: {
       name: 'GOLD PENDANT',
-      text: 'Matches pay 25% more, the bonus comes sooner again, and a loss still pays.',
+      text: 'RUMOUR — six seconds of the market moving your biggest position your way.',
     },
   },
   torso: {

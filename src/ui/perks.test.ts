@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ABILITY_IDS } from '../sim/abilities';
 import { CONFIG } from '../sim/config';
 import { NEVER_BUST } from '../sim/perks';
 import { perksFor, wantsBoardScreen } from './perks';
@@ -26,8 +27,7 @@ describe('a bare trader', () => {
     expect(trader.minResult).toBe(0);
     expect(trader.stopLossUses).toBe(0);
     expect(trader.undos).toBe(0);
-    expect(ui.starMult).toBe(1);
-    expect(ui.profitBar).toBe(0.4);
+    expect(ui.ability).toBe(null);
     expect(ui.truthTicks).toBe(0);
     expect(wantsBoardScreen(ui)).toBe(false);
   });
@@ -65,17 +65,15 @@ describe('every ladder climbs the right way', () => {
     expect(perksFor(wearing('torso', 'mythic'), CASH).trader.undos).toBe(0);
   });
 
-  it('pays more and asks less up the NECK slot', () => {
-    const pay = ladder('neck', (p) => p.ui.starMult);
-    const bar = ladder('neck', (p) => p.ui.profitBar);
-    for (let i = 1; i < pay.length; i++) {
-      expect(pay[i]).toBeGreaterThanOrEqual(pay[i - 1]);
-      expect(bar[i]).toBeLessThanOrEqual(bar[i - 1]);
-    }
-    expect(pay[pay.length - 1]).toBeCloseTo(1.25, 6);
-    expect(bar[bar.length - 1]).toBeCloseTo(0.3, 6);
-    expect(perksFor(wearing('neck', 'legend'), CASH).ui.lossPaysDraw).toBe(true);
-    expect(perksFor(wearing('neck', 'mythic'), CASH).ui.lossPaysDraw).toBe(false);
+  it('brings a different ability at every rung of the NECK slot', () => {
+    // The neck is the only slot that is not a ladder of the same thing turned
+    // up: each rung is its own tool, so what is asserted is that they differ.
+    const got = ladder('neck', (p) => p.ui.ability);
+    expect(got[0]).toBe(null);
+    const worn = got.slice(1);
+    expect(worn).toHaveLength(RARITIES.length);
+    expect(new Set(worn).size).toBe(worn.length);
+    for (const a of worn) expect(ABILITY_IDS).toContain(a);
   });
 
   it('reveals one more thing per rung up the EXTRA slot', () => {
@@ -133,11 +131,19 @@ describe('the catalogue and the numbers', () => {
     });
   });
 
-  it('pays the percentages the NECK cards promise', () => {
-    const promised = [0.05, 0.1, 0.15, 0.2, 0.25];
-    RARITIES.forEach((r, i) => {
-      expect(perksFor(wearing('neck', r), CASH).ui.starMult).toBeCloseTo(1 + promised[i], 6);
-    });
+  it('names on the NECK cards the ability that rung actually brings', () => {
+    const promised: Record<string, string> = {
+      common: 'STATIC',
+      uncommon: 'HALT',
+      rare: 'DOSSIER',
+      mythic: 'MARGIN CALL',
+      legend: 'RUMOUR',
+    };
+    for (const r of RARITIES) {
+      const ability = perksFor(wearing('neck', r), CASH).ui.ability;
+      expect(ability).not.toBe(null);
+      expect(CATALOGUE.neck[r].text).toContain(promised[r]);
+    }
   });
 
   it('stacks the whole wardrobe without any slot cancelling another', () => {
@@ -146,7 +152,7 @@ describe('the catalogue and the numbers', () => {
     expect(trader.freeExits).toBe(true);
     expect(trader.bankruptAt).toBe(NEVER_BUST);
     expect(trader.undos).toBe(1);
-    expect(ui.starMult).toBeCloseTo(1.25, 6);
+    expect(ui.ability).toBe('rumour');
     expect(ui.truthTicks).toBeGreaterThan(0);
     expect(ui.pickAll).toBe(true);
   });

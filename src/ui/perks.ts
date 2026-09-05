@@ -12,16 +12,16 @@
  * be changed together.
  */
 
+import type { AbilityId } from '../sim/abilities';
 import { NO_PERKS, NEVER_BUST, type TraderPerks } from '../sim/perks';
 import { RARITIES, type Outfit, type Slot } from './wardrobe';
 
 /** Everything the outfit changes that the simulation never hears about. */
 export interface UiPerks {
   /* NECK — what a match pays */
-  starMult: number;
+  /** the ability the neck brings to a match, or null for a bare neck */
+  ability: AbilityId | null;
   /** the gain a match has to clear for the profit bonus */
-  profitBar: number;
-  lossPaysDraw: boolean;
 
   /* EXTRA — what you know */
   /** the company's kind is written on its row during the match */
@@ -70,8 +70,8 @@ const BANKRUPT_AT = [0, -500, NEVER_BUST, NEVER_BUST, NEVER_BUST, NEVER_BUST] as
 const KEEP_SHARE = [0, 0, 0.1, 0.1, 0.1, 0.1] as const;
 const STOP_USES = [0, 0, 0, 1, 2, 2] as const;
 const LOSS_REFUND = [0, 0, 0, 0, 0.5, 0.5] as const;
-const STAR_MULT = [1, 1.05, 1.1, 1.15, 1.2, 1.25] as const;
-const PROFIT_BAR = [0.4, 0.4, 0.4, 0.37, 0.34, 0.3] as const;
+/** The neck is the ability slot: one rung, one thing you can do in a match. */
+const ABILITY = [null, 'static', 'halt', 'dossier', 'margincall', 'rumour'] as const;
 const REROLLS = [0, 0, 1, 2, 2, 2] as const;
 
 /** A position this far under water is one the rare BODY item bails out of. */
@@ -80,9 +80,7 @@ const STOP_AT = 0.15;
 const UNDO_WINDOW_TICKS = 10;
 
 export const NO_UI_PERKS: UiPerks = {
-  starMult: 1,
-  profitBar: PROFIT_BAR[0],
-  lossPaysDraw: false,
+  ability: null,
   showKind: false,
   showQuirks: false,
   headlineWarning: false,
@@ -124,9 +122,7 @@ export function perksFor(outfit: Outfit, startingCash: number): Perks {
   };
 
   const ui: UiPerks = {
-    starMult: at(STAR_MULT, neck),
-    profitBar: at(PROFIT_BAR, neck),
-    lossPaysDraw: neck >= 5,
+    ability: at(ABILITY, neck),
     showKind: eyes >= 1,
     showQuirks: eyes >= 2,
     headlineWarning: eyes >= 3,

@@ -231,6 +231,21 @@ body {
   filter: grayscale(0.55) brightness(0.8);
 }
 
+/* Something has just been done to this trader. The opponent is a bot, so an
+   ability that only changed what it may do would land with no sign at all —
+   this is the sign. It beats rather than holds, or five seconds of red reads
+   as a broken sprite. */
+.portrait.hit > img,
+.portrait.hit > .character {
+  filter: drop-shadow(0 0 7px rgba(255, 70, 70, 0.95)) saturate(1.5) hue-rotate(-18deg);
+  animation: hit-beat 0.7s ease-in-out infinite;
+}
+
+@keyframes hit-beat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
 .trader-card {
   border: var(--outline) solid var(--ink);
   border-radius: 10px;
@@ -320,12 +335,39 @@ body {
 
 /* ---------- ability bar ---------- */
 
-/* Empty on purpose: the trade-size buttons that used to sit here are gone and
-   abilities are going in their place. It keeps their exact height so the rows
-   below stay put when that happens. */
+/* The row keeps its height with or without an ability in it, so putting a tie
+   on never shoves the stock rows down the screen. */
 .ability-bar {
   flex: 0 0 auto;
   height: 30px;
+  display: flex;
+  align-items: stretch;
+}
+
+.ability-btn {
+  flex: 1 1 auto;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: linear-gradient(#ffc02e, #f08322);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Spent and merely not-ready look different on purpose: one is a thing you
+   already did, the other is a thing you can still do once the board allows. */
+.ability-btn:disabled {
+  cursor: default;
+  background: rgba(8, 34, 70, 0.55);
+  color: #8fa8c6;
+  border-color: rgba(10, 31, 60, 0.6);
+}
+
+.ability-btn.spent {
+  opacity: 0.5;
 }
 
 /* ---------- stock rows ---------- */

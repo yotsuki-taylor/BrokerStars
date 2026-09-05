@@ -1,4 +1,5 @@
 import { CONFIG, cloneConfig, type Config } from './config';
+import { abilityStep, initAbilities, type AbilityId } from './abilities';
 import { botStep } from './bot';
 import type { StockConfig } from './companies';
 import {
@@ -21,6 +22,8 @@ export interface TraderSpec {
   preset: string;
   /** the terms this seat trades on; left out means the ordinary ones */
   perks?: Partial<TraderPerks>;
+  /** the one ability this seat brought to the match, if any */
+  ability?: AbilityId | null;
 }
 
 export interface MatchOptions {
@@ -81,6 +84,8 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     undosLeft: spec.perks?.undos ?? 0,
     refundUsed: false,
     undoPoint: null,
+    ability: spec.ability ?? null,
+    abilityUsed: false,
   }));
 
   const state: MatchState = {
@@ -95,6 +100,7 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     winner: null,
     resigned: null,
     rng: { price: priceRng, bot: botRng, trait: traitRng },
+    abilities: initAbilities(traders.length, stocks.length),
   };
   return state;
 }
@@ -107,6 +113,7 @@ export function step(state: MatchState): MatchState {
   for (const t of state.traders) {
     if (t.kind === 'bot') botStep(state, t);
   }
+  abilityStep(state);
 
   const phase = phaseAtTick(state.cfg, state.tick);
   for (let i = 0; i < state.stocks.length; i++) {

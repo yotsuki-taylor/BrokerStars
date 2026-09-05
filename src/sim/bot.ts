@@ -1,5 +1,6 @@
 import type { BotConfig } from './config';
-import { applyAction } from './trading';
+import { canUseAbility, useAbility } from './abilities';
+import { applyAction, grossExposure } from './trading';
 import type { MatchState, TraderState } from './types';
 
 /**
@@ -12,6 +13,8 @@ export function botStep(state: MatchState, t: TraderState): void {
   if (!bc || t.bankrupt) return;
   const rng = state.rng.bot;
   const tickMs = state.cfg.match.tickMs;
+
+  maybeFireAbility(state, t);
 
   if (bc.mode === 'hold') {
     if (state.tick === 1) {
@@ -50,7 +53,10 @@ export function botStep(state: MatchState, t: TraderState): void {
     const threshold =
       bc.triggerSigmas * state.cfg.stocks[s].noiseSigma * Math.sqrt(bc.lookbackTicks);
     if (Math.abs(move) < threshold) continue;
-    if (rng.chance(bc.ignoreChance)) continue;
+    // a bot holding DOSSIER knows where the opponent is committed, and skips
+    // far fewer of the moves that happen there
+    const watched = state.abilities.seesBook[t.idx] && state.traders[1 - t.idx]?.positions[s] !== 0;
+    if (rng.chance(watched ? bc.ignoreChance / 2 : bc.ignoreChance)) continue;
     const delayTicks = Math.max(1, Math.round(rng.int(bc.reactionMs[0], bc.reactionMs[1]) / tickMs));
     t.pending.push({
       atTick: state.tick + delayTicks,
@@ -96,6 +102,56 @@ export function botStep(state: MatchState, t: TraderState): void {
         t.exitAt[s] = -1;
       }
     }
+  }
+}
+
+/** What an open book is worth over what it was opened at, for one trader. */
+function unrealised(state: MatchState, t: TraderState): number {
+  let v = 0;
+  for (let i = 0; i < state.stocks.length; i++) {
+    if (!t.positions[i] || !t.avgEntry[i]) continue;
+    v += (state.stocks[i].price - t.avgEntry[i]) * t.positions[i];
+  }
+  return v;
+}
+
+/**
+ * When the bot spends its one ability.
+ *
+ * Each of these is a plain reading of the board rather than a schedule, so a
+ * bot that never gets the moment never fires — which is right: an ability held
+ * back is a decision too. Nothing here draws on RNG, so a seed still replays.
+ *
+ * DOSSIER is the odd one. It buys a look at the opponent's book, and a bot has
+ * no eyes; rather than leave the rung dead, holding it makes the bot pay closer
+ * attention where the opponent is committed (see `ignoreChance` below).
+ */
+function maybeFireAbility(state: MatchState, t: TraderState): void {
+  if (!canUseAbility(state, t.idx)) return;
+  const foe = state.traders[1 - t.idx];
+  if (!foe) return;
+  const start = state.cfg.match.startingCash;
+  // never on the opening tick: every one of these wants a board to read
+  const warm = state.tick > Math.round(state.totalTicks * 0.1);
+  if (!warm) return;
+
+  switch (t.ability) {
+    case 'static':
+    case 'halt':
+      // deny time to someone who is using it better than you are
+      if (foe.netWorth > t.netWorth) useAbility(state, t.idx);
+      break;
+    case 'dossier':
+      useAbility(state, t.idx);
+      break;
+    case 'margincall':
+      // take the rest of a move off them, once the move is worth taking
+      if (unrealised(state, foe) > start * 0.03) useAbility(state, t.idx);
+      break;
+    case 'rumour':
+      // only worth it behind a position big enough to carry the push
+      if (grossExposure(state, t) > start * 0.15) useAbility(state, t.idx);
+      break;
   }
 }
 

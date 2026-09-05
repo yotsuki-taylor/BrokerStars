@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
 import { TRAIT_SHORT, pickCompanies, type PickOptions } from '../sim/companies';
+import { canUseAbility, isHit, useAbility, type AbilityId } from '../sim/abilities';
 import { segmentAt } from '../sim/market';
 import { createMatch, resign, step } from '../sim/match';
 import type { TraderPerks } from '../sim/perks';
@@ -69,6 +70,15 @@ const HUMAN = 0;
  * is one number now.
  */
 const TRADE_FRACTION = 0.25;
+
+/** What the button says. The card in the wardrobe carries the long version. */
+const ABILITY_NAME: Record<AbilityId, string> = {
+  static: 'STATIC',
+  halt: 'HALT',
+  dossier: 'DOSSIER',
+  margincall: 'MARGIN CALL',
+  rumour: 'RUMOUR',
+};
 function haptic(kind: 'light' | 'heavy' = 'light') {
   const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
   if (tg?.impactOccurred) tg.impactOccurred(kind === 'heavy' ? 'medium' : 'light');
@@ -97,12 +107,16 @@ function makeMatch(
   league: number,
   perks: TraderPerks,
   board: PickOptions,
+  ability: AbilityId | null,
 ): MatchState {
   const h = hashSeed(seed);
   return createMatch(h, cfg, {
     traders: [
-      { name: playerName(), kind: 'human', preset: 'medium', perks },
-      { name: 'RIVAL', kind: 'bot', preset },
+      { name: playerName(), kind: 'human', preset: 'medium', perks, ability },
+      // The rival brings the same one. Anything else moves the ladder: the
+      // league win rates were measured with neither side holding an ability,
+      // and handing one to the player alone quietly makes every rung easier.
+      { name: 'RIVAL', kind: 'bot', preset, ability },
     ],
     stocks: pickCompanies(league, new Rng(h ^ 0x1b873593), 3, board),
   });
@@ -177,7 +191,7 @@ export default function App() {
   const prefsRef = useRef(boardPrefs);
   prefsRef.current = boardPrefs;
   const stateRef = useRef<MatchState>(
-    makeMatch(baseCfg.current, seed, botPreset, league, perks.trader, {}),
+    makeMatch(baseCfg.current, seed, botPreset, league, perks.trader, {}, perks.ui.ability),
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
@@ -275,16 +289,14 @@ export default function App() {
         awarded.current = true;
         const me = st.traders[HUMAN];
         const li = leagueRef.current;
-        const mods = perksRef.current.ui;
         const a =
           st.resigned === HUMAN
             ? NO_AWARD
             : awardFor(
                 st.winner === HUMAN,
                 st.winner === null,
-                tradedWell(me.netWorth, st.cfg.match.startingCash, mods.profitBar),
+                tradedWell(me.netWorth, st.cfg.match.startingCash),
                 LEAGUES[li].reward,
-                { starMult: mods.starMult, lossPaysDraw: mods.lossPaysDraw },
               );
         setAward(a);
         if (a.total > 0) {
@@ -373,11 +385,15 @@ export default function App() {
       if (force !== undefined) forcedRef.current = force;
       if (!keepRerolls) setRerollsLeft(perksRef.current.ui.rerolls);
       const prefs = prefsRef.current;
-      const match = makeMatch(baseCfg.current, s, p, li, perksRef.current.trader, {
-        pin: prefs.pin,
-        ban: prefs.ban,
-        force: forcedRef.current,
-      });
+      const match = makeMatch(
+        baseCfg.current,
+        s,
+        p,
+        li,
+        perksRef.current.trader,
+        { pin: prefs.pin, ban: prefs.ban, force: forcedRef.current },
+        perksRef.current.ui.ability,
+      );
       stateRef.current = match;
       // meeting a company in a match is what files it in the archive
       setSeenCompanies((prev) => {
@@ -405,6 +421,13 @@ export default function App() {
     if (!undoLast(stateRef.current, HUMAN)) return;
     haptic('heavy');
     setFloats({});
+    rerender();
+  };
+
+  const fireAbility = () => {
+    const st = stateRef.current;
+    if (!useAbility(st, HUMAN)) return;
+    haptic('heavy');
     rerender();
   };
 
@@ -776,6 +799,7 @@ export default function App() {
           startCash={cfg.match.startingCash}
           cheapestShare={cheapestShare}
           bankrupt={me.bankrupt}
+          hit={isHit(st, HUMAN)}
         />
         <div className={`timer${remaining <= 15 ? ' urgent' : ''}`}>
           {mm}:{ss}
@@ -789,10 +813,16 @@ export default function App() {
           startCash={cfg.match.startingCash}
           cheapestShare={cheapestShare}
           bankrupt={rival.bankrupt}
+          hit={isHit(st, rival.idx)}
         />
       </div>
 
-      <AbilityBar />
+      <AbilityBar
+        name={me.ability ? ABILITY_NAME[me.ability] : null}
+        ready={canUseAbility(st, HUMAN)}
+        spent={me.abilityUsed}
+        onUse={fireAbility}
+      />
 
       {undoOffered && (
         <button className="undo-btn" onClick={takeBack}>
