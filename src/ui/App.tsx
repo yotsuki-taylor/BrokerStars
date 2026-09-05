@@ -142,9 +142,9 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
         orders move the price against you, so the rival feels every trade you make.
       </p>
       <p>
-        Dashed line on the chart is your average entry: above it you are in profit. Win a match to
-        earn stars — the tougher the league, the bigger the payout. Bank enough wins in a league
-        and the next one opens.
+        Dashed line on the chart is your average entry: a long is in profit above it, a short
+        below. Win a match to earn stars — the tougher the league, the bigger the payout. Bank
+        enough wins in a league and the next one opens.
       </p>
       <button className="big-btn" onClick={onClose}>
         GOT IT
