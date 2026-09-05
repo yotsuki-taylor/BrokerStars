@@ -7,3 +7,8 @@ tsconfig.tsbuildinfo
 
 # bot token lives here
 .env
+
+# worker build state, local D1, and the throwaway token a local run needs
+worker/node_modules
+worker/.wrangler
+.dev.vars

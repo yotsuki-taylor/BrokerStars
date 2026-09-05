@@ -2305,3 +2305,90 @@ body {
   font-weight: 700;
   max-width: 34ch;
 }
+
+/* ---------- leaderboard ---------- */
+
+.board {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+.board-head em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  opacity: 0.8;
+}
+
+.board-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* rank, name, matches, stars — the name is the only part allowed to grow */
+.board-line {
+  display: grid;
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+/* your own row, wherever it landed */
+.board-line.you {
+  background: linear-gradient(#1d5ea6, #10427c);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+.board-rank {
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.board-who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-matches {
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  opacity: 0.5;
+}
+
+.board-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* the break between the top of the board and your own row below it */
+.board-gap {
+  text-align: center;
+  opacity: 0.4;
+  font-size: 12px;
+  letter-spacing: 3px;
+}

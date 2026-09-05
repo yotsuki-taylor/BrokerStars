@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { COMPANIES, TRAIT_LABEL, type Company } from '../sim/companies';
-import { LogoMask, Lock, money } from './components';
+import { LogoMask, Lock, Star, money } from './components';
 import { LEAGUES, leagueName } from './leagues';
+import { boardConfigured, fetchBoard, myId, type Board, type BoardRow } from './api';
 import { t, tr } from './i18n';
 
 /**
  * The archive: what the player has collected, under three tabs.
  *
- * COMPANIES is the one that has anything in it — everything the game can put on
- * a board, unlocked by playing a match out against it, nothing bought and
- * nothing spoiled in advance. The other two are the shelf they will stand on:
- * standings need a server the game does not have yet, and the achievements
- * themselves are still to be decided. They are here rather than hidden because
- * the tab strip is the thing being built, and a strip that grows a tab later
- * moves the two that were already there.
+ * COMPANIES is everything the game can put on a board, unlocked by playing a
+ * match out against it — nothing bought, and nothing spoiled in advance.
+ *
+ * RATING is the leaderboard the Worker keeps (see worker/). It ranks stars
+ * EARNED rather than stars held, so spending them in the shop cannot cost
+ * anybody their place, and it is read-only here: the client never says what it
+ * scored, only what happened, and the server does the arithmetic.
+ *
+ * AWARDS is still a shelf with nothing on it. It is here rather than hidden
+ * because a strip that grows a tab later moves the ones already on it.
  */
 
 type Tab = 'companies' | 'rating' | 'achievements';
@@ -107,6 +111,85 @@ function SoonTab({ title, line }: { title: string; line: string }) {
   );
 }
 
+/**
+ * The leaderboard. Every way this can fail says so in a sentence rather than
+ * spinning: a build with no server behind it, a server that will not answer,
+ * and a board nobody has opened an account on yet all look different.
+ */
+function RatingTab() {
+  const [state, setState] = useState<'loading' | 'ready' | 'offline'>('loading');
+  const [board, setBoard] = useState<Board | null>(null);
+
+  useEffect(() => {
+    if (!boardConfigured()) {
+      setState('offline');
+      return;
+    }
+    let alive = true;
+    fetchBoard(25).then((b) => {
+      if (!alive) return;
+      setBoard(b);
+      setState(b ? 'ready' : 'offline');
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (state === 'loading') return <div className="arch-soon"><p>{t('archive.ratingLoading')}</p></div>;
+  if (state === 'offline') {
+    return (
+      <SoonTab
+        title={t('archive.tabRating')}
+        line={boardConfigured() ? t('archive.ratingOffline') : t('archive.ratingNoServer')}
+      />
+    );
+  }
+
+  const rows = board?.top ?? [];
+  if (!rows.length) {
+    return <SoonTab title={t('archive.tabRating')} line={t('archive.ratingEmpty')} />;
+  }
+
+  // the caller's own row, appended when they placed outside the slice above
+  const mine = board?.me ?? null;
+
+  return (
+    <div className="board">
+      <div className="board-head">
+        <span>{t('archive.ratingHeader')}</span>
+        {!myId() && <em>{t('archive.ratingOnlyInTelegram')}</em>}
+      </div>
+      <div className="board-rows">
+        {rows.map((r) => (
+          <BoardLine key={r.id} row={r} />
+        ))}
+        {mine && (
+          <>
+            <div className="board-gap">···</div>
+            <BoardLine key={mine.id} row={mine} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BoardLine({ row }: { row: BoardRow }) {
+  return (
+    <div className={`board-line${row.you ? ' you' : ''}`}>
+      <span className="board-rank">{row.rank}</span>
+      <span className="board-who">{row.name}</span>
+      <span className="board-matches">
+        {row.matches} {t('archive.ratingMatches')}
+      </span>
+      <span className="board-stars">
+        <Star size={12} /> {row.stars}
+      </span>
+    </div>
+  );
+}
+
 export default function ArchiveScreen({ seen, onBack }: { seen: Set<string>; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('companies');
 
@@ -137,9 +220,7 @@ export default function ArchiveScreen({ seen, onBack }: { seen: Set<string>; onB
       </div>
 
       {tab === 'companies' && <CompaniesTab seen={seen} />}
-      {tab === 'rating' && (
-        <SoonTab title={t('archive.tabRating')} line={t('archive.ratingSoon')} />
-      )}
+      {tab === 'rating' && <RatingTab />}
       {tab === 'achievements' && (
         <SoonTab title={t('archive.tabAchievements')} line={t('archive.achievementsSoon')} />
       )}

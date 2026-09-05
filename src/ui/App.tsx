@@ -35,6 +35,7 @@ import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
+import { submitResult } from './api';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { perksFor, wantsBoardScreen } from './perks';
@@ -92,7 +93,9 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
  */
 function playerName(): string {
   const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-  const name = String(u?.first_name ?? u?.username ?? '').trim();
+  // `||`, not `??`: Telegram sends an empty first_name rather than leaving it
+  // out, and `??` only falls through on null, so the username was never reached
+  const name = String(u?.first_name || u?.username || '').trim();
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -351,6 +354,20 @@ export default function App() {
         // like is a reroll, which is what the BALL CAP is sold for.
         if (st.resigned === null) {
           hold(li, null);
+
+          // The board hears about the match, but not about what it was worth:
+          // the server reads the outcome and works the stars out from its own
+          // table. Fire and forget — a leaderboard that cannot be reached must
+          // never be something the player has to wait for or notice.
+          void submitResult({
+            seed: st.seed.toString(36),
+            league: li,
+            outcome:
+              st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
+            netWorth: Math.round(me.netWorth),
+            tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
+          });
+
           setSeenCompanies((prev) => {
             const next = withSeen(prev, st.cfg.stocks.map((x) => x.id));
             if (next !== prev) saveSeen(next);

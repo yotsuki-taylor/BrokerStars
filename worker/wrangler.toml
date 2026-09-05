@@ -1,0 +1,16 @@
+name = "broker-stars-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# BOT_TOKEN is NOT here and must never be. It is a secret:
+#   wrangler secret put BOT_TOKEN
+# Without it the Worker refuses every write, which is the behaviour we want —
+# a board that takes unsigned scores is worse than no board.
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "broker-stars"
+database_id = "2006f293-59fc-4af9-b7e9-10b4d4ceab76"

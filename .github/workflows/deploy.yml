@@ -30,11 +30,15 @@ jobs:
 
       - run: npm ci
 
-      # Baked into the client bundle, so it is readable by anyone who opens the
-      # JS. It only hides the dev buttons from ordinary players; see admin.ts.
+      # Both are baked into the client bundle and readable by anyone who opens
+      # the JS, which is why neither is a secret in any real sense. VITE_ADMIN_ID
+      # only hides the dev buttons from ordinary players (see admin.ts), and the
+      # API url is a public endpoint that refuses anything unsigned anyway —
+      # hence a repository variable rather than a secret.
       - run: npm run build
         env:
           VITE_ADMIN_ID: ${{ secrets.MY_ID }}
+          VITE_API_URL: ${{ vars.API_URL }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
