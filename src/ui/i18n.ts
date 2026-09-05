@@ -307,15 +307,15 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
  */
 const RU_DATA: Record<string, string> = {
   /* ---- leagues ---- */
-  'league.bronze.name': 'БРОНЗОВАЯ ЯМА',
+  'league.bronze.name': 'БРОНЗОВЫЙ РЯД',
   'league.bronze.blurb': 'Заходит поздно, мелко и паникует. Заканчивает примерно там же, где начал.',
   'league.silver.name': 'СЕРЕБРЯНЫЙ ЗАЛ',
   'league.silver.blurb': 'Берёт только то, чего не заметить нельзя, и сидит в позиции слишком долго.',
   'league.gold.name': 'ЗОЛОТОЙ СТОЛ',
   'league.gold.blurb': 'Реагирует меньше чем за секунду и выходит, как только движение кончилось.',
-  'league.global.name': 'ГЛОБАЛЬНЫЙ ФОНД',
+  'league.global.name': 'МИРОВОЙ ФОНД',
   'league.global.blurb': 'Ловит почти каждый тренд и наваливается на него. Заканчивает около 16 000.',
-  'league.crown.name': 'БЫЧЬЯ КОРОНА',
+  'league.crown.name': 'КОРОНА БЫКА',
   'league.crown.blurb': 'Читает ленту раньше тебя. Обыграешь — считай, удвоил счёт.',
 
   /* ---- what a company is like ---- */

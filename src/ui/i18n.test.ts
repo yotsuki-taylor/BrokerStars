@@ -42,10 +42,16 @@ describe('the dictionary', () => {
     try {
       setLang('en');
       expect(t('menu.play')).toBe('PLAY');
+      // English is whatever the data file said, handed straight back
       expect(tr('league.bronze.name', 'BRONZE PIT')).toBe('BRONZE PIT');
       setLang('ru');
       expect(t('menu.play')).toBe('ИГРАТЬ');
-      expect(tr('league.bronze.name', 'BRONZE PIT')).toBe('БРОНЗОВАЯ ЯМА');
+      // Russian is something else, and Russian. Asserting the exact wording
+      // here would only mean that renaming a league breaks a test about
+      // whether the lookup works.
+      const ru = tr('league.bronze.name', 'BRONZE PIT');
+      expect(ru).not.toBe('BRONZE PIT');
+      expect(ru).toMatch(/^[А-ЯЁ][А-ЯЁ\s-]+$/);
       // an id nobody has translated still shows something a player can read
       expect(tr('company.nosuch.tagline', 'fallback')).toBe('fallback');
     } finally {
