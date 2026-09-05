@@ -12,6 +12,7 @@
 import { COMPANIES } from '../sim/companies';
 
 const KEY = 'brokerstars.board';
+const HELD_KEY = 'brokerstars.held';
 
 export interface BoardPrefs {
   pin: string | null;
@@ -43,5 +44,46 @@ export function savePrefs(prefs: BoardPrefs): void {
     window.localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {
     /* storage unavailable — the orders hold for this session only */
+  }
+}
+
+/* ------------------------------------------------------------ held boards */
+
+/**
+ * The seed each league is holding for the player: the board it has already
+ * dealt them, standing until they play that match out.
+ *
+ * Without this the draw was a free reroll. Backing out of the board screen and
+ * coming back dealt three fresh companies, and so did stepping into another
+ * league and back — which left the BALL CAP and the BLACK BRIM, the two items
+ * sold on being able to change the board, buying something the player already
+ * had for nothing.
+ *
+ * Kept per league, because each league draws from its own pool, and written to
+ * storage rather than memory, or reloading the page would be the same reroll
+ * with an extra step.
+ */
+export type HeldBoards = Record<number, string>;
+
+export function loadHeld(): HeldBoards {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(HELD_KEY) ?? 'null');
+    if (!raw || typeof raw !== 'object') return {};
+    const out: HeldBoards = {};
+    for (const [k, v] of Object.entries(raw)) {
+      const i = Number(k);
+      if (Number.isInteger(i) && i >= 0 && typeof v === 'string' && v) out[i] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function saveHeld(held: HeldBoards): void {
+  try {
+    window.localStorage.setItem(HELD_KEY, JSON.stringify(held));
+  } catch {
+    /* storage unavailable — the board holds for this session only */
   }
 }

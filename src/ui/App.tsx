@@ -35,7 +35,7 @@ import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
-import { loadPrefs, savePrefs, type BoardPrefs } from './board';
+import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -190,6 +190,14 @@ export default function App() {
   perksRef.current = perks;
   const prefsRef = useRef(boardPrefs);
   prefsRef.current = boardPrefs;
+  /** the board each league is holding, until the match it was dealt for is played */
+  const heldRef = useRef(loadHeld());
+  /** Hand a league the board it will deal next, or forget the one it held. */
+  const hold = (league: number, seedOrNull: string | null) => {
+    if (seedOrNull === null) delete heldRef.current[league];
+    else heldRef.current[league] = seedOrNull;
+    saveHeld(heldRef.current);
+  };
   const stateRef = useRef<MatchState>(
     makeMatch(baseCfg.current, seed, botPreset, league, perks.trader, {}, perks.ui.ability),
   );
@@ -306,6 +314,20 @@ export default function App() {
             return next;
           });
         }
+        // Both of these turn on the same thing: a match you played out. Giving
+        // up is not playing it out, so it neither files the companies nor hands
+        // the league a fresh board — otherwise surrendering would be the free
+        // reroll again, four taps slower. The way to change a board you do not
+        // like is a reroll, which is what the BALL CAP is sold for.
+        if (st.resigned === null) {
+          hold(li, null);
+          setSeenCompanies((prev) => {
+            const next = withSeen(prev, st.cfg.stocks.map((x) => x.id));
+            if (next !== prev) saveSeen(next);
+            return next;
+          });
+        }
+
         // A surrendered match is a loss, and a loss banks nothing: the ladder
         // is climbed by winning, not by starting matches.
         if (st.winner === HUMAN && st.resigned === null) {
@@ -395,12 +417,6 @@ export default function App() {
         perksRef.current.ui.ability,
       );
       stateRef.current = match;
-      // meeting a company in a match is what files it in the archive
-      setSeenCompanies((prev) => {
-        const next = withSeen(prev, match.cfg.stocks.map((x) => x.id));
-        if (next !== prev) saveSeen(next);
-        return next;
-      });
       // seeded off the match, so replaying a seed brings back the same opponent
       const look = new Rng(hashSeed(s) ^ 0x5bd1e995);
       setRivalOutfit(randomOutfit(() => look.next()));
@@ -595,7 +611,16 @@ export default function App() {
           onPlay={(i) => {
             setLeague(i);
             savePick(i);
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[i].preset, i, null);
+            // The three companies stand until the match they were dealt for is
+            // played out. Backing out of the board or the versus screen used to
+            // deal a fresh three, and so did stepping into another league and
+            // back — a free reroll, which is the whole of what the BALL CAP and
+            // the BLACK BRIM are sold for. Redealing on the held seed brings
+            // back the same three and picks up any clothes bought in between.
+            const held = heldRef.current[i];
+            const s = held ?? String(Math.floor(Math.random() * 1e6));
+            if (!held) hold(i, s);
+            restart(s, LEAGUES[i].preset, i, held ? undefined : null, Boolean(held));
             setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
             haptic('heavy');
           }}
@@ -616,7 +641,9 @@ export default function App() {
           rerollsLeft={rerollsLeft}
           onReroll={() => {
             setRerollsLeft((n) => Math.max(0, n - 1));
-            restart(String(Math.floor(Math.random() * 1e6)), undefined, league, null, true);
+            const s = String(Math.floor(Math.random() * 1e6));
+            hold(league, s);
+            restart(s, undefined, league, null, true);
             haptic();
           }}
           onPrefs={(next) => {
@@ -882,7 +909,9 @@ export default function App() {
           leagueName={LEAGUES[league].name}
           unlockedName={unlockedName}
           onRestart={() => {
-            restart(String(Math.floor(Math.random() * 1e6)), LEAGUES[league].preset, league, null);
+            const s = String(Math.floor(Math.random() * 1e6));
+            hold(league, s);
+            restart(s, LEAGUES[league].preset, league, null);
             setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
           }}
           onMenu={() => setScreen('leagues')}
