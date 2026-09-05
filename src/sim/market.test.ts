@@ -82,7 +82,7 @@ describe('segment schedule', () => {
 describe('quarters', () => {
   it('cuts the match into four equal boxes', () => {
     expect(quarterTicks(CONFIG)).toBe(TOTAL / CONFIG.match.quarters);
-    expect(quarterCloses(CONFIG)).toEqual([60, 120, 180, 240]);
+    expect(quarterCloses(CONFIG)).toEqual([40, 80, 120, 160]);
     expect(quarterCloses(CONFIG)[CONFIG.match.quarters - 1]).toBe(TOTAL);
   });
 

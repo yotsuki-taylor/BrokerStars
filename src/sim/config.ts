@@ -42,11 +42,11 @@ export interface BotConfig {
 
 export const CONFIG = {
   match: {
-    durationSec: 120,
+    durationSec: 80,
     tickMs: 500,
     /**
-     * The match is a business year. Four quarters of 30 seconds, two half-years
-     * of 60: the chart rules them off and several companies key their behaviour
+     * The match is a business year. Four quarters of 20 seconds, two half-years
+     * of 40: the chart rules them off and several companies key their behaviour
      * to the closes, so nothing may assume this is 4 except by reading it here.
      */
     quarters: 4,
@@ -57,12 +57,13 @@ export const CONFIG = {
   },
   chart: {
     /**
-     * How much history the plot holds. 60 ticks is 30 seconds, and the line
-     * crossed the panel fast enough that playtesters could not read it; 90 is
-     * 45 seconds, which both slows the scroll and compresses the tick-to-tick
-     * chop into something legible. Presentation only — the market is unchanged.
+     * How much history the plot holds, as a share of the match: 60 ticks is 30
+     * seconds of an 80-second year, or a quarter and a half on screen at once.
+     * Less than that and the line crosses the panel too fast for playtesters to
+     * read; much more and the tick-to-tick chop compresses into a flat smear.
+     * Presentation only — the market is unchanged.
      */
-    windowTicks: 90,
+    windowTicks: 60,
     mode: 'percent' as 'percent' | 'absolute',
     /**
      * The vertical axis fits whatever is on screen. A fixed frame was tried and
@@ -83,26 +84,32 @@ export const CONFIG = {
   /**
    * One phase per quarter, so the year the chart draws and the volatility the
    * market runs at are the same four boxes. The two headlines are spread one
-   * per middle quarter rather than both landing in the same 40 seconds.
+   * per middle quarter rather than both landing in the same half-year.
    */
   phases: [
-    { id: 'q1', fromSec: 0, toSec: 30, volMult: 0.7, truthShift: 0.05 },
-    { id: 'q2', fromSec: 30, toSec: 60, volMult: 1.0, truthShift: 0.0, newsEvents: 1 },
-    { id: 'q3', fromSec: 60, toSec: 90, volMult: 1.25, truthShift: 0.0, newsEvents: 1 },
-    { id: 'q4', fromSec: 90, toSec: 120, volMult: 1.6, truthShift: -0.1 },
+    { id: 'q1', fromSec: 0, toSec: 20, volMult: 0.7, truthShift: 0.05 },
+    { id: 'q2', fromSec: 20, toSec: 40, volMult: 1.0, truthShift: 0.0, newsEvents: 1 },
+    { id: 'q3', fromSec: 40, toSec: 60, volMult: 1.25, truthShift: 0.0, newsEvents: 1 },
+    { id: 'q4', fromSec: 60, toSec: 80, volMult: 1.6, truthShift: -0.1 },
   ] as PhaseConfig[],
   bot: {
     /**
      * Five rungs, one per league. `holdTicks` is the main lever (see README):
      * a bot that sits on a position past the move it caught hands the profit
      * back to mean reversion, so the ladder tightens it from 26 down to 8.
+     *
+     * `triggerSigmas` is the second lever, and the one that decides how long
+     * the bot sits out at the start: it is a gate on how rare a move has to be
+     * before the bot believes it, and that wait is measured in seconds, not in
+     * quarters. It does not shrink when the match does — see the rookie note in
+     * the README.
      */
     rookie: {
       reactionMs: [2200, 4000] as [number, number],
       ignoreChance: 0.78,
       sizeFraction: 0.1,
       lookbackTicks: 11,
-      triggerSigmas: 2.6,
+      triggerSigmas: 2.0,
       holdTicks: 26,
       panicChance: 0.35,
       mode: 'momentum' as const,

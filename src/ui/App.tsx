@@ -123,7 +123,7 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
     <div className="overlay">
       <h2>HOW TO PLAY</h2>
       <p>
-        120 seconds. You and your rival trade the same three stocks. Whoever ends with the bigger
+        80 seconds. You and your rival trade the same three stocks. Whoever ends with the bigger
         net worth — cash plus positions — wins. Positions close automatically at the whistle, so
         the finish is never a race to sell.
       </p>
