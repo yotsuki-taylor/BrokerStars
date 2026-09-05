@@ -26,7 +26,7 @@ import {
   type FloatPnl,
 } from './components';
 import BoardScreen from './BoardScreen';
-import Companies from './Companies';
+import ArchiveScreen from './ArchiveScreen';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
@@ -718,7 +718,7 @@ export default function App() {
   if (screen === 'archive') {
     return (
       <div className="app">
-        <Companies seen={seenCompanies} onBack={() => setScreen('menu')} />
+        <ArchiveScreen seen={seenCompanies} onBack={() => setScreen('menu')} />
       </div>
     );
   }

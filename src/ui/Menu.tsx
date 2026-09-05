@@ -146,7 +146,7 @@ export default function Menu({
             {t('menu.equip')}
           </button>
           <button className="menu-btn" onClick={onArchive}>
-            {t('menu.companies')}
+            {t('menu.archive')}
           </button>
         </div>
         <button className="menu-btn play" onClick={onPlay}>

@@ -2268,3 +2268,40 @@ body {
 .overlay.settings .settings-list .big-btn {
   width: 100%;
 }
+
+/* ---------- archive tabs ---------- */
+
+/* Same tab as the shop wears, three across instead of five. */
+.arch-tabs {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+/* A tab whose shelf is built and whose contents are not. */
+.arch-soon {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 24px;
+  text-align: center;
+  opacity: 0.55;
+}
+
+.arch-soon b {
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.arch-soon p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 700;
+  max-width: 34ch;
+}
