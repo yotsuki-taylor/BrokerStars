@@ -264,15 +264,23 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
   state.stocks.forEach((_, i) => {
     if (me.positions[i] === 0 || me.avgEntry[i] <= 0) return;
     const y = py(val(i, me.avgEntry[i]));
+    // A short reads the other way round — its profit is BELOW this line, not
+    // above — and one line drawn one way cannot say which. Dots for a short,
+    // dashes for a long: the player still has to know the rule, but at least
+    // the two stop looking like the same promise. Round caps make the dots
+    // read as dots at this size; the cap is put back for everything after.
+    const short = me.positions[i] < 0;
     ctx.strokeStyle = cfg.stocks[i].color;
     ctx.globalAlpha = 0.85;
-    ctx.setLineDash([5, 4]);
-    ctx.lineWidth = 1.5;
+    ctx.lineCap = short ? 'round' : 'butt';
+    ctx.setLineDash(short ? [1, 4.5] : [5, 4]);
+    ctx.lineWidth = short ? 2 : 1.5;
     ctx.beginPath();
     ctx.moveTo(padL, y);
     ctx.lineTo(W - padR, y);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.lineCap = 'butt';
     ctx.globalAlpha = 1;
   });
 
