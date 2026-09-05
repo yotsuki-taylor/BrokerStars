@@ -970,8 +970,17 @@ body {
   opacity: 0.4;
 }
 
+/*
+ * Right under the stats, NOT pushed to the foot of the overlay.
+ *
+ * `margin-top: auto` used to hold them at the bottom, which is exactly where
+ * BUY and SHORT sit on the match screen underneath. The overlay arrives while
+ * the player's thumb is still there from the last trade, and the first thing it
+ * lands on is PLAY AGAIN. A gap below the buttons costs nothing; a match
+ * started by accident costs a match.
+ */
 .result-actions {
-  margin-top: auto;
+  margin-top: 14px;
   display: grid;
   grid-template-columns: 1fr 1.4fr;
   gap: 8px;

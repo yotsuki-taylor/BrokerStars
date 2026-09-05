@@ -41,6 +41,7 @@ import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
+  leagueName,
   loadPick,
   loadWins,
   savePick,
@@ -385,7 +386,9 @@ export default function App() {
           winsRef.current = after;
           setLeagueWins(after);
           const opened = unlockedCount(after);
-          setUnlockedName(opened > unlockedCount(before) ? LEAGUES[opened - 1].name : null);
+          setUnlockedName(
+            opened > unlockedCount(before) ? leagueName(LEAGUES[opened - 1]) : null,
+          );
         }
       }
 
@@ -680,7 +683,7 @@ export default function App() {
     return (
       <div className="app">
         <BoardScreen
-          leagueName={LEAGUES[league].name}
+          leagueName={leagueName(LEAGUES[league])}
           leagueIndex={league}
           stocks={cfg.stocks}
           ui={perks.ui}
@@ -975,7 +978,7 @@ export default function App() {
           state={st}
           humanIdx={HUMAN}
           award={award}
-          leagueName={LEAGUES[league].name}
+          leagueName={leagueName(LEAGUES[league])}
           unlockedName={unlockedName}
           onRestart={() => {
             const s = String(Math.floor(Math.random() * 1e6));
