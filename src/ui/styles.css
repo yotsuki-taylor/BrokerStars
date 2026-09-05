@@ -318,31 +318,14 @@ body {
   letter-spacing: 1px;
 }
 
-/* ---------- trade size ---------- */
+/* ---------- ability bar ---------- */
 
-.sizes {
+/* Empty on purpose: the trade-size buttons that used to sit here are gone and
+   abilities are going in their place. It keeps their exact height so the rows
+   below stay put when that happens. */
+.ability-bar {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.size-btn {
-  flex: 1 1 0;
   height: 30px;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  background: rgba(8, 34, 70, 0.55);
-  color: #cfe0f5;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.size-btn.on {
-  background: linear-gradient(#e8f3ff, #b9d3f0);
-  color: var(--ink);
 }
 
 /* ---------- stock rows ---------- */

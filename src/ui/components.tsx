@@ -151,41 +151,20 @@ export function TraderCard({
   );
 }
 
-/* ------------------------------------------------------- size selector */
-
-export const SIZES: { label: string; value: number }[] = [
-  { label: '10%', value: 0.1 },
-  { label: '25%', value: 0.25 },
-  { label: '50%', value: 0.5 },
-  { label: 'MAX', value: 1 },
-];
+/* ---------------------------------------------------------- ability bar */
 
 /**
- * How much of the cash on hand one tap commits. The free cash itself used to
- * sit beside these buttons as POWER, but the trader card now carries it as
- * CASH — and the two disagreed on sight, since POWER was clamped at zero while
- * CASH shows the overdraft. One number for one thing.
+ * Deliberately empty, and deliberately still here.
+ *
+ * A row of 10 / 25 / 50 / MAX buttons used to sit on this line, setting how
+ * much of the cash one tap committed. Nobody used it — the choice was made
+ * once and never revisited — so the size is fixed now (TRADE_FRACTION in
+ * App.tsx) and the buttons are gone. Abilities are going in this slot, and
+ * holding the space open means the rows below do not jump down the screen the
+ * day they land.
  */
-export function SizeSelector({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="sizes">
-      {SIZES.map((s) => (
-        <button
-          key={s.label}
-          className={`size-btn${value === s.value ? ' on' : ''}`}
-          onClick={() => onChange(s.value)}
-        >
-          {s.label}
-        </button>
-      ))}
-    </div>
-  );
+export function AbilityBar() {
+  return <div className="ability-bar" />;
 }
 
 /* ------------------------------------------------------------ stock row */

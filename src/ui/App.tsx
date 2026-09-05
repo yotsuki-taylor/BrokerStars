@@ -16,7 +16,7 @@ import {
 import type { MatchState } from '../sim/types';
 import { drawChart } from './chart';
 import {
-  SizeSelector,
+  AbilityBar,
   StockRow,
   TraderCard,
   money,
@@ -63,6 +63,12 @@ import {
 } from './wardrobe';
 
 const HUMAN = 0;
+/**
+ * How much of the cash on hand one tap commits. This was a row of buttons the
+ * player could set per trade; it was never a decision anyone made twice, so it
+ * is one number now.
+ */
+const TRADE_FRACTION = 0.25;
 function haptic(kind: 'light' | 'heavy' = 'light') {
   const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
   if (tg?.impactOccurred) tg.impactOccurred(kind === 'heavy' ? 'medium' : 'light');
@@ -137,9 +143,9 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
         at a quarter close, so watch the line as one goes by.
       </p>
       <p>
-        SIZE sets how much of your buying power one tap commits. BUY goes long. SELL closes a
-        long, or opens a short when you hold nothing — then you profit when the price falls. Big
-        orders move the price against you, so the rival feels every trade you make.
+        BUY goes long, and one tap commits a quarter of your cash. SELL closes a long, or opens
+        a short when you hold nothing — then you profit when the price falls. Big orders move the
+        price against you, so the rival feels every trade you make.
       </p>
       <p>
         Dashed line on the chart is your average entry: a long is in profit above it, a short
@@ -181,7 +187,6 @@ export default function App() {
 
   const [speed, setSpeed] = useState(1);
   const [showTruth, setShowTruth] = useState(false);
-  const [fraction, setFraction] = useState(0.25);
   const [devOpen, setDevOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -407,7 +412,12 @@ export default function App() {
   const act = (stockIdx: number, side: 'buy' | 'sell') => {
     const st = stateRef.current;
     if (st.finished || st.traders[HUMAN].bankrupt) return;
-    const trade = applyAction(st, { trader: HUMAN, stock: stockIdx, side, fraction });
+    const trade = applyAction(st, {
+      trader: HUMAN,
+      stock: stockIdx,
+      side,
+      fraction: TRADE_FRACTION,
+    });
     if (!trade) return;
     haptic(Math.abs(trade.realized) > 1 ? 'heavy' : 'light');
     const id = floatId.current++;
@@ -782,7 +792,7 @@ export default function App() {
         />
       </div>
 
-      <SizeSelector value={fraction} onChange={setFraction} />
+      <AbilityBar />
 
       {undoOffered && (
         <button className="undo-btn" onClick={takeBack}>
@@ -794,8 +804,10 @@ export default function App() {
         {cfg.stocks.map((s, i) => {
           const price = st.stocks[i].price;
           const short = isShortSide(st, HUMAN, i);
-          const buyQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'buy', fraction });
-          const sellQty = plannedQty(st, { trader: HUMAN, stock: i, side: 'sell', fraction });
+          const plan = (side: 'buy' | 'sell') =>
+            plannedQty(st, { trader: HUMAN, stock: i, side, fraction: TRADE_FRACTION });
+          const buyQty = plan('buy');
+          const sellQty = plan('sell');
           const held = me.positions[i] !== 0;
           // a side that plans nothing while the match is still on is a side
           // with no money behind it: buying power is cash and nothing else
