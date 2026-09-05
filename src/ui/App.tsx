@@ -199,8 +199,11 @@ function SettingsOverlay({
           </button>
         </div>
       )}
-      <button className="big-btn" onClick={onClose}>
-        {t('settings.close')}
+      {/* One step up, whatever that is from here. Picking a language used to
+          leave CLOSE as the only way out of it, so getting back to the settings
+          list meant leaving the settings and opening them again. */}
+      <button className="big-btn" onClick={() => (langOpen ? setLangOpen(false) : onClose())}>
+        {langOpen ? t('common.back') : t('settings.close')}
       </button>
     </div>
   );
