@@ -41,6 +41,73 @@ const tweak = (id: string, trait: Partial<Company['trait']>): Company => {
   return { ...c, trait: { ...c.trait, ...trait } };
 };
 
+/**
+ * CIEDE2000, the standard measure of "how different do these two look". Plain
+ * RGB distance is no use here: it calls a light blue and a light green close
+ * neighbours and two dark reds strangers, which is the opposite of what a
+ * player sees. Roughly: under 10 reads as the same colour, 25 and up reads as
+ * two clearly different ones.
+ */
+function labOf(hex: string): [number, number, number] {
+  const ch = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const [r, g, b] = ch;
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const x = f((r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047);
+  const y = f(r * 0.2126729 + g * 0.7151522 + b * 0.072175);
+  const z = f((r * 0.0193339 + g * 0.119192 + b * 0.9503041) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+
+function deltaE(hexA: string, hexB: string): number {
+  const [L1, a1, b1] = labOf(hexA);
+  const [L2, a2, b2] = labOf(hexB);
+  const C1 = Math.hypot(a1, b1);
+  const C2 = Math.hypot(a2, b2);
+  const cb = (C1 + C2) / 2;
+  const G = 0.5 * (1 - Math.sqrt(cb ** 7 / (cb ** 7 + 25 ** 7)));
+  const A1 = (1 + G) * a1;
+  const A2 = (1 + G) * a2;
+  const P1 = Math.hypot(A1, b1);
+  const P2 = Math.hypot(A2, b2);
+  const ang = (y: number, x: number) => (y === 0 && x === 0 ? 0 : ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
+  const h1 = ang(b1, A1);
+  const h2 = ang(b2, A2);
+  const dL = L2 - L1;
+  const dC = P2 - P1;
+  let dh = 0;
+  if (P1 * P2 !== 0) {
+    dh = h2 - h1;
+    if (dh > 180) dh -= 360;
+    else if (dh < -180) dh += 360;
+  }
+  const dH = 2 * Math.sqrt(P1 * P2) * Math.sin((dh * Math.PI) / 360);
+  const Lb = (L1 + L2) / 2;
+  const Cb = (P1 + P2) / 2;
+  let hb: number;
+  if (P1 * P2 === 0) hb = h1 + h2;
+  else {
+    hb = Math.abs(h1 - h2) > 180 ? (h1 + h2 + 360) / 2 : (h1 + h2) / 2;
+    if (hb >= 360) hb -= 360;
+  }
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const T =
+    1 - 0.17 * Math.cos(rad(hb - 30)) + 0.24 * Math.cos(rad(2 * hb))
+      + 0.32 * Math.cos(rad(3 * hb + 6)) - 0.2 * Math.cos(rad(4 * hb - 63));
+  const Sl = 1 + (0.015 * (Lb - 50) ** 2) / Math.sqrt(20 + (Lb - 50) ** 2);
+  const Sc = 1 + 0.045 * Cb;
+  const Sh = 1 + 0.015 * Cb * T;
+  const Rt =
+    -Math.sin(rad(60 * Math.exp(-(((hb - 275) / 25) ** 2))))
+    * 2 * Math.sqrt(Cb ** 7 / (Cb ** 7 + 25 ** 7));
+  return Math.sqrt((dL / Sl) ** 2 + (dC / Sc) ** 2 + (dH / Sh) ** 2 + Rt * (dC / Sc) * (dH / Sh));
+}
+
+/** The panel the chart draws on, from styles.css. Lines have to clear it too. */
+const CHART_BG = '#0a3670';
+
 describe('the roster', () => {
   it('gives every company an id, a colour and a logo of its own', () => {
     const ids = COMPANIES.map((c) => c.id);
@@ -96,6 +163,42 @@ describe('the roster', () => {
       if (i > 0) for (const c of poolFor(i - 1)) expect(pool).toContain(c);
     }
     expect(poolFor(LEAGUES - 1)).toHaveLength(COMPANIES.length);
+  });
+
+  it('keeps every board a league can deal readable as three separate lines', () => {
+    // The picker never puts two of one colour family on a board, so these are
+    // the pairs that can actually share a chart. They are what the player
+    // complains about when three lines look like one idea in three shades.
+    for (let i = 0; i < LEAGUES; i++) {
+      const pool = poolFor(i);
+      for (let a = 0; a < pool.length; a++) {
+        for (let b = a + 1; b < pool.length; b++) {
+          if (pool[a].family === pool[b].family) continue;
+          const d = deltaE(pool[a].color, pool[b].color);
+          expect(
+            d,
+            `league ${i}: ${pool[a].name} ${pool[a].color} vs ${pool[b].name} ${pool[b].color}`,
+          ).toBeGreaterThan(18);
+        }
+      }
+    }
+  });
+
+  it('still tells two companies of one colour family apart in a list', () => {
+    // These never share a chart, only the archive and the board screen, so the
+    // bar is lower — but not so low that they are the same swatch twice.
+    for (const a of COMPANIES) {
+      for (const b of COMPANIES) {
+        if (a === b || a.family !== b.family) continue;
+        expect(deltaE(a.color, b.color), `${a.name} vs ${b.name}`).toBeGreaterThan(7);
+      }
+    }
+  });
+
+  it('keeps every line clear of the panel it is drawn on', () => {
+    for (const c of COMPANIES) {
+      expect(deltaE(c.color, CHART_BG), `${c.name} ${c.color}`).toBeGreaterThan(30);
+    }
   });
 });
 
