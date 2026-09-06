@@ -18,6 +18,7 @@ export default function Menu({
   onToggleFree,
   onOpenDev,
   onPlay,
+  onDuel,
   onShop,
   onEquip,
   onArchive,
@@ -34,6 +35,7 @@ export default function Menu({
   onToggleFree: () => void;
   onOpenDev: () => void;
   onPlay: () => void;
+  onDuel: () => void;
   onShop: () => void;
   onEquip: () => void;
   onArchive: () => void;
@@ -161,9 +163,18 @@ export default function Menu({
             <span>{t('rating.title')}</span>
           </button>
         </div>
-        <button className="menu-btn play" onClick={onPlay}>
-          {t('menu.play')}
-        </button>
+        {/* PLAY is still the button the eye lands on. DUEL sits under it at
+            two thirds the height: the same journey, but one that needs a
+            friend at the other end of it, and it should not be competing with
+            the one that needs nobody. */}
+        <div className="menu-right">
+          <button className="menu-btn play" onClick={onPlay}>
+            {t('menu.play')}
+          </button>
+          <button className="menu-btn duel" onClick={onDuel}>
+            {t('menu.duel')}
+          </button>
+        </div>
       </div>
     </div>
   );

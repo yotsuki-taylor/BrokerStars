@@ -14,3 +14,16 @@ enabled = true
 binding = "DB"
 database_name = "broker-stars"
 database_id = "2006f293-59fc-4af9-b7e9-10b4d4ceab76"
+
+# Duels. One object per invitation code: it holds the lobby, then runs the
+# match itself and talks to both players over WebSockets (worker/src/duel.ts).
+[[durable_objects.bindings]]
+name = "DUEL"
+class_name = "Duel"
+
+# The object keeps only the invitation in storage, but it keeps it in SQLite —
+# `new_sqlite_classes` is the current backend and the one new classes should be
+# created on.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Duel"]

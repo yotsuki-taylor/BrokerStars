@@ -9,6 +9,13 @@ import type { Outfit } from './wardrobe';
  * has already been created, this only decides when to hand over to it.
  *
  * player in → searching → rival in as a silhouette → rival revealed → done.
+ *
+ * A duel skips most of that. There is nothing to search for — the friend is
+ * already sitting on the other end of the socket — and nothing to cancel or
+ * skip either: the server started its clock when it sent the two of us here,
+ * and a player who tapped past the wait would only reach an empty board
+ * sooner. So the reveal comes almost at once and the wait is spent looking at
+ * who turned up.
  */
 type Phase = 'enter' | 'searching' | 'found' | 'revealed';
 
@@ -17,6 +24,10 @@ const TIMELINE: [Phase, number][] = [
   ['found', 1900],
   ['revealed', 2700],
 ];
+const DUEL_TIMELINE: [Phase, number][] = [
+  ['found', 250],
+  ['revealed', 950],
+];
 const HANDOVER_MS = 3600;
 
 export default function VersusScreen({
@@ -24,6 +35,7 @@ export default function VersusScreen({
   playerOutfit,
   rivalName,
   rivalOutfit,
+  duel = false,
   onReady,
   onCancel,
 }: {
@@ -31,6 +43,8 @@ export default function VersusScreen({
   playerOutfit: Outfit;
   rivalName: string;
   rivalOutfit: Outfit;
+  /** a friend rather than a draw from the pool: no searching, no way out */
+  duel?: boolean;
   onReady: () => void;
   onCancel: () => void;
 }) {
@@ -50,20 +64,23 @@ export default function VersusScreen({
   };
 
   useEffect(() => {
-    const timers = TIMELINE.map(([p, at]) => window.setTimeout(() => setPhase(p), at));
+    const line = duel ? DUEL_TIMELINE : TIMELINE;
+    const timers = line.map(([p, at]) => window.setTimeout(() => setPhase(p), at));
     timers.push(window.setTimeout(() => finish(), HANDOVER_MS));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [duel]);
 
   const rivalIn = phase === 'found' || phase === 'revealed';
 
   return (
-    // tapping anywhere skips the wait
-    <div className="versus" onClick={finish}>
+    // tapping anywhere skips the wait, except in a duel, where the wait is the
+    // server's and skipping it only means staring at a board that has not
+    // started yet
+    <div className="versus" onClick={duel ? undefined : finish}>
       <img className="versus-bg" src={tex('bg_vs.png')} alt="" draggable={false} />
 
-      {!rivalIn && (
+      {!rivalIn && !duel && (
         <button
           className="menu-btn back versus-cancel"
           onClick={(e) => {
@@ -90,7 +107,11 @@ export default function VersusScreen({
 
       <div className="versus-mark">VS</div>
 
-      {!rivalIn && <div className="versus-status">{t('versus.searching')}</div>}
+      {!rivalIn && (
+        <div className="versus-status">
+          {t(duel ? 'versus.waitingFriend' : 'versus.searching')}
+        </div>
+      )}
 
       {rivalIn && <div className="name-plate top">{rivalName}</div>}
       <div className="name-plate bottom">{playerName}</div>

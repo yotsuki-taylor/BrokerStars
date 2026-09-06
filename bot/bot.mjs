@@ -59,6 +59,24 @@ async function api(method, body) {
 
 const PLAY_BUTTON = { text: '🎮 PLAY', web_app: { url: WEBAPP_URL } };
 
+/**
+ * A duel invitation arrives here rather than at the game.
+ *
+ * The friend it was sent to may never have opened the mini app, and `?start=`
+ * is the one door Telegram opens for somebody who has not. The Worker mints
+ * `t.me/<bot>?start=duel_<code>`; this turns that back into a button that opens
+ * the game on the duel, by hanging the code off WEBAPP_URL as a query
+ * parameter. A query and not a fragment on purpose: Telegram appends its own
+ * `#tgWebAppData=...` to the hash, and anything of ours there is in its way.
+ */
+const DUEL_START = /^\/start\s+duel_([0-9bcdfghjklmnpqrstvwxyz]{4,32})$/;
+
+function duelButton(code) {
+  const url = new URL(WEBAPP_URL);
+  url.searchParams.set('d', code);
+  return { text: '⚔️ ACCEPT THE DUEL', web_app: { url: url.toString() } };
+}
+
 /** One-off setup: the blue menu button next to the message box, and /commands. */
 async function configure() {
   const me = await api('getMe');
@@ -80,6 +98,9 @@ const HELP =
   'You and a rival trade the same three stocks. Whoever ends with the bigger ' +
   'net worth wins; positions close automatically at the whistle. Big orders ' +
   'move the price against you, so size matters.\n\n' +
+  'PLAY puts a bot opposite you. DUEL, on the menu, sends a friend a link and ' +
+  'puts them there instead — same market, same second, and your abilities ' +
+  'land on each other.\n\n' +
   'Tap PLAY to start.';
 
 async function handle(update) {
@@ -87,6 +108,21 @@ async function handle(update) {
   if (!msg?.text) return;
   const text = msg.text.trim().toLowerCase();
   const chatId = msg.chat.id;
+
+  // Checked before /start, which it also matches.
+  const duel = DUEL_START.exec(text);
+  if (duel) {
+    await api('sendMessage', {
+      chat_id: chatId,
+      text:
+        'Somebody wants eighty seconds of your time.\n\n' +
+        'Tap below and you are in the same match they are — same three ' +
+        'companies, same chart, same tick. The invitation is only good for ' +
+        '15 minutes from when it was sent.',
+      reply_markup: { inline_keyboard: [[duelButton(duel[1])]] },
+    });
+    return;
+  }
 
   if (text.startsWith('/start') || text.startsWith('/play')) {
     await api('sendMessage', {

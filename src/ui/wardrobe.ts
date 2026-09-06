@@ -199,7 +199,19 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
 export const SPRITE_W = 474;
 export const SPRITE_H = 732;
 
-const tex = (name: string) => `${import.meta.env.BASE_URL}textures/shop/${name}.png`;
+/**
+ * Everything in this file above the sprite plumbing is plain data, and the duel
+ * server imports it: working out what a duellist's clothes are worth happens on
+ * the object that runs the match, not in the browser that claims them (see
+ * `worker/src/duel.ts`). A Worker has neither Vite's `import.meta.env` nor a
+ * `window`, so the two places this module touches a platform — here and
+ * `store()` further down — reach for it rather than name it, and the file
+ * compiles in a build that has neither.
+ */
+const BASE_URL =
+  (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+
+const tex = (name: string) => `${BASE_URL}textures/shop/${name}.png`;
 
 export type Piece = 'single' | 'up' | 'down';
 
@@ -372,6 +384,15 @@ export function randomOutfit(rand: () => number): Outfit {
 const OWNED_KEY = 'brokerstars.owned';
 const OUTFIT_KEY = 'brokerstars.outfit';
 
+/** The store, when there is one, reached through `globalThis` — see `BASE_URL`. */
+interface KeyValueStore {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+const store = (): KeyValueStore | null =>
+  (globalThis as { localStorage?: KeyValueStore }).localStorage ?? null;
+
 /**
  * Nobody starts dressed. The commons used to be granted and force-merged back
  * in on every load, which made them impossible not to own and therefore
@@ -382,7 +403,7 @@ export const STARTER: Outfit = {};
 
 export function loadOwned(): Set<string> {
   try {
-    const raw = window.localStorage.getItem(OWNED_KEY);
+    const raw = store()?.getItem(OWNED_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? new Set(arr.map(String)) : new Set();
@@ -393,7 +414,7 @@ export function loadOwned(): Set<string> {
 
 export function saveOwned(owned: Set<string>): void {
   try {
-    window.localStorage.setItem(OWNED_KEY, JSON.stringify([...owned]));
+    store()?.setItem(OWNED_KEY, JSON.stringify([...owned]));
   } catch {
     /* storage unavailable — purchases do not survive the session */
   }
@@ -401,7 +422,7 @@ export function saveOwned(owned: Set<string>): void {
 
 export function loadOutfit(): Outfit {
   try {
-    const raw = window.localStorage.getItem(OUTFIT_KEY);
+    const raw = store()?.getItem(OUTFIT_KEY);
     if (!raw) return { ...STARTER };
     const parsed = JSON.parse(raw) as Outfit;
     const out: Outfit = {};
@@ -418,7 +439,7 @@ export function loadOutfit(): Outfit {
 
 export function saveOutfit(outfit: Outfit): void {
   try {
-    window.localStorage.setItem(OUTFIT_KEY, JSON.stringify(outfit));
+    store()?.setItem(OUTFIT_KEY, JSON.stringify(outfit));
   } catch {
     /* same as above */
   }

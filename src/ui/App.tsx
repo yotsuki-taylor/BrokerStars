@@ -7,6 +7,7 @@ import { createMatch, resign, step } from '../sim/match';
 import type { TraderPerks } from '../sim/perks';
 import { Rng, hashSeed } from '../sim/rng';
 import {
+  TRADE_FRACTION,
   applyAction,
   canUndo,
   isShortSide,
@@ -14,7 +15,7 @@ import {
   positionValue,
   undoLast,
 } from '../sim/trading';
-import type { MatchState } from '../sim/types';
+import type { MatchState, Trade } from '../sim/types';
 import { drawChart } from './chart';
 import {
   AbilityBar,
@@ -27,6 +28,7 @@ import {
 } from './components';
 import BoardScreen from './BoardScreen';
 import ArchiveScreen from './ArchiveScreen';
+import DuelScreen, { type DuelPhase } from './DuelScreen';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
@@ -37,6 +39,20 @@ import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
 import { submitResult } from './api';
+import {
+  DuelSocket,
+  applySync,
+  applyTick,
+  buildMirror,
+  copyLink,
+  createInvite,
+  duelCodeFromLaunch,
+  duelsAvailable,
+  shareInvite,
+  type Link,
+} from './duel';
+import { apiBase } from './api';
+import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { perksFor, wantsBoardScreen } from './perks';
@@ -68,12 +84,29 @@ import {
 } from './wardrobe';
 
 const HUMAN = 0;
+
 /**
- * How much of the cash on hand one tap commits. This was a row of buttons the
- * player could set per trade; it was never a decision anyone made twice, so it
- * is one number now.
+ * What the game is in the middle of, when it is in the middle of a duel.
+ *
+ * `phase` is where the invitation has got to; once the match exists it is
+ * 'match' and this object is only carrying the two things the match screen
+ * still needs from the socket — whether the connection is up, and whether the
+ * other player is still on the end of it.
  */
-const TRADE_FRACTION = 0.25;
+interface DuelUi {
+  phase: DuelPhase | 'match';
+  code: string | null;
+  link: string | null;
+  expiresAt: number | null;
+  league: number;
+  rival: DuelProfile | null;
+  error: DuelError | 'net' | null;
+  /** the socket, which says nothing about `link` above — that is the invitation */
+  conn: Link;
+  rivalGone: boolean;
+  /** the league the server actually paid at, once it has said */
+  payLeague: number | null;
+}
 
 /** What the button says. The card in the wardrobe carries the long version. */
 const ABILITY_NAME: Record<AbilityId, string> = {
@@ -225,6 +258,8 @@ export default function App() {
   );
   const perksRef = useRef(perks);
   perksRef.current = perks;
+  const outfitRef = useRef(outfit);
+  outfitRef.current = outfit;
   const prefsRef = useRef(boardPrefs);
   prefsRef.current = boardPrefs;
   /** the board each league is holding, until the match it was dealt for is played */
@@ -253,7 +288,16 @@ export default function App() {
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<
-    'menu' | 'shop' | 'equip' | 'archive' | 'rating' | 'leagues' | 'board' | 'vs' | 'match'
+    | 'menu'
+    | 'shop'
+    | 'equip'
+    | 'archive'
+    | 'rating'
+    | 'leagues'
+    | 'board'
+    | 'duel'
+    | 'vs'
+    | 'match'
   >('menu');
   /** rerolls of the board still owed this match, and a board the player named */
   const [rerollsLeft, setRerollsLeft] = useState(0);
@@ -268,6 +312,22 @@ export default function App() {
   /** 3, 2, 1 before the first tick; the match is frozen while it runs */
   const [countdown, setCountdown] = useState<number | null>(null);
   const admin = isAdmin();
+  /**
+   * The duel, if there is one. The socket is a ref because the game loop and
+   * every button need it and none of them should re-render when it changes;
+   * `duel` beside it is the part the screens draw.
+   */
+  const duelRef = useRef<DuelSocket | null>(null);
+  const [duel, setDuel] = useState<DuelUi | null>(null);
+  /** when the last tick landed, which is all the interpolation has to go on */
+  const lastTickAt = useRef(0);
+  /**
+   * The last tick as it arrived. Two things on the match screen cannot be read
+   * off the mirror in a duel, because the server does not send what they are
+   * made of: what the rival is holding (their book is DOSSIER's to sell) and
+   * whether the ability button is live (two of the five read that same book).
+   */
+  const lastTick = useRef<DuelTick | null>(null);
   const [award, setAward] = useState<Award | null>(null);
   /** name of the league this match's win opened, shown once on the result screen */
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
@@ -312,7 +372,17 @@ export default function App() {
         acc = 0;
       }
 
-      if (!st.finished && !ui.current.paused) {
+      if (duelRef.current) {
+        // A duel is stepped by the object on the server, not here. All this
+        // end does is slide the line along between the ticks it is sent, so
+        // the chart still moves at sixty frames on a market that arrives at
+        // two. Pausing is not on offer either: the market goes on whether or
+        // not this phone is looking at it.
+        const tickMs = st.cfg.match.tickMs;
+        progressRef.current = st.finished
+          ? 1
+          : Math.min(1, (now - lastTickAt.current) / tickMs);
+      } else if (!st.finished && !ui.current.paused) {
         acc += dt * ui.current.speed;
         const tickMs = st.cfg.match.tickMs;
         while (acc >= tickMs && !st.finished) {
@@ -331,7 +401,11 @@ export default function App() {
         });
       }
 
-      if (st.finished && !awarded.current) {
+      // A duel is paid by the server, which watched it: the `end` message
+      // brings the number, and none of the banking below applies. League wins
+      // are not banked either — the ladder is climbed against the bots, or a
+      // friend willing to lose ten times would be a lift to the crown.
+      if (st.finished && !awarded.current && !duelRef.current) {
         awarded.current = true;
         const me = st.traders[HUMAN];
         const li = leagueRef.current;
@@ -486,8 +560,253 @@ export default function App() {
     [seed, botPreset, rerender],
   );
 
+  /**
+   * The number that floats off a row when a trade prints. Against a bot the
+   * trade comes back from `applyAction` on the spot; in a duel it comes back
+   * from the server a moment later. Same float either way.
+   */
+  const floatId = useRef(1);
+  const showTrade = useCallback((trade: Trade) => {
+    const id = floatId.current++;
+    const text =
+      trade.realized !== 0
+        ? `${signed(trade.realized)}`
+        : `${trade.qty > 0 ? '+' : '-'}${Math.abs(trade.qty)} SH`;
+    const item: FloatPnl = { id, text, good: trade.realized !== 0 ? trade.realized > 0 : true };
+    setFloats((f) => ({ ...f, [trade.stock]: [...(f[trade.stock] ?? []), item] }));
+    window.setTimeout(
+      () =>
+        setFloats((f) => ({
+          ...f,
+          [trade.stock]: (f[trade.stock] ?? []).filter((x) => x.id !== id),
+        })),
+      900,
+    );
+  }, []);
+
+  /* ------------------------------------------------------------------- duels */
+
+  const closeDuel = useCallback(() => {
+    duelRef.current?.close();
+    duelRef.current = null;
+  }, []);
+
+  /**
+   * Everything the object on the other end has to say.
+   *
+   * Note what `setup` does and does not do. It builds a mirror off the seed and
+   * the board the server sent — which is what gives this end the news schedule,
+   * the quarter lines and the perks the HUD reads — and then never steps it
+   * again. Every tick after that is written over the mirror by `applyTick`.
+   */
+  const onDuelMessage = useCallback(
+    (msg: ServerMsg) => {
+      switch (msg.k) {
+        case 'lobby':
+          setDuel((d) =>
+            d
+              ? {
+                  ...d,
+                  phase: d.phase === 'match' ? d.phase : 'waiting',
+                  rival: msg.rival,
+                  league: msg.league,
+                  expiresAt: msg.expiresAt,
+                  error: null,
+                }
+              : d,
+          );
+          break;
+
+        case 'setup': {
+          stateRef.current = buildMirror(msg);
+          lastTick.current = null;
+          progressRef.current = 0;
+          lastTickAt.current = performance.now();
+          // The payout arrives as a message; nothing local is allowed to bank
+          // one, and this is the flag the game loop checks.
+          awarded.current = true;
+          setAward(null);
+          setUnlockedName(null);
+          setFloats({});
+          setPauseOpen(false);
+          setRivalOutfit(msg.outfits[1]);
+          setDuel((d) => (d ? { ...d, phase: 'match', league: msg.league, error: null } : d));
+          if (msg.startsInMs === null) {
+            // dropped back into a match already under way
+            setCountdown(null);
+            setScreen('match');
+          } else {
+            setScreen('vs');
+          }
+          rerender();
+          break;
+        }
+
+        case 'sync':
+          applySync(stateRef.current, msg.sync, msg.tick);
+          lastTick.current = msg.tick;
+          lastTickAt.current = performance.now();
+          rerender();
+          break;
+
+        case 'tick': {
+          const st = stateRef.current;
+          const advanced = msg.tick.t !== st.tick;
+          const trades = applyTick(st, msg.tick);
+          lastTick.current = msg.tick;
+          if (advanced) lastTickAt.current = performance.now();
+          for (const trade of trades) {
+            if (trade.trader !== HUMAN) continue;
+            showTrade(trade);
+            haptic(Math.abs(trade.realized) > 1 ? 'heavy' : 'light');
+          }
+          rerender();
+          break;
+        }
+
+        case 'end': {
+          const a: Award = {
+            win: msg.award.win,
+            profit: msg.award.profit,
+            total: msg.award.total,
+          };
+          setAward(a);
+          setDuel((d) => (d ? { ...d, payLeague: msg.award.league } : d));
+          if (a.total > 0) {
+            setStars((prev) => {
+              const next = prev + a.total;
+              saveStars(next);
+              return next;
+            });
+          }
+          break;
+        }
+
+        case 'gone':
+          setDuel((d) => (d ? { ...d, rivalGone: true } : d));
+          break;
+
+        case 'back':
+          setDuel((d) => (d ? { ...d, rivalGone: false } : d));
+          break;
+
+        case 'error':
+          closeDuel();
+          setDuel((d) => (d ? { ...d, phase: 'error', error: msg.reason } : d));
+          setScreen('duel');
+          break;
+      }
+    },
+    [closeDuel, rerender, showTrade],
+  );
+
+  const connect = useCallback(
+    (code: string, phase: DuelPhase, extra: Partial<DuelUi> = {}) => {
+      closeDuel();
+      setDuel({
+        phase,
+        code,
+        link: null,
+        expiresAt: null,
+        league: leagueRef.current,
+        rival: null,
+        error: null,
+        conn: 'connecting',
+        rivalGone: false,
+        payLeague: null,
+        ...extra,
+      });
+      setScreen('duel');
+      duelRef.current = new DuelSocket(
+        code,
+        { name: playerName(), outfit: outfitRef.current },
+        onDuelMessage,
+        (state) => setDuel((d) => (d ? { ...d, conn: state } : d)),
+      );
+    },
+    [closeDuel, onDuelMessage],
+  );
+
+  /** Say why there will be no duel, on the duel screen, where it was asked for. */
+  const duelRefusal = useCallback((reason: DuelError | 'net') => {
+    setDuel({
+      phase: 'error',
+      code: null,
+      link: null,
+      expiresAt: null,
+      league: leagueRef.current,
+      rival: null,
+      error: reason,
+      conn: 'lost',
+      rivalGone: false,
+      payLeague: null,
+    });
+    setScreen('duel');
+  }, []);
+
+  const startDuel = useCallback(async () => {
+    // Two things a duel cannot do without, and they fail differently: a build
+    // with no server behind it, and a game opened outside Telegram, where
+    // there is no signature and so no way to say who is playing.
+    if (!apiBase()) return duelRefusal('noserver');
+    if (!duelsAvailable()) return duelRefusal('badsig');
+
+    setDuel({
+      phase: 'opening',
+      code: null,
+      link: null,
+      expiresAt: null,
+      league: leagueRef.current,
+      rival: null,
+      error: null,
+      conn: 'connecting',
+      rivalGone: false,
+      payLeague: null,
+    });
+    setScreen('duel');
+    const invite = await createInvite(leagueRef.current, outfitRef.current);
+    if (!invite) return duelRefusal('net');
+    connect(invite.code, 'waiting', {
+      code: invite.code,
+      link: invite.link,
+      expiresAt: invite.expiresAt,
+    });
+  }, [connect, duelRefusal]);
+
+  /** Out of the duel and back to a perfectly ordinary match against a bot. */
+  const leaveDuel = useCallback(() => {
+    closeDuel();
+    setDuel(null);
+    setScreen('menu');
+    const li = leagueRef.current;
+    const held = heldRef.current[li];
+    const s = held ?? String(Math.floor(Math.random() * 1e6));
+    if (!held) hold(li, s);
+    restart(s, LEAGUES[li].preset, li, held ? undefined : null, Boolean(held));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeDuel, restart]);
+
+  /** Opened on somebody's invitation: straight into it, whatever screen was next. */
+  useEffect(() => {
+    const code = duelCodeFromLaunch();
+    if (code) connect(code, 'joining', { code });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // the socket must not outlive the page that was watching it
+  useEffect(() => closeDuel, [closeDuel]);
+
+  /* ---------------------------------------------------------------- actions */
+
   /** Take the last trade back, if the coat is still offering. */
   const takeBack = () => {
+    if (duelRef.current) {
+      // The book lives on the server; an undo is a request for it to be put
+      // back, not something this end can do to a mirror.
+      if (canUndo(stateRef.current, HUMAN)) duelRef.current.send({ k: 'undo' });
+      haptic('heavy');
+      return;
+    }
     if (!undoLast(stateRef.current, HUMAN)) return;
     haptic('heavy');
     setFloats({});
@@ -496,15 +815,37 @@ export default function App() {
 
   const fireAbility = () => {
     const st = stateRef.current;
+    if (duelRef.current) {
+      if (lastTick.current?.rdy) {
+        duelRef.current.send({ k: 'ability' });
+        haptic('heavy');
+      }
+      return;
+    }
     if (!useAbility(st, HUMAN)) return;
     haptic('heavy');
     rerender();
   };
 
-  const floatId = useRef(1);
+  /** Giving up. In a duel the server has to be told, or it goes on ticking. */
+  const giveUp = () => {
+    if (duelRef.current) duelRef.current.send({ k: 'resign' });
+    else resign(stateRef.current, HUMAN);
+    setPauseOpen(false);
+    rerender();
+  };
+
   const act = (stockIdx: number, side: 'buy' | 'sell') => {
     const st = stateRef.current;
     if (st.finished || st.traders[HUMAN].bankrupt) return;
+    if (duelRef.current) {
+      // Nothing is applied here on the way out. A tap that the server refuses —
+      // frozen company, no cash, a STATIC still running — must not print a
+      // trade on this screen that the other player never sees.
+      duelRef.current.send({ k: 'act', stock: stockIdx, side });
+      haptic();
+      return;
+    }
     const trade = applyAction(st, {
       trader: HUMAN,
       stock: stockIdx,
@@ -513,21 +854,7 @@ export default function App() {
     });
     if (!trade) return;
     haptic(Math.abs(trade.realized) > 1 ? 'heavy' : 'light');
-    const id = floatId.current++;
-    const text =
-      trade.realized !== 0
-        ? `${signed(trade.realized)}`
-        : `${trade.qty > 0 ? '+' : '-'}${Math.abs(trade.qty)} SH`;
-    const item: FloatPnl = { id, text, good: trade.realized !== 0 ? trade.realized > 0 : true };
-    setFloats((f) => ({ ...f, [stockIdx]: [...(f[stockIdx] ?? []), item] }));
-    window.setTimeout(
-      () =>
-        setFloats((f) => ({
-          ...f,
-          [stockIdx]: (f[stockIdx] ?? []).filter((x) => x.id !== id),
-        })),
-      900,
-    );
+    showTrade(trade);
     rerender();
   };
 
@@ -729,11 +1056,31 @@ export default function App() {
           playerOutfit={outfit}
           rivalName={rival.name}
           rivalOutfit={rivalOutfit}
+          duel={Boolean(duel)}
           onReady={() => {
             setScreen('match');
             setCountdown(3);
           }}
           onCancel={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (screen === 'duel' && duel) {
+    return (
+      <div className="app">
+        <DuelScreen
+          phase={duel.phase === 'match' ? 'waiting' : duel.phase}
+          link={duel.link}
+          code={duel.code}
+          expiresAt={duel.expiresAt}
+          leagueName={leagueName(LEAGUES[duel.league] ?? LEAGUES[0])}
+          rivalName={duel.rival?.name ?? null}
+          error={duel.error}
+          onSend={() => duel.link && shareInvite(duel.link, t('duel.inviteText'))}
+          onCopy={() => (duel.link ? copyLink(duel.link) : Promise.resolve(false))}
+          onBack={leaveDuel}
         />
       </div>
     );
@@ -788,6 +1135,7 @@ export default function App() {
           onToggleFree={toggleFree}
           onOpenDev={() => setDevOpen(true)}
           onPlay={() => setScreen('leagues')}
+          onDuel={startDuel}
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
@@ -796,7 +1144,7 @@ export default function App() {
         />
         {pauseOpen && !st.finished && (
         <div className="overlay pause">
-          <h2>{t('match.paused')}</h2>
+          <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
@@ -812,14 +1160,7 @@ export default function App() {
             </button>
           )}
           <div className="result-actions">
-            <button
-              className="big-btn ghost"
-              onClick={() => {
-                resign(stateRef.current, HUMAN);
-                setPauseOpen(false);
-                rerender();
-              }}
-            >
+            <button className="big-btn ghost" onClick={giveUp}>
               {t('match.surrender')}
             </button>
             <button className="big-btn" onClick={() => setPauseOpen(false)}>
@@ -883,6 +1224,16 @@ export default function App() {
         </button>
       </header>
 
+      {/* Neither of these stops the match: the market is on the server and it
+          keeps going whether this phone is attached to it or the other player
+          is still watching. Saying so is the whole job. */}
+      {duel && duel.conn !== 'open' && !st.finished && (
+        <div className="duel-banner bad">{t('duel.reconnecting')}</div>
+      )}
+      {duel && duel.conn === 'open' && duel.rivalGone && !st.finished && (
+        <div className="duel-banner">{t('duel.rivalGone')}</div>
+      )}
+
       <div className="chart-card">
         <div className="chart-wrap">
           <canvas ref={canvasRef} />
@@ -914,7 +1265,7 @@ export default function App() {
           outfit={rivalOutfit}
           netWorth={rival.netWorth}
           cash={rival.cash}
-          held={positionValue(st, rival)}
+          held={duel ? (lastTick.current?.tr[1].hv ?? 0) : positionValue(st, rival)}
           startCash={cfg.match.startingCash}
           cheapestShare={cheapestShare}
           bankrupt={rival.bankrupt}
@@ -924,7 +1275,7 @@ export default function App() {
 
       <AbilityBar
         name={me.ability ? ABILITY_NAME[me.ability] : null}
-        ready={canUseAbility(st, HUMAN)}
+        ready={duel ? Boolean(lastTick.current?.rdy) : canUseAbility(st, HUMAN)}
         spent={me.abilityUsed}
         onUse={fireAbility}
       />
@@ -991,21 +1342,31 @@ export default function App() {
           state={st}
           humanIdx={HUMAN}
           award={award}
-          leagueName={leagueName(LEAGUES[league])}
+          /* A duel is paid at the ladder position the SERVER has for you, which
+             is not always the league whose companies were dealt: beating a
+             friend on the crown board is worth what your own rung is worth.
+             Say which one it was, or the payout looks arbitrary. */
+          leagueName={leagueName(
+            LEAGUES[duel ? (duel.payLeague ?? duel.league) : league] ?? LEAGUES[0],
+          )}
           unlockedName={unlockedName}
           onRestart={() => {
+            if (duel) {
+              void startDuel();
+              return;
+            }
             const s = String(Math.floor(Math.random() * 1e6));
             hold(league, s);
             restart(s, LEAGUES[league].preset, league, null);
             setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
           }}
-          onMenu={() => setScreen('leagues')}
+          onMenu={() => (duel ? leaveDuel() : setScreen('leagues'))}
         />
       )}
 
       {pauseOpen && !st.finished && (
         <div className="overlay pause">
-          <h2>{t('match.paused')}</h2>
+          <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
           <div className="sub">
             {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
           </div>
@@ -1021,14 +1382,7 @@ export default function App() {
             </button>
           )}
           <div className="result-actions">
-            <button
-              className="big-btn ghost"
-              onClick={() => {
-                resign(stateRef.current, HUMAN);
-                setPauseOpen(false);
-                rerender();
-              }}
-            >
+            <button className="big-btn ghost" onClick={giveUp}>
               {t('match.surrender')}
             </button>
             <button className="big-btn" onClick={() => setPauseOpen(false)}>

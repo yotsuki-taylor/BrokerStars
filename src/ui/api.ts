@@ -18,10 +18,19 @@
 
 const BASE = String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
-/** The signed one. `initDataUnsafe` is the forgeable one — see admin.ts. */
-function initData(): string {
+/**
+ * The signed one. `initDataUnsafe` is the forgeable one — see admin.ts.
+ *
+ * Exported because duels need it too: the object that runs a duel has to know
+ * who is on each end of it, and this string is the only thing that says so in
+ * a way a server can check (src/ui/duel.ts).
+ */
+export function initData(): string {
   return String((window as any).Telegram?.WebApp?.initData ?? '');
 }
+
+/** Where the server is, for the socket a duel opens. Empty in a build with none. */
+export const apiBase = (): string => BASE;
 
 /** Who the server will say we are, used only to highlight a row. */
 export function myId(): string | null {

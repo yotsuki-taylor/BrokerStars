@@ -960,6 +960,116 @@ body {
   letter-spacing: 2px;
 }
 
+/* PLAY and DUEL share the column the single PLAY used to have to itself, and
+   the split is deliberately uneven: the duel needs somebody on the other end,
+   so it gets the smaller half of a button that was already big enough. */
+.menu-right {
+  display: grid;
+  grid-template-rows: 1.6fr 1fr;
+  gap: 8px;
+}
+
+.menu-btn.duel {
+  background: linear-gradient(#7f6ef0, #4b39c4);
+  color: #f4f0ff;
+  font-size: 18px;
+  letter-spacing: 2px;
+  min-height: 0;
+}
+
+/* ---------- duel invitation ---------- */
+
+.overlay.duel {
+  align-items: stretch;
+}
+
+.overlay.duel .spacer {
+  flex: 1 1 auto;
+}
+
+.duel-clock {
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: 2px;
+  margin: 6px 0 2px;
+}
+
+.duel-clock.urgent {
+  color: var(--down);
+}
+
+/* The code is meant to be read out loud when a link will not open, so it is
+   spaced like something dictated rather than like a word. */
+.duel-code {
+  text-align: center;
+  font-size: 20px;
+  letter-spacing: 6px;
+  padding: 8px 4px;
+  margin: 4px 0 10px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  word-break: break-all;
+}
+
+.duel-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.duel-actions .menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.duel-status {
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  margin: 6px 0;
+}
+
+.duel-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 8px 0;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.duel-note.bad {
+  color: var(--down);
+}
+
+/* A duel that lost its socket says so over the match rather than stopping it:
+   the market on the server keeps moving whether or not this phone is watching. */
+.duel-banner {
+  position: absolute;
+  left: 50%;
+  top: calc(8px + env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 15;
+  padding: 5px 12px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  background: rgba(10, 24, 52, 0.92);
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.duel-banner.bad {
+  color: var(--down);
+}
+
 /* ---------- match payout ---------- */
 
 .payout {

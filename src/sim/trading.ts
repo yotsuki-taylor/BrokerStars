@@ -1,6 +1,18 @@
 import type { Config } from './config';
 import type { Action, MatchState, Trade, TraderState } from './types';
 
+/**
+ * How much of the cash on hand one tap commits. This was a row of buttons the
+ * player could set per trade; it was never a decision anyone made twice, so it
+ * is one number now.
+ *
+ * It lives here rather than beside the buttons because the duel server presses
+ * them too: a tap in a duel is a message, and the size it turns into has to be
+ * the same on the object that runs the match as it is in the browser that drew
+ * the button (see `worker/src/duel.ts`).
+ */
+export const TRADE_FRACTION = 0.25;
+
 export function positionValue(state: MatchState, t: TraderState): number {
   let v = 0;
   for (let i = 0; i < state.stocks.length; i++) v += t.positions[i] * state.stocks[i].price;
