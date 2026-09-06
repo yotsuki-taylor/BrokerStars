@@ -10,6 +10,13 @@ compatibility_date = "2025-09-01"
 [observability]
 enabled = true
 
+# Where the game is served from. The bot answers /start with a button that opens
+# it, so the Worker has to know the address (worker/src/bot.ts). Public, and in
+# here beside the database id below for the same reason that is: it names this
+# deployment rather than protecting it.
+[vars]
+WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "broker-stars"

@@ -18,11 +18,16 @@
  * What is deliberately NOT here: any notion of the player's local star balance.
  * The board ranks stars EARNED, which the server adds up itself, so spending
  * them in the shop cannot cost anybody their place.
+ *
+ * The bot lives here too, on `/tg` (see `bot.ts`). It has two jobs, both of
+ * them one message long, and this is where the token already is — so there is
+ * no process to keep alive anywhere.
  */
 
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
+import { answerUpdate } from './bot';
 import { REWARDS, record, topLeague, type Env, type Outcome, type Row } from './results';
-import { botUsername, verifyInitData } from './telegram';
+import { botUsername, sameSecret, verifyInitData, webhookSecret } from './telegram';
 
 export { Duel } from './duel';
 export { verifyInitData } from './telegram';
@@ -216,6 +221,44 @@ async function newDuel(request: Request, env: Env) {
   return json({ ok: true, code, link, expiresAt, yourLeague: await topLeague(env, caller.id) });
 }
 
+/* -------------------------------------------------------------- the bot */
+
+/**
+ * An update from Telegram, if it really is from Telegram.
+ *
+ * The only thing standing between this route and anybody who guessed its path
+ * is the header, which carries the `secret_token` that `setWebhook` was given.
+ * That token is derived from the bot's own token (see `webhookSecret`), so
+ * there is no second secret to set anywhere and nothing to fall out of step.
+ *
+ * The answer is a method call in the body: Telegram performs whatever the
+ * webhook responds with, so a reply costs no second call to the API. And the
+ * status is 200 whatever happens — an update this route refuses to think about
+ * is one Telegram would otherwise retry all day.
+ */
+async function telegramUpdate(request: Request, env: Env) {
+  if (!env.BOT_TOKEN || !env.WEBAPP_URL) return new Response('ok');
+
+  const given = request.headers.get('x-telegram-bot-api-secret-token') ?? '';
+  if (!sameSecret(given, await webhookSecret(env.BOT_TOKEN))) {
+    return new Response('no', { status: 401 });
+  }
+
+  let update: unknown;
+  try {
+    update = await request.json();
+  } catch {
+    return new Response('ok');
+  }
+
+  const answer = answerUpdate(update, env.WEBAPP_URL);
+  return answer
+    ? new Response(JSON.stringify(answer), {
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+      })
+    : new Response('ok');
+}
+
 /* ---------------------------------------------------------------- routing */
 
 export default {
@@ -225,7 +268,12 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
     if (url.pathname === '/health') {
-      return json({ ok: true, signedWrites: Boolean(env.BOT_TOKEN), duels: Boolean(env.DUEL) });
+      return json({
+        ok: true,
+        signedWrites: Boolean(env.BOT_TOKEN),
+        duels: Boolean(env.DUEL),
+        bot: Boolean(env.BOT_TOKEN && env.WEBAPP_URL),
+      });
     }
 
     if (url.pathname === '/top' && request.method === 'GET') {
@@ -238,6 +286,8 @@ export default {
     if (url.pathname === '/result' && request.method === 'POST') return submit(request, env);
 
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);
+
+    if (url.pathname === '/tg' && request.method === 'POST') return telegramUpdate(request, env);
 
     // The socket carries no identity of its own: the first thing over it is a
     // `hello` with the signed initData in the body, which is why the code in

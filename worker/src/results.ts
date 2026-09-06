@@ -13,6 +13,12 @@ export interface Env {
   DB: D1Database;
   /** the bot's token, set with `wrangler secret put BOT_TOKEN` */
   BOT_TOKEN?: string;
+  /**
+   * Where the game is served from, which the bot needs to build the button it
+   * answers with. Public, and in `wrangler.toml` beside the database id for
+   * the same reason that is: it names this deployment, it does not protect it.
+   */
+  WEBAPP_URL?: string;
   DUEL: DurableObjectNamespace;
 }
 

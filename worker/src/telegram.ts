@@ -80,6 +80,26 @@ export async function verifyInitData(initData: string, botToken: string): Promis
 }
 
 /**
+ * The password on the webhook, which is the bot token wearing a hat.
+ *
+ * Telegram sends whatever `secret_token` was given to `setWebhook` back in a
+ * header on every update, and that is how a Worker tells a real update from
+ * anybody who guessed the path. Deriving it from the token rather than minting
+ * a second secret means there is nothing to keep in step: the script that sets
+ * the hook and the Worker that checks it both hold the token, both do this,
+ * and both get the same answer. Rotate the token and the hook's password
+ * rotates with it.
+ *
+ * Hex, because Telegram only allows `A-Za-z0-9_-` in it.
+ */
+export async function webhookSecret(botToken: string): Promise<string> {
+  return hex(await hmac(enc.encode(botToken), 'BrokerStarsWebhook')).slice(0, 48);
+}
+
+/** Constant time, for the same reason the signature check is. */
+export const sameSecret = sameSignature;
+
+/**
  * The bot's @name, asked of Telegram once and kept for the life of the isolate.
  *
  * A duel invitation is a `t.me/<bot>?start=...` link, and the name in it is

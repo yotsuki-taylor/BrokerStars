@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { answerUpdate } from '../src/bot';
+
+/**
+ * The bot is two messages and a button, and it used to be a script somebody
+ * ran. Now it is a route, and a route that answers wrongly is a friend tapping
+ * an invitation and landing nowhere — so the routing gets a test.
+ */
+
+const APP = 'https://example.github.io/BrokerStars/';
+const msg = (text: string) => ({ message: { chat: { id: 42 }, text } });
+
+/** The url on the one button of a reply. */
+const buttonUrl = (answer: any): string =>
+  answer.reply_markup.inline_keyboard[0][0].web_app.url;
+
+describe('what the bot answers', () => {
+  it('sends an invitation straight into that duel', () => {
+    const answer: any = answerUpdate(msg('/start duel_bcdfgh2345'), APP);
+    expect(answer.method).toBe('sendMessage');
+    expect(answer.chat_id).toBe(42);
+    // a query, not a fragment: Telegram wants the hash for tgWebAppData
+    expect(buttonUrl(answer)).toBe(`${APP}?d=bcdfgh2345`);
+  });
+
+  it('opens the game plainly for anything else', () => {
+    for (const text of ['/start', '/play', '/help', '/start@BrokerStars_bot']) {
+      const answer: any = answerUpdate(msg(text), APP);
+      expect(answer, text).not.toBeNull();
+      expect(buttonUrl(answer), text).toBe(APP);
+    }
+  });
+
+  it('still opens the game when the code in the link is nonsense', () => {
+    // Better than a dead end: the duel will not be found, but the friend is at
+    // least inside the game rather than looking at a bot that said nothing.
+    const answer: any = answerUpdate(msg('/start duel_' + 'a'.repeat(80)), APP);
+    expect(buttonUrl(answer)).toBe(APP);
+  });
+
+  it('says nothing to everything it is not for', () => {
+    expect(answerUpdate(msg('hello'), APP)).toBeNull();
+    expect(answerUpdate({ message: { chat: { id: 1 } } }, APP)).toBeNull();
+    expect(answerUpdate({ edited_message: { chat: { id: 1 }, text: '/play' } }, APP)).toBeNull();
+    expect(answerUpdate({}, APP)).toBeNull();
+    expect(answerUpdate(null, APP)).toBeNull();
+    expect(answerUpdate('/play', APP)).toBeNull();
+  });
+
+  it('keeps whatever the mini app url already carried', () => {
+    const withPath = 'https://example.com/game/?v=2';
+    const answer: any = answerUpdate(msg('/start duel_bcdfgh2345'), withPath);
+    const url = new URL(buttonUrl(answer));
+    expect(url.searchParams.get('v')).toBe('2');
+    expect(url.searchParams.get('d')).toBe('bcdfgh2345');
+  });
+});

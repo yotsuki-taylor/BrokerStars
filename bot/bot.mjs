@@ -1,14 +1,25 @@
 /**
- * Telegram bot that opens the mini app.
+ * Points Telegram at the bot and stops.
  *
- *   npm run bot
+ *   npm run bot          set the webhook, the menu button and the commands
+ *   npm run bot -- --off remove the webhook again
  *
- * Reads BOT_TOKEN and WEBAPP_URL from .env (never commit that file). Long
- * polling, no webhook and no server of its own — the game itself is a static
- * page served from wherever WEBAPP_URL points.
+ * This used to be a long-polling loop, and the loop was the whole of the bot:
+ * something had to stay alive for a PLAY button to be answered. It does not any
+ * more. The Worker already holds the token — it needs it to check who is
+ * handing in a score and who is sitting down to a duel — so it answers updates
+ * too, on `/tg` (`worker/src/bot.ts`). What is left here is the one-off setup,
+ * which is a script rather than a service.
  *
- * Node 18+ only, no dependencies.
+ * The webhook's `secret_token` is derived from the bot token rather than
+ * invented, so there is no second secret to set on the Worker and nothing to
+ * fall out of step: both sides HMAC the same label under the same token. See
+ * `webhookSecret` in `worker/src/telegram.ts` — this has to agree with it.
+ *
+ * Reads BOT_TOKEN, WEBAPP_URL and VITE_API_URL from .env (never commit that
+ * file). Node 18+ only, no dependencies.
  */
+import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 /** Minimal .env reader: KEY=value per line, # comments, optional quotes. */
@@ -31,6 +42,8 @@ loadEnv();
 
 const TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL;
+const API_URL = String(process.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+const off = process.argv.includes('--off');
 
 if (!TOKEN || !WEBAPP_URL) {
   console.error(
@@ -41,6 +54,14 @@ if (!TOKEN || !WEBAPP_URL) {
 }
 if (!WEBAPP_URL.startsWith('https://')) {
   console.error(`WEBAPP_URL must be https, got: ${WEBAPP_URL}`);
+  process.exit(1);
+}
+if (!off && !API_URL) {
+  console.error(
+    'Missing VITE_API_URL — the bot answers from the Worker now, so there has to\n' +
+      'be one to point Telegram at. Deploy worker/ and put its address in .env.\n' +
+      'To take an old webhook off instead: npm run bot -- --off',
+  );
   process.exit(1);
 }
 
@@ -57,105 +78,42 @@ async function api(method, body) {
   return json.result;
 }
 
-const PLAY_BUTTON = { text: '🎮 PLAY', web_app: { url: WEBAPP_URL } };
+/** Must match `webhookSecret` in worker/src/telegram.ts. */
+const webhookSecret = () =>
+  createHmac('sha256', TOKEN).update('BrokerStarsWebhook').digest('hex').slice(0, 48);
 
-/**
- * A duel invitation arrives here rather than at the game.
- *
- * The friend it was sent to may never have opened the mini app, and `?start=`
- * is the one door Telegram opens for somebody who has not. The Worker mints
- * `t.me/<bot>?start=duel_<code>`; this turns that back into a button that opens
- * the game on the duel, by hanging the code off WEBAPP_URL as a query
- * parameter. A query and not a fragment on purpose: Telegram appends its own
- * `#tgWebAppData=...` to the hash, and anything of ours there is in its way.
- */
-const DUEL_START = /^\/start\s+duel_([0-9bcdfghjklmnpqrstvwxyz]{4,32})$/;
+const me = await api('getMe');
 
-function duelButton(code) {
-  const url = new URL(WEBAPP_URL);
-  url.searchParams.set('d', code);
-  return { text: '⚔️ ACCEPT THE DUEL', web_app: { url: url.toString() } };
+if (off) {
+  await api('deleteWebhook', { drop_pending_updates: false });
+  console.log(`@${me.username}: webhook removed. Nothing is answering /start now.`);
+  process.exit(0);
 }
 
-/** One-off setup: the blue menu button next to the message box, and /commands. */
-async function configure() {
-  const me = await api('getMe');
-  await api('setChatMenuButton', {
-    menu_button: { type: 'web_app', text: 'PLAY', web_app: { url: WEBAPP_URL } },
-  });
-  await api('setMyCommands', {
-    commands: [
-      { command: 'play', description: 'Open Broker Stars' },
-      { command: 'help', description: 'How the match works' },
-    ],
-  });
-  console.log(`@${me.username} is live. Mini app: ${WEBAPP_URL}`);
-  console.log('Menu button and commands set. Ctrl+C to stop polling.');
+// The Worker only ever needs messages. Asking for nothing else keeps the rest
+// of Telegram's firehose off a route that would only drop it anyway.
+await api('setWebhook', {
+  url: `${API_URL}/tg`,
+  secret_token: webhookSecret(),
+  allowed_updates: ['message'],
+  max_connections: 20,
+});
+
+await api('setChatMenuButton', {
+  menu_button: { type: 'web_app', text: 'PLAY', web_app: { url: WEBAPP_URL } },
+});
+
+await api('setMyCommands', {
+  commands: [
+    { command: 'play', description: 'Open Broker Stars' },
+    { command: 'help', description: 'How the match works' },
+  ],
+});
+
+const hook = await api('getWebhookInfo');
+console.log(`@${me.username} is set up. Mini app: ${WEBAPP_URL}`);
+console.log(`Webhook: ${hook.url}`);
+if (hook.last_error_message) {
+  console.log(`Last error Telegram saw: ${hook.last_error_message}`);
 }
-
-const HELP =
-  'Broker Stars — a two-minute trading duel.\n\n' +
-  'You and a rival trade the same three stocks. Whoever ends with the bigger ' +
-  'net worth wins; positions close automatically at the whistle. Big orders ' +
-  'move the price against you, so size matters.\n\n' +
-  'PLAY puts a bot opposite you. DUEL, on the menu, sends a friend a link and ' +
-  'puts them there instead — same market, same second, and your abilities ' +
-  'land on each other.\n\n' +
-  'Tap PLAY to start.';
-
-async function handle(update) {
-  const msg = update.message;
-  if (!msg?.text) return;
-  const text = msg.text.trim().toLowerCase();
-  const chatId = msg.chat.id;
-
-  // Checked before /start, which it also matches.
-  const duel = DUEL_START.exec(text);
-  if (duel) {
-    await api('sendMessage', {
-      chat_id: chatId,
-      text:
-        'Somebody wants eighty seconds of your time.\n\n' +
-        'Tap below and you are in the same match they are — same three ' +
-        'companies, same chart, same tick. The invitation is only good for ' +
-        '15 minutes from when it was sent.',
-      reply_markup: { inline_keyboard: [[duelButton(duel[1])]] },
-    });
-    return;
-  }
-
-  if (text.startsWith('/start') || text.startsWith('/play')) {
-    await api('sendMessage', {
-      chat_id: chatId,
-      text: `Ready to trade, ${msg.from.first_name ?? 'broker'}?`,
-      reply_markup: { inline_keyboard: [[PLAY_BUTTON]] },
-    });
-    return;
-  }
-  if (text.startsWith('/help')) {
-    await api('sendMessage', {
-      chat_id: chatId,
-      text: HELP,
-      reply_markup: { inline_keyboard: [[PLAY_BUTTON]] },
-    });
-  }
-}
-
-async function poll() {
-  let offset = 0;
-  for (;;) {
-    try {
-      const updates = await api('getUpdates', { offset, timeout: 30 });
-      for (const u of updates) {
-        offset = u.update_id + 1;
-        await handle(u).catch((e) => console.error('handler:', e.message));
-      }
-    } catch (e) {
-      console.error('poll:', e.message);
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-  }
-}
-
-await configure();
-await poll();
+console.log('Nothing needs to keep running — the Worker answers from here on.');
