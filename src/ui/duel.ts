@@ -114,15 +114,33 @@ export type Link = 'connecting' | 'open' | 'lost';
  * other end is happy to take the seat back and say what has happened since —
  * so the right answer to a dropped connection is to dial again, not to end the
  * match. Give up after enough tries that a real outage stops looking like one.
+ *
+ * Three numbers, and each is there for a reason a player would recognise.
+ *
+ * The first retry is almost immediate and the rest back off: most drops are a
+ * blip and heal on the first try, and waiting a second and a half to find that
+ * out is a second and a half of a match spent looking at a warning.
+ *
+ * Which is what `GRACE_MS` is really about. A blip that heals inside it is
+ * never mentioned — the banner is for a connection that is actually in
+ * trouble, and one that flashes up whenever a packet is late trains the player
+ * to ignore it.
+ *
+ * `PING_MS` keeps something going up the wire. A player who is not trading
+ * sends nothing at all, and there are mobile carriers that will quietly hang
+ * up a connection that has been one-way for a minute.
  */
-const RETRIES = 6;
-const RETRY_MS = 1200;
+const BACKOFF_MS = [200, 500, 1000, 2000, 3000, 4000];
+const GRACE_MS = 2500;
+const PING_MS = 20_000;
 
 export class DuelSocket {
   private ws: WebSocket | null = null;
   private tries = 0;
   private closed = false;
   private timer = 0;
+  private grace = 0;
+  private heartbeat = 0;
 
   constructor(
     private readonly code: string,
@@ -130,13 +148,13 @@ export class DuelSocket {
     private readonly onMessage: (msg: ServerMsg) => void,
     private readonly onLink: (state: Link) => void,
   ) {
+    this.onLink('connecting');
     this.dial();
   }
 
   private dial(): void {
     if (this.closed) return;
     const base = apiBase().replace(/^http/, 'ws');
-    this.onLink(this.tries === 0 ? 'connecting' : 'lost');
     let ws: WebSocket;
     try {
       ws = new WebSocket(`${base}/duel/${this.code}/ws`);
@@ -148,8 +166,12 @@ export class DuelSocket {
 
     ws.onopen = () => {
       this.tries = 0;
+      window.clearTimeout(this.grace);
+      this.grace = 0;
       this.onLink('open');
       this.send({ k: 'hello', initData: initData(), ...this.hello });
+      window.clearInterval(this.heartbeat);
+      this.heartbeat = window.setInterval(() => this.send({ k: 'ping' }), PING_MS);
     };
     ws.onmessage = (e) => {
       try {
@@ -168,13 +190,29 @@ export class DuelSocket {
 
   private retry(): void {
     this.ws = null;
+    window.clearInterval(this.heartbeat);
+    this.heartbeat = 0;
     if (this.closed) return;
-    if (++this.tries > RETRIES) {
+
+    // Say nothing yet. If the next dial lands inside the grace, the player
+    // never learns this happened, which is the truthful thing to show them:
+    // the match did not miss anything either.
+    if (!this.grace) {
+      this.grace = window.setTimeout(() => {
+        this.grace = 0;
+        if (this.ws?.readyState !== WebSocket.OPEN) this.onLink('lost');
+      }, GRACE_MS);
+    }
+
+    const wait = BACKOFF_MS[this.tries];
+    if (wait === undefined) {
+      window.clearTimeout(this.grace);
+      this.grace = 0;
       this.onLink('lost');
       return;
     }
-    this.onLink('lost');
-    this.timer = window.setTimeout(() => this.dial(), RETRY_MS);
+    this.tries++;
+    this.timer = window.setTimeout(() => this.dial(), wait);
   }
 
   send(msg: ClientMsg): void {
@@ -184,6 +222,8 @@ export class DuelSocket {
   close(): void {
     this.closed = true;
     window.clearTimeout(this.timer);
+    window.clearTimeout(this.grace);
+    window.clearInterval(this.heartbeat);
     const ws = this.ws;
     this.ws = null;
     try {

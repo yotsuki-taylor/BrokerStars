@@ -138,7 +138,14 @@ export type ClientMsg =
   | { k: 'act'; stock: number; side: 'buy' | 'sell' }
   | { k: 'undo' }
   | { k: 'ability' }
-  | { k: 'resign' };
+  | { k: 'resign' }
+  /**
+   * Nothing to answer. It exists so that something goes *up* the socket now
+   * and then: a duellist who is not trading sends nothing for a minute at a
+   * time, and a lobby sends nothing for fifteen, and there are carriers and
+   * proxies that hang up on a connection that quiet.
+   */
+  | { k: 'ping' };
 
 export type ServerMsg =
   /** seated, and waiting for the other one. `expiresAt` is server time. */

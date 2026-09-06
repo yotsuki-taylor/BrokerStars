@@ -215,6 +215,11 @@ export class Duel implements DurableObject {
         return;
       }
 
+      // A keepalive is the client having nothing to say and saying it anyway,
+      // so that the connection does not look abandoned to whatever is between
+      // us. There is nothing to answer and nothing to charge it against.
+      if (msg?.k === 'ping') return;
+
       if (msg?.k === 'hello') {
         if (seat !== null) return;
         void this.seat(ws, msg).then((s) => {
