@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Character from './Character';
 import Room from './Room';
-import { Check, Cross, Gear, Star } from './components';
+import { Cards, Cart, Check, Cross, Gear, Star, Tie, Trophy } from './components';
 import { t, tr } from './i18n';
 import { ROOM_DONE, ROOM_STEPS } from './renovation';
 import type { Outfit } from './wardrobe';
@@ -21,6 +21,7 @@ export default function Menu({
   onShop,
   onEquip,
   onArchive,
+  onRating,
   onSettings,
 }: {
   stars: number;
@@ -36,6 +37,7 @@ export default function Menu({
   onShop: () => void;
   onEquip: () => void;
   onArchive: () => void;
+  onRating: () => void;
   onSettings: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
@@ -138,15 +140,25 @@ export default function Menu({
       )}
 
       <div className="menu-actions">
+        {/* Each of the four carries its mark at a fixed inset, so the pictures
+            line up down the column while the words stay centred in what is
+            left of the button. */}
         <div className="menu-left">
           <button className="menu-btn" onClick={onShop}>
-            {t('menu.shop')}
+            <Cart />
+            <span>{t('menu.shop')}</span>
           </button>
           <button className="menu-btn" onClick={onEquip}>
-            {t('menu.equip')}
+            <Tie />
+            <span>{t('menu.equip')}</span>
           </button>
           <button className="menu-btn" onClick={onArchive}>
-            {t('menu.archive')}
+            <Cards />
+            <span>{t('menu.archive')}</span>
+          </button>
+          <button className="menu-btn" onClick={onRating}>
+            <Trophy />
+            <span>{t('rating.title')}</span>
           </button>
         </div>
         <button className="menu-btn play" onClick={onPlay}>

@@ -30,6 +30,7 @@ import ArchiveScreen from './ArchiveScreen';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
+import RatingScreen from './RatingScreen';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import VersusScreen from './VersusScreen';
@@ -252,7 +253,7 @@ export default function App() {
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<
-    'menu' | 'shop' | 'equip' | 'archive' | 'leagues' | 'board' | 'vs' | 'match'
+    'menu' | 'shop' | 'equip' | 'archive' | 'rating' | 'leagues' | 'board' | 'vs' | 'match'
   >('menu');
   /** rerolls of the board still owed this match, and a board the player named */
   const [rerollsLeft, setRerollsLeft] = useState(0);
@@ -746,6 +747,14 @@ export default function App() {
     );
   }
 
+  if (screen === 'rating') {
+    return (
+      <div className="app">
+        <RatingScreen onBack={() => setScreen('menu')} />
+      </div>
+    );
+  }
+
   if (screen === 'shop' || screen === 'equip') {
     return (
       <div className="app">
@@ -782,6 +791,7 @@ export default function App() {
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
+          onRating={() => setScreen('rating')}
           onSettings={() => setSettingsOpen(true)}
         />
         {pauseOpen && !st.finished && (

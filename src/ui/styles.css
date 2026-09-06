@@ -907,11 +907,29 @@ body {
   gap: 8px;
 }
 
-/* three buttons stack against one PLAY, so they give up a little height and a
-   little type size rather than pushing the room out of the menu */
+/* four buttons stack against one PLAY, so they give up height and type size
+   rather than pushing the room out of the menu — the hero above them is the
+   flexible box and every pixel taken here comes off the character */
 .menu-left .menu-btn {
-  min-height: 42px;
-  font-size: 15px;
+  min-height: 38px;
+  font-size: 14px;
+  /* mark in a fixed column, word in what is left: the four pictures line up
+     down the edge, which centring the pair would not give */
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.menu-left .menu-btn > span {
+  text-align: center;
+}
+
+.menu-left .menu-btn > svg {
+  /* the label carries a drop shadow; the mark gets the same one, or it reads
+     as printed on a different layer from the word beside it */
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4));
 }
 
 .menu-btn {
@@ -2280,11 +2298,11 @@ body {
 
 /* ---------- archive tabs ---------- */
 
-/* Same tab as the shop wears, three across instead of five. */
+/* Same tab as the shop wears, two across instead of five. */
 .arch-tabs {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
 }
 
@@ -2317,7 +2335,9 @@ body {
 
 /* ---------- leaderboard ---------- */
 
-.board {
+/* `rating-`, not `board-`: the screen you pick three companies on is `.board`
+   already, and the two were quietly sharing a rule. */
+.rating-board {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -2325,7 +2345,7 @@ body {
   gap: 6px;
 }
 
-.board-head {
+.rating-head {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -2335,14 +2355,14 @@ body {
   opacity: 0.6;
 }
 
-.board-head em {
+.rating-head em {
   font-style: normal;
   font-size: 10px;
   letter-spacing: 0.3px;
   opacity: 0.8;
 }
 
-.board-rows {
+.rating-rows {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -2352,7 +2372,7 @@ body {
 }
 
 /* rank, name, matches, stars — the name is the only part allowed to grow */
-.board-line {
+.rating-line {
   display: grid;
   grid-template-columns: 26px 1fr auto auto;
   align-items: center;
@@ -2365,37 +2385,37 @@ body {
 }
 
 /* your own row, wherever it landed */
-.board-line.you {
+.rating-line.you {
   background: linear-gradient(#1d5ea6, #10427c);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
-.board-rank {
+.rating-rank {
   opacity: 0.6;
   font-size: 11px;
 }
 
-.board-who {
+.rating-who {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.board-matches {
+.rating-matches {
   font-size: 9px;
   letter-spacing: 0.4px;
   opacity: 0.5;
 }
 
-.board-stars {
+.rating-stars {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 /* the break between the top of the board and your own row below it */
-.board-gap {
+.rating-gap {
   text-align: center;
   opacity: 0.4;
   font-size: 12px;

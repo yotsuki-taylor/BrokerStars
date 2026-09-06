@@ -110,6 +110,115 @@ export function Lock({ size = 20 }: { size?: number }) {
   );
 }
 
+/* ------------------------------------------------------- menu button marks */
+
+/*
+ * One mark per button on the main menu, drawn here rather than typed as emoji.
+ * Emoji would fall out of the display face onto whatever the system ships, so
+ * the same four buttons would wear four different styles on iOS, Android and
+ * desktop Telegram — and none of them the game's. These are the same 24-box,
+ * round-capped, `currentColor` line the marks above are: they take the label's
+ * colour, so a disabled button dims its picture along with its word.
+ */
+
+/** SHOP. Basket, rail and two wheels. */
+export function Cart({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M2.8 4.3h2.4l2.9 11.4h9.4M6.6 7.6h14.1l-1.9 6.2H8.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="9.8" cy="19.2" r="1.7" fill="currentColor" />
+      <circle cx="17.3" cy="19.2" r="1.7" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * EQUIP. A necktie: the one piece of the wardrobe that says which game this is.
+ *
+ * Knot and blade are one filled shape with a waist between them rather than two
+ * pieces — at 18px a gap of half a pixel closes up and the tie turns into a
+ * leaf. The collar is the stroke on top, and it is what stops it reading as one.
+ */
+export function Tie({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M9.3 3.7L12 6.1l2.7-2.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 6.4l2.6 2.4-1.1 1.6 2 8.8L12 21.2l-3.5-2 2-8.8-1.1-1.6z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * ARCHIVE. Two cards of the collection, the near one lying over the far one.
+ *
+ * Anything centred and humped on top of a box reads as a briefcase — that was
+ * the first two attempts. What kills the reading is the diagonal: the cards are
+ * offset corner to corner, and the far one is drawn as the two edges that would
+ * actually still be showing rather than as a whole rectangle behind. The offset
+ * is 4.4 units because the stroke eats 2.2 of it, and what is left has to stay
+ * a visible gap down at 18px.
+ */
+export function Cards({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M8 5.4h10.2a2.2 2.2 0 012.2 2.2v9.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="3.6"
+        y="9.8"
+        width="12.4"
+        height="10.6"
+        rx="2.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+    </svg>
+  );
+}
+
+/** RATING. A cup, not a star: the star is already what stars are. */
+export function Trophy({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M7 4h10l-.6 5.2a4.5 4.5 0 01-8.8 0zM7.1 5.6H5a2.3 2.3 0 000 4.6h1.4M16.9 5.6H19a2.3 2.3 0 010 4.6h-1.4M12 14v3.4M8.4 20.4h7.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------- trader card */
 
 export function TraderCard({
