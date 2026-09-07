@@ -107,8 +107,8 @@ export interface Claim {
 /**
  * A fat-finger guard on the claim, not a security boundary — the claim is
  * believed or it is not, and that decision is made elsewhere. The whole
- * wardrobe plus the whole room is 559 stars, so nothing legitimate is anywhere
- * near this.
+ * wardrobe plus the whole room is 7894 stars at today's prices, so nothing
+ * legitimate is within an order of magnitude of this.
  */
 export const MAX_CLAIM_STARS = 100_000;
 

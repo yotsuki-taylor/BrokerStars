@@ -18,7 +18,7 @@ import {
   type Held,
 } from '../src/profile';
 import { ROOM_DONE, ROOM_STEPS } from '../../src/ui/renovation';
-import { PRICES } from '../../src/ui/wardrobe';
+import { PRICES, RARITIES } from '../../src/ui/wardrobe';
 import { cleanClaim, setOf, topsOf } from '../../src/profile/protocol';
 import {
   DAILY_BONUS,
@@ -97,14 +97,17 @@ describe('buying a rung', () => {
   });
 
   it('climbs a whole slot for what the ladder says it costs', () => {
+    const whole = RARITIES.reduce((n, r) => n + PRICES[r], 0);
     let h = EMPTY;
-    for (const r of ['common', 'uncommon', 'rare', 'mythic', 'legend'] as const) {
-      const out = buyItem(h, 1000, 'hat', r, false);
-      expect(out.ok).toBe(true);
+    for (const r of RARITIES) {
+      const out = buyItem(h, whole, 'hat', r, false);
+      expect(out.ok, `could not buy ${r}`).toBe(true);
       if (!out.ok) return;
       h = out.held;
     }
-    expect(h.spent).toBe(4 + 7 + 12 + 20 + 40);
+    // the sum of the rungs and nothing else: no discount for going the long
+    // way and no penalty for it either
+    expect(h.spent).toBe(whole);
     expect(h.owned.hat).toBe('legend');
   });
 });
@@ -129,18 +132,19 @@ describe('renovating', () => {
 
 describe('the developer handing things back', () => {
   it('takes the top rung and refunds it', () => {
-    const h = held({ owned: { hat: 'uncommon' }, outfit: { hat: 'uncommon' }, spent: 11 });
+    const spent = PRICES.common + PRICES.uncommon;
+    const h = held({ owned: { hat: 'uncommon' }, outfit: { hat: 'uncommon' }, spent });
     const out = refundItem(h, 'hat', 'uncommon');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     // dropped a rung, and wearing what is left rather than what is gone
     expect(out.held.owned.hat).toBe('common');
     expect(out.held.outfit.hat).toBe('common');
-    expect(out.held.spent).toBe(11 - PRICES.uncommon);
+    expect(out.held.spent).toBe(spent - PRICES.uncommon);
   });
 
   it('leaves the slot bare and bare-headed at the bottom of the ladder', () => {
-    const h = held({ owned: { hat: 'common' }, outfit: { hat: 'common' }, spent: 4 });
+    const h = held({ owned: { hat: 'common' }, outfit: { hat: 'common' }, spent: PRICES.common });
     const out = refundItem(h, 'hat', 'common');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
@@ -205,11 +209,13 @@ describe('the migration', () => {
   });
 
   it('leaves a player who really did earn it all with exactly what they had', () => {
-    // 40 earned on the board, 23 of it spent in the shop, 17 in hand
+    // everything they own was paid for out of what the board already says they
+    // earned, with some left over: nothing has to be granted to make it add up
     const spent = priceOf({ hat: 'uncommon' }, 1);
-    const h = claimInto(EMPTY, 40, claim({ stars: 40 - spent, room: 1, owned: { hat: 'uncommon' } }));
+    const earned = spent + 17;
+    const h = claimInto(EMPTY, earned, claim({ stars: 17, room: 1, owned: { hat: 'uncommon' } }));
     expect(h.granted).toBe(0);
-    expect(balance(h, 40)).toBe(40 - spent);
+    expect(balance(h, earned)).toBe(17);
   });
 
   it('shuts the door behind the first save with anything in it', () => {

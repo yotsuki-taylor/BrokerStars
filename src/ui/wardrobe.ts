@@ -28,23 +28,43 @@ export const SLOT_LABEL: Record<Slot, string> = {
  *
  * Rarities inside a slot are a ladder, bought in order, so these are step
  * prices rather than the price of an item standing alone: taking a slot from
- * bare to legend is 4+7+12+20+40 = 83 stars whichever way you come at it.
- * Skipping used to be strictly better — buy the rare for 10 and the common and
- * uncommon you passed over were 10 stars thrown away — which meant the shop
- * punished you for buying what you could afford today.
+ * bare to legend is 50+200+300+400+600 = 1550 stars whichever way you come at
+ * it. Skipping used to be strictly better — buy the rare and the two rungs you
+ * passed over were stars thrown away — which meant the shop punished you for
+ * buying what you could afford today.
  *
- * The curve is set against what a league pays (see leagues.ts). Filling all
- * five slots at one tier is 10 to 17 matches in the league where that tier
- * gets bought: 20 stars at 2.2 a match in the bronze pit, 200 at 12 a match
- * under the crown. So a rung always costs about the same number of evenings,
- * whichever rung you are on.
+ * WHY THEY ARE THIS BIG. The old curve was 4/7/12/20/40, and the trouble with
+ * it was the size rather than the shape: at what a league pays, every single
+ * item on it cost about a fifth of an evening, and a whole wardrobe went in six
+ * days. Clothes hand out perks that change how every subsequent match is
+ * played — the neck slot hands out the abilities outright — so they were at
+ * once the biggest lever in the game and the cheapest thing in it. Seven stars
+ * for an ability is not a price.
+ *
+ * THE SHAPE IS THE LEAGUE'S. A league pays 2.2 stars a match in the bronze pit
+ * and 12.2 under the crown, and the day's quests add about 7.5 on top of
+ * whatever gets played (`src/daily/protocol.ts`). Against that, at eight
+ * matches an evening, these prices come to 2 / 5.6 / 5.9 / 5.5 / 5.7 days per
+ * item in the league where each tier actually gets bought — which is the
+ * property worth having and the one the old numbers only claimed: a rung costs
+ * about the same number of evenings wherever you stand on the ladder, because
+ * the prices climb at the rate the payouts do.
+ *
+ * THE COMMON IS THE ODD ONE, DELIBERATELY. At two days it is half the price in
+ * evenings of everything above it. The first purchase is not a reward for a
+ * grind, it is the lesson that the shop exists and that what is in it decides
+ * matches — and at 200 the player spent five days being told NOTHING TO USE ·
+ * BUY A NECK ITEM before owning anything at all. It is cheap on purpose.
+ *
+ * The whole wardrobe is 7750 stars, or three to seven months depending on how
+ * much somebody plays. That is the horizon, and it is meant to be one.
  */
 export const PRICES: Record<Rarity, number> = {
-  common: 4,
-  uncommon: 7,
-  rare: 12,
-  mythic: 20,
-  legend: 40,
+  common: 50,
+  uncommon: 200,
+  rare: 300,
+  mythic: 400,
+  legend: 600,
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = {
