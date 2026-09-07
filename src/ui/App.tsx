@@ -1448,6 +1448,7 @@ export default function App() {
 
       <AbilityBar
         name={me.ability ? ABILITY_NAME[me.ability] : null}
+        owned={highestOwned(owned, 'neck') !== null}
         ready={duel ? Boolean(lastTick.current?.rdy) : canUseAbility(st, HUMAN)}
         spent={me.abilityUsed}
         onUse={fireAbility}

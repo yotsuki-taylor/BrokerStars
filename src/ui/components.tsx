@@ -294,18 +294,39 @@ export function TraderCard({
  */
 export function AbilityBar({
   name,
+  owned,
   ready,
   spent,
   onUse,
 }: {
-  /** null for a bare neck: the row stays, empty */
+  /** null for a bare neck, which is what the hint below is for */
   name: string | null;
+  /**
+   * Whether a neck item is owned at all. Only read when there is no ability:
+   * one that is bought and left in the wardrobe wants a different sentence
+   * from one that was never bought, and telling somebody to go and buy what
+   * they already have is worse than saying nothing.
+   */
+  owned: boolean;
   /** live now — unspent, and whatever it needs is on the board */
   ready: boolean;
   spent: boolean;
   onUse: () => void;
 }) {
-  if (!name) return <div className="ability-bar" />;
+  // The row used to stand here empty. A bare strip is not a thing a player can
+  // read anything off, and the neck slot is the one part of the wardrobe whose
+  // absence is invisible from the match screen: everything else you can see
+  // yourself not wearing. So the row says what is missing and where it comes
+  // from — as a hint and not a disabled button, because a disabled button
+  // means "you have one and it is not ready yet", which is a different state
+  // this screen already draws.
+  if (!name) {
+    return (
+      <div className="ability-bar">
+        <span className="ability-hint">{t(owned ? 'match.abilityOff' : 'match.abilityNone')}</span>
+      </div>
+    );
+  }
   return (
     <div className="ability-bar">
       <button

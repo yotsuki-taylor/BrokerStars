@@ -190,6 +190,11 @@ const EN = {
   'match.noCash': 'NO CASH',
   'match.takeBack': 'TAKE THAT BACK',
   'match.abilityUsed': '{name} · USED',
+  // The row where an ability would be, for a trader wearing nothing round the
+  // neck. Two of them, because the useful half of the sentence is different
+  // when the thing is already bought and merely left in the wardrobe.
+  'match.abilityNone': 'NOTHING TO USE · BUY A NECK ITEM',
+  'match.abilityOff': 'NOTHING TO USE · WEAR YOUR NECK ITEM',
   'match.paused': 'PAUSED',
   'match.stillRunning': 'THE MARKET IS STILL RUNNING',
   'match.resume': 'RESUME',
@@ -347,6 +352,8 @@ const RU: Record<Key, string> = {
   'match.noCash': 'НЕТ ДЕНЕГ',
   'match.takeBack': 'ОТМЕНИТЬ СДЕЛКУ',
   'match.abilityUsed': '{name} · ПОТРАЧЕНО',
+  'match.abilityNone': 'НЕЧЕГО ПРИМЕНИТЬ · КУПИ ВЕЩЬ НА ШЕЮ',
+  'match.abilityOff': 'НЕЧЕГО ПРИМЕНИТЬ · НАДЕНЬ ВЕЩЬ НА ШЕЮ',
   'match.paused': 'ПАУЗА',
   'match.stillRunning': 'РЫНОК ПРОДОЛЖАЕТ ИДТИ',
   'match.resume': 'ПРОДОЛЖИТЬ',

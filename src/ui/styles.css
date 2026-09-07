@@ -379,6 +379,26 @@ body {
   opacity: 0.5;
 }
 
+/* An empty neck slot, not a button: nothing here can be pressed, and it must
+   not be mistaken for the disabled state above, which means the opposite —
+   that there IS an ability and it is only waiting. Hence the dashed outline
+   and no fill: the shape of somewhere something goes. */
+.ability-hint {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(143, 168, 198, 0.45);
+  border-radius: 8px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #8fa8c6;
+  opacity: 0.8;
+  /* it is a hint at the edge of a live match; nothing here wants a tap */
+  pointer-events: none;
+  user-select: none;
+}
+
 /* ---------- stock rows ---------- */
 
 .rows {
