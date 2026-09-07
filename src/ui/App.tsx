@@ -344,6 +344,8 @@ export default function App() {
   /** companies the player has met — filed by the match that put them up */
   const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
+  /** the last thing the server said about this player, for the shelf to draw */
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [roomDone, setRoomDone] = useState(loadRoom);
   const [freeMode, setFreeMode] = useState(loadFreeMode);
   const [rivalOutfit, setRivalOutfit] = useState<Outfit>(() => randomOutfit(Math.random));
@@ -400,6 +402,12 @@ export default function App() {
    * against a build with no server behind it.
    */
   const applyProfile = useCallback((p: Profile) => {
+    // The whole answer is kept, not only the parts the menu draws: the shelf
+    // screen reads the awards and the numbers they are judged against straight
+    // off it, so there is no second request behind the ARCHIVE button.
+    setProfile(p);
+    setSeenCompanies(new Set(p.seen));
+    saveSeen(new Set(p.seen));
     setStars(p.stars);
     saveStars(p.stars);
     setRoomDone(p.room);
@@ -450,6 +458,7 @@ export default function App() {
           owned: topsOf(loadOwned()),
           outfit: loadOutfit(),
           wins: loadWins(),
+          seen: [...loadSeen()],
         }),
       ),
     );
@@ -593,6 +602,10 @@ export default function App() {
               // minted here, once, and kept with the match if it has to be sent
               // again: the same match twice must not be paid for twice
               token: mintToken(),
+              // what the shelf wants and the board does not
+              bankrupt: me.bankrupt,
+              trades: me.trades.length,
+              companies: st.cfg.stocks.map((x) => x.id),
             }).then(refreshProfile),
           );
 
@@ -1262,7 +1275,11 @@ export default function App() {
   if (screen === 'archive') {
     return (
       <div className="app">
-        <ArchiveScreen seen={seenCompanies} onBack={() => setScreen('menu')} />
+        <ArchiveScreen
+          seen={seenCompanies}
+          profile={profile}
+          onBack={() => setScreen('menu')}
+        />
       </div>
     );
   }

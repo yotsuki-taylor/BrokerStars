@@ -2463,6 +2463,99 @@ body {
   max-width: 34ch;
 }
 
+/* ---------- the shelf ---------- */
+
+/* The whole tab scrolls as one list rather than each group scrolling itself:
+   twenty rows in five groups is a page, not five panes. */
+.awards {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.award-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.award-group h3 {
+  margin: 0 0 2px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  opacity: 0.55;
+}
+
+.award {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 2px solid rgba(10, 31, 60, 0.55);
+  border-radius: 10px;
+  background: rgba(8, 34, 70, 0.35);
+}
+
+/* Earned is the state worth seeing from across the room, so it is the one that
+   gets the colour; everything else is deliberately flat. */
+.award.got {
+  border-color: #ffb020;
+  background: rgba(255, 176, 32, 0.12);
+}
+
+.award-mark {
+  flex: 0 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: #8fa8c6;
+}
+
+.award.got .award-mark {
+  color: #ffb020;
+}
+
+.award-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.award-text b {
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.award-text i {
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.7;
+}
+
+/* Only ever shown on something unearned and already begun: a 0/10 on every row
+   is noise, and a count on a row you have finished is worse than noise. */
+.award-bar {
+  flex: 0 0 auto;
+  font-size: 11px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* The hidden ones, as one row rather than a column of identical locks. */
+.award.secret {
+  border-style: dashed;
+  border-color: rgba(143, 168, 198, 0.4);
+  background: none;
+}
+
 /* ---------- leaderboard ---------- */
 
 /* `rating-`, not `board-`: the screen you pick three companies on is `.board`

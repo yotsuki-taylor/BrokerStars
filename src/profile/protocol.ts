@@ -28,6 +28,8 @@
  * they are conveniences, and they are allowed to differ between two phones.
  */
 
+import { cleanAwards } from '../awards/catalogue';
+import { COMPANIES } from '../sim/companies';
 import { ROOM_DONE } from '../ui/renovation';
 import { RARITIES, SLOTS, itemId, type Outfit, type Rarity, type Slot } from '../ui/wardrobe';
 
@@ -63,6 +65,15 @@ export interface Profile {
   owned: Tops;
   outfit: Outfit;
   wins: Wins;
+  /** the shelf: award id to when it was earned. See `src/awards/catalogue.ts`. */
+  awards: Record<string, number>;
+  duelWins: number;
+  streak: number;
+  /** companies met, which the archive tab draws */
+  seen: string[];
+  /** best match ever and highest league played, off the board's own row */
+  bestNetWorth: number;
+  topLeague: number;
 }
 
 /**
@@ -76,6 +87,12 @@ export interface Claim {
   owned: Tops;
   outfit: Outfit;
   wins: Wins;
+  /**
+   * The archive. Unlike the shelf, which the server works out for itself, which
+   * companies somebody has met cannot be recovered from anything it kept — so
+   * this rides in with the room and the wardrobe.
+   */
+  seen: string[];
 }
 
 /**
@@ -136,6 +153,15 @@ export function cleanWins(raw: unknown, count: number): Wins {
 export const mergeWins = (a: Wins, b: Wins): Wins =>
   a.map((n, i) => Math.max(n, b[i] ?? 0));
 
+/** A list of company ids off the wire, cut to the ones this build knows. */
+export function cleanSeen(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const known = new Set(COMPANIES.map((c) => c.id));
+  const out = new Set<string>();
+  for (const id of raw) if (typeof id === 'string' && known.has(id)) out.add(id);
+  return [...out];
+}
+
 export function cleanClaim(raw: unknown, leagues: number): Claim {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const owned = cleanTops(src.owned);
@@ -145,6 +171,7 @@ export function cleanClaim(raw: unknown, leagues: number): Claim {
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
     wins: cleanWins(src.wins, leagues),
+    seen: cleanSeen(src.seen),
   };
 }
 
@@ -153,7 +180,8 @@ export const emptyClaim = (c: Claim): boolean =>
   c.stars === 0 &&
   c.room === 0 &&
   Object.keys(c.owned).length === 0 &&
-  c.wins.every((n) => n === 0);
+  c.wins.every((n) => n === 0) &&
+  c.seen.length === 0;
 
 /** You cannot wear what you do not own, and you cannot wear above what you do. */
 export function wearable(owned: Tops, outfit: Outfit): Outfit {
@@ -208,6 +236,12 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
     wins: cleanWins(src.wins, leagues),
+    awards: cleanAwards(src.awards),
+    duelWins: cleanCount(src.duelWins),
+    streak: cleanCount(src.streak),
+    seen: cleanSeen(src.seen),
+    bestNetWorth: cleanCount(src.bestNetWorth),
+    topLeague: cleanCount(src.topLeague),
   };
 }
 

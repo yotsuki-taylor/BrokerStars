@@ -12,6 +12,7 @@ import {
 } from './protocol';
 import { ROOM_DONE } from '../ui/renovation';
 import { LEAGUE_COUNT } from '../ui/leagues';
+import { COMPANIES } from '../sim/companies';
 
 /**
  * The wire between the game and the wardrobe the server keeps. Everything here
@@ -107,6 +108,10 @@ describe('a claim, before the server is asked to believe it', () => {
     expect(claim({ wins: [-3, 'x'] }).wins[0]).toBe(0);
   });
 
+  it('keeps only companies this build has heard of', () => {
+    expect(claim({ seen: [COMPANIES[0].id, 'ghost-corp'] }).seen).toEqual([COMPANIES[0].id]);
+  });
+
   it('survives a save that is not there at all', () => {
     expect(claim(undefined)).toEqual({
       stars: 0,
@@ -114,6 +119,7 @@ describe('a claim, before the server is asked to believe it', () => {
       owned: {},
       outfit: {},
       wins: Array(LEAGUE_COUNT).fill(0),
+      seen: [],
     });
   });
 });
@@ -134,6 +140,12 @@ describe('a profile coming back', () => {
         owned: { hat: 'common' },
         outfit: { hat: 'legend' },
         wins: [3],
+        awards: { bust: 1700, 'not-an-award': 1700 },
+        duelWins: 2,
+        streak: 1,
+        seen: [COMPANIES[0].id, 'ghost-corp'],
+        bestNetWorth: 31_000,
+        topLeague: 1,
       },
       LEAGUE_COUNT,
     );
@@ -145,6 +157,14 @@ describe('a profile coming back', () => {
       owned: { hat: 'common' },
       outfit: { hat: 'common' },
       wins: [3, ...Array(LEAGUE_COUNT - 1).fill(0)],
+      // an award this build does not have is dropped rather than drawn as a
+      // blank row, and so is a company it does not have
+      awards: { bust: 1700 },
+      duelWins: 2,
+      streak: 1,
+      seen: [COMPANIES[0].id],
+      bestNetWorth: 31_000,
+      topLeague: 1,
     });
   });
 });

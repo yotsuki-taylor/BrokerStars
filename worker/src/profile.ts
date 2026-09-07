@@ -44,6 +44,15 @@ import {
   type Wins,
 } from '../../src/profile/protocol';
 import { REWARDS, type Env } from './results';
+import {
+  afterChange,
+  afterMatch,
+  cleanSeen,
+  cleanShelf,
+  withSeen,
+  type MatchFacts,
+  type Standing,
+} from './awards';
 import type { Caller } from './telegram';
 
 /**
@@ -64,6 +73,14 @@ export interface Held {
   granted: number;
   /** wins banked in each league, lowest first */
   wins: Wins;
+  /** what is on the shelf, and when it went there — see `awards.ts` */
+  awards: Record<string, number>;
+  /** duels won, ever. A counter rather than a scan of `results`. */
+  duelWins: number;
+  /** matches won in a row right now, zero the moment one is not won */
+  streak: number;
+  /** companies this player has met, which used to live in the browser */
+  seen: string[];
 }
 
 export const EMPTY: Held = {
@@ -73,6 +90,10 @@ export const EMPTY: Held = {
   spent: 0,
   granted: 0,
   wins: cleanWins([], LEAGUES),
+  awards: {},
+  duelWins: 0,
+  streak: 0,
+  seen: [],
 };
 
 /**
@@ -85,7 +106,9 @@ export const untouched = (h: Held): boolean =>
   h.spent === 0 &&
   h.granted === 0 &&
   Object.keys(h.owned).length === 0 &&
-  h.wins.every((n) => n === 0);
+  h.wins.every((n) => n === 0) &&
+  h.seen.length === 0 &&
+  Object.keys(h.awards).length === 0;
 
 /**
  * Stars in hand. Never stored, always worked out: `players.stars` is the
@@ -96,7 +119,13 @@ export const untouched = (h: Held): boolean =>
 export const balance = (h: Held, earned: number): number =>
   Math.max(0, earned + h.granted - h.spent);
 
-export const view = (h: Held, earned: number): Profile => ({
+/**
+ * The profile as the browser receives it. `bestNetWorth` and `topLeague` come
+ * off the `players` row rather than out of here: the shelf screen draws
+ * progress towards the money and ladder awards, and those two numbers are what
+ * the judge measured them against.
+ */
+export const view = (h: Held, earned: number, at: Standing): Profile => ({
   stars: balance(h, earned),
   earned,
   spent: h.spent,
@@ -104,6 +133,12 @@ export const view = (h: Held, earned: number): Profile => ({
   owned: h.owned,
   outfit: h.outfit,
   wins: h.wins,
+  awards: h.awards,
+  duelWins: h.duelWins,
+  streak: h.streak,
+  seen: h.seen,
+  bestNetWorth: at.bestNetWorth,
+  topLeague: at.topLeague,
 });
 
 /** What this wardrobe and this much room would have cost, at today's prices. */
@@ -262,6 +297,16 @@ export function claimInto(h: Held, earned: number, claim: Claim): Held {
     // of reconstructing: it starts counting wins today, and everything climbed
     // before that only exists in the save being handed over.
     wins: mergeWins(h.wins, claim.wins),
+    // The shelf is not claimed. Every award on it is something the server can
+    // work out for itself from what it already knows, and the first evaluation
+    // after this hands over the ones that were already true — so there is
+    // nothing here worth taking anybody's word for.
+    awards: h.awards,
+    duelWins: h.duelWins,
+    streak: h.streak,
+    // The archive is different: which companies a player has met is not
+    // recoverable from anything the server kept, so it rides in like the room.
+    seen: [...new Set([...h.seen, ...claim.seen])],
   };
 }
 
@@ -282,6 +327,10 @@ interface StoredRow {
   owned: string;
   outfit: string;
   wins: string;
+  awards: string;
+  seen: string;
+  duel_wins: number;
+  streak: number;
   spent: number;
   granted: number;
   updated_at: number;
@@ -308,9 +357,29 @@ export async function earnedBy(env: Env, id: string): Promise<number> {
   return row?.stars ?? 0;
 }
 
+/**
+ * The two numbers the shelf is judged against, off the board's own row. Both
+ * are things the server has always kept for its own reasons — the best match
+ * ever played, and the highest league one was finished in — so the awards that
+ * turn on them need no new bookkeeping and are already true of everybody who
+ * has been playing.
+ */
+export async function standingOf(env: Env, id: string): Promise<Standing> {
+  const row = await env.DB.prepare(
+    `SELECT best_net_worth, top_league FROM players WHERE id = ?1`,
+  )
+    .bind(id)
+    .first<{ best_net_worth: number; top_league: number }>();
+  return {
+    bestNetWorth: Math.max(0, row?.best_net_worth ?? 0),
+    topLeague: Math.max(0, row?.top_league ?? 0),
+  };
+}
+
 export async function read(env: Env, id: string): Promise<Stored | null> {
   const row = await env.DB.prepare(
-    `SELECT room, owned, outfit, wins, spent, granted, updated_at
+    `SELECT room, owned, outfit, wins, awards, seen, duel_wins, streak,
+            spent, granted, updated_at
        FROM profiles WHERE id = ?1`,
   )
     .bind(id)
@@ -326,6 +395,10 @@ export async function read(env: Env, id: string): Promise<Stored | null> {
       spent: Math.max(0, row.spent),
       granted: Math.max(0, row.granted),
       wins: cleanWins(parse(row.wins), LEAGUES),
+      awards: cleanShelf(parse(row.awards)),
+      seen: cleanSeen(parse(row.seen)),
+      duelWins: Math.max(0, row.duel_wins),
+      streak: Math.max(0, row.streak),
     },
   };
 }
@@ -356,18 +429,24 @@ export async function write(
   const owned = JSON.stringify(h.owned);
   const outfit = JSON.stringify(h.outfit);
   const wins = JSON.stringify(h.wins);
+  const awards = JSON.stringify(h.awards);
+  const seen = JSON.stringify(h.seen);
 
   const res =
     version === null
       ? // A row that was not there. If one appeared in the meantime this does
         // nothing, and the caller starts again knowing about it.
         await env.DB.prepare(
-          `INSERT INTO profiles (id, room, owned, outfit, wins, spent, granted,
+          `INSERT INTO profiles (id, room, owned, outfit, wins, awards, seen,
+                                 duel_wins, streak, spent, granted,
                                  first_seen, updated_at)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
            ON CONFLICT (id) DO NOTHING`,
         )
-          .bind(id, h.room, owned, outfit, wins, h.spent, h.granted, now)
+          .bind(
+            id, h.room, owned, outfit, wins, awards, seen,
+            h.duelWins, h.streak, h.spent, h.granted, now,
+          )
           .run()
       : await env.DB.prepare(
           `UPDATE profiles
@@ -375,12 +454,19 @@ export async function write(
                   owned      = ?3,
                   outfit     = ?4,
                   wins       = ?5,
-                  spent      = ?6,
-                  granted    = ?7,
-                  updated_at = MAX(updated_at + 1, ?8)
-            WHERE id = ?1 AND updated_at = ?9`,
+                  awards     = ?6,
+                  seen       = ?7,
+                  duel_wins  = ?8,
+                  streak     = ?9,
+                  spent      = ?10,
+                  granted    = ?11,
+                  updated_at = MAX(updated_at + 1, ?12)
+            WHERE id = ?1 AND updated_at = ?13`,
         )
-          .bind(id, h.room, owned, outfit, wins, h.spent, h.granted, now, version)
+          .bind(
+            id, h.room, owned, outfit, wins, awards, seen,
+            h.duelWins, h.streak, h.spent, h.granted, now, version,
+          )
           .run();
 
   return (res.meta?.changes ?? 0) > 0;
@@ -397,11 +483,12 @@ const ATTEMPTS = 4;
 export interface Applied {
   held: Held;
   earned: number;
+  at: Standing;
   error?: string;
 }
 
 /** A change, worked out against the row as it stands at the moment it is read. */
-export type Change = (h: Held, earned: number) => Bought;
+export type Change = (h: Held, earned: number, at: Standing) => Bought;
 
 /**
  * Read, change, write — and if the row moved underneath, read it again and work
@@ -414,16 +501,22 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
   let last: Applied | null = null;
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const earned = await earnedBy(env, caller.id);
+    const at = await standingOf(env, caller.id);
     const stored = await read(env, caller.id);
     const held = stored?.held ?? EMPTY;
 
-    const out = apply(held, earned);
-    if (!out.ok) return { held, earned, error: out.error };
+    const out = apply(held, earned, at);
+    if (!out.ok) return { held, earned, at, error: out.error };
 
-    if (await write(env, caller.id, out.held, stored?.version ?? null)) {
-      return { held: out.held, earned };
+    // Anything a change makes true is true immediately, so the shelf is looked
+    // at on the way past rather than on a timer or at the next sign-in. A
+    // fifth slot filled in the shop is DRESSED before the screen redraws.
+    const settled = afterChange(out.held, at, Date.now());
+
+    if (await write(env, caller.id, settled, stored?.version ?? null)) {
+      return { held: settled, earned, at };
     }
-    last = { held, earned };
+    last = { held, earned, at };
   }
   // Four collisions in a row is not a thing that happens to one player; if it
   // somehow does, the honest answer is the profile as last seen, and the client
@@ -441,6 +534,32 @@ export async function open(env: Env, caller: Caller, claim: Claim | null): Promi
     ok: true,
     held: claim && untouched(held) ? claimInto(held, earned, claim) : held,
   }));
+}
+
+/**
+ * Everything one finished match does to a profile, from either of the two
+ * places a match can finish: `/result` for a bot, and the object that ran a
+ * duel. One `change`, so the ladder, the archive and the shelf all move under
+ * the same compare-and-set rather than racing each other.
+ *
+ * The order matters. The league win is banked first because an award turns on
+ * the ladder; the companies are filed next because an award turns on the
+ * archive; the shelf is judged last, against a profile that already knows
+ * about both.
+ */
+export async function settle(
+  env: Env,
+  caller: Caller,
+  m: { league: number; facts: MatchFacts; companies: string[] },
+): Promise<Applied> {
+  const now = Date.now();
+  return change(env, caller, (held, _earned, at) => {
+    // The ladder is climbed against the bots. A friend willing to lose ten
+    // times is a lift, not a climb, so a duel banks no league win.
+    const climbed =
+      m.facts.outcome === 'win' && !m.facts.duel ? bankWin(held, m.league) : held;
+    return { ok: true, held: afterMatch(withSeen(climbed, m.companies), at, m.facts, now) };
+  });
 }
 
 /**

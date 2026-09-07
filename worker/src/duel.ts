@@ -33,7 +33,7 @@ import type { MatchState } from '../../src/sim/types';
 import { perksFor } from '../../src/ui/perks';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
-import { outfitOf } from './profile';
+import { outfitOf, settle } from './profile';
 import {
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
@@ -537,6 +537,27 @@ export class Duel implements DurableObject {
             // `finish` already refuses to run twice, and this is the same
             // promise written where the database can keep it.
             token: `duel:${this.state.id.toString()}:${s}`,
+          },
+        );
+
+        // And the shelf, which cares about different things than the board
+        // does: the duel counter it keeps, the streak, and the companies that
+        // were up. A duel banks no league win — `settle` knows that from the
+        // `duel` flag rather than from being told twice.
+        await settle(
+          this.env,
+          { id: player.id, name: player.name },
+          {
+            league: player.payLeague,
+            facts: {
+              outcome,
+              netWorth: Math.round(Math.max(0, t.netWorth)),
+              tradedWell: well,
+              bankrupt: t.bankrupt,
+              trades: t.trades.length,
+              duel: true,
+            },
+            companies: st.cfg.stocks.map((x) => x.id),
           },
         );
       } catch (err) {

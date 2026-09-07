@@ -4,16 +4,22 @@
  * Meta, like progress.ts and renovation.ts: a company is recorded the moment
  * it goes up on a board, and nothing in the simulation ever reads this back.
  * The roster itself lives in sim/companies.ts — only the discovery does.
+ *
+ * The discovery is the server's now, alongside the room and the wardrobe: it is
+ * the one thing on a profile the server could not have worked out for itself,
+ * and an award turns on having met all thirty. What is left here is the copy
+ * the archive draws before the first answer comes back.
  */
 
 import { COMPANIES } from '../sim/companies';
+import { read, write } from './store';
 
 const KEY = 'brokerstars.companies';
 
 /** Private browsing and locked-down webviews throw on access, so never assume. */
 export function loadSeen(): Set<string> {
   try {
-    const raw = JSON.parse(window.localStorage.getItem(KEY) ?? 'null');
+    const raw = JSON.parse(read(KEY) ?? 'null');
     if (!Array.isArray(raw)) return new Set();
     // a company dropped from the roster since must not linger in the count
     const known = new Set(COMPANIES.map((c) => c.id));
@@ -24,11 +30,7 @@ export function loadSeen(): Set<string> {
 }
 
 export function saveSeen(ids: Set<string>): void {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify([...ids]));
-  } catch {
-    /* storage unavailable — the archive simply does not persist this session */
-  }
+  write(KEY, JSON.stringify([...ids]));
 }
 
 /**

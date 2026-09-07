@@ -32,7 +32,7 @@
  */
 
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
-import { cleanClaim, cleanOutfit } from '../../src/profile/protocol';
+import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate } from './bot';
 import * as profiles from './profile';
@@ -129,6 +129,10 @@ interface Submission {
   tradedWell?: unknown;
   /** the client's name for this match — see `alreadyPaid` in results.ts */
   token?: unknown;
+  /** for the shelf: went broke, how many trades, which companies were up */
+  bankrupt?: unknown;
+  trades?: unknown;
+  companies?: unknown;
 }
 
 /**
@@ -162,6 +166,12 @@ async function submit(request: Request, env: Env) {
   const seed = String(body.seed ?? '').slice(0, 32);
   const tradedWell = body.tradedWell === true;
   const token = String(body.token ?? '').slice(0, MAX_TOKEN);
+  // What the shelf needs and the board does not. All three are the client's
+  // word, and all three are worth about as much as its word for the outcome —
+  // which the replay check in `results` is there to settle one day.
+  const bankrupt = body.bankrupt === true;
+  const trades = Math.max(0, Math.floor(Number(body.trades) || 0));
+  const companies = cleanSeen(body.companies);
 
   if (!token) return bad(400, 'no token');
 
@@ -212,22 +222,22 @@ async function submit(request: Request, env: Env) {
     return json({ ok: true, stars: already, already: true });
   }
 
-  // Recorded for the first time, so the ladder hears about it once. Climbing it
-  // is the server's arithmetic for the reason the payout is: a league that opens
-  // because a browser said so is not a league anybody earned. A surrender
-  // arrives here as a loss and banks nothing; a duel never arrives at all.
-  if (outcome === 'win') {
-    try {
-      await profiles.change(env, caller, (held) => ({
-        ok: true,
-        held: profiles.bankWin(held, league),
-      }));
-    } catch (err) {
-      // The match is recorded and paid either way, and a count the player can
-      // put back by winning again is not worth failing the whole submission
-      // over — which would only have it sent to us a second time.
-      console.error('win not banked', err);
-    }
+  // Recorded for the first time, so the ladder and the shelf hear about it
+  // once. Both are the server's arithmetic for the reason the payout is: a
+  // league that opens, or an award that lands, because a browser said so is
+  // not one anybody earned. A surrender arrives here as a loss and banks
+  // nothing; a duel never arrives at all, it is settled where it was played.
+  try {
+    await profiles.settle(env, caller, {
+      league,
+      facts: { outcome, netWorth, tradedWell, bankrupt, trades, duel: false },
+      companies,
+    });
+  } catch (err) {
+    // The match is recorded and paid either way, and none of this is worth
+    // failing the whole submission over — which would only have the client
+    // send it to us a second time.
+    console.error('match not settled', err);
   }
 
   return json({ ok: true, stars });
@@ -260,7 +270,7 @@ async function whoIsAsking(
 
 /** The whole profile, every time: the client's job is to draw what comes back. */
 const sent = (a: profiles.Applied) =>
-  json({ ok: !a.error, error: a.error, profile: profiles.view(a.held, a.earned) });
+  json({ ok: !a.error, error: a.error, profile: profiles.view(a.held, a.earned, a.at) });
 
 /**
  * Where a session starts. The body may carry `claim` — what this browser had in

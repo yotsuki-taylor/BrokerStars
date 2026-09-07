@@ -142,6 +142,12 @@ export interface MatchResult {
    * submission whose answer was lost can simply be sent again.
    */
   token: string;
+  /** went broke — an award turns on it, and a net worth of zero is not proof */
+  bankrupt: boolean;
+  /** trades made; zero in a won match is an award of its own */
+  trades: number;
+  /** which companies were on the board, for the archive */
+  companies: string[];
 }
 
 /** A name for one finished match. Random, and nothing is read off it. */

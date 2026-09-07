@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS profiles (
   -- JSON array of wins per league, lowest first: the ladder. Counted here as
   -- matches are handed in, never read off what the client claims to have won.
   wins       TEXT NOT NULL DEFAULT '[]',
+  -- The shelf: JSON of award id to when it was earned. Which awards exist is
+  -- src/awards/catalogue.ts, shared with the game; who has earned them is
+  -- worked out on this side and only ever added to (worker/src/awards.ts).
+  awards     TEXT NOT NULL DEFAULT '{}',
+  -- Companies met. Used to live in the browser, and is the one thing on this
+  -- row the server could not have reconstructed for itself.
+  seen       TEXT NOT NULL DEFAULT '[]',
+  -- Counters two awards turn on, kept here rather than scanned out of
+  -- `results` every time somebody opens the shelf.
+  duel_wins  INTEGER NOT NULL DEFAULT 0,
+  streak     INTEGER NOT NULL DEFAULT 0,
   spent      INTEGER NOT NULL DEFAULT 0,
   granted    INTEGER NOT NULL DEFAULT 0,
   first_seen INTEGER NOT NULL,
