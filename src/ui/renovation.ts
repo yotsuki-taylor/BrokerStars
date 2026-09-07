@@ -6,6 +6,8 @@
  * plain image stacking with no per-item placement.
  */
 
+import { read, write } from './store';
+
 export type RoomSlot = 'bg' | 'bed' | 'door' | 'table' | 'window' | 'shelf' | 'rug' | 'picture';
 
 export interface RoomStep {
@@ -63,7 +65,18 @@ const POOR_HAS: Record<RoomSlot, boolean> = {
   picture: false,
 };
 
-const tex = (name: string) => `${import.meta.env.BASE_URL}textures/room/${name}.png`;
+/**
+ * The prices above are plain data and the Worker imports them: what a
+ * renovation step costs is charged on the server now, not in the browser that
+ * asks for it (`worker/src/profile.ts`). A Worker has no Vite `import.meta.env`
+ * and no `window`, so the one place this module touches a platform reaches for
+ * it rather than naming it — the same dodge `ui/wardrobe.ts` makes, and for the
+ * same reason.
+ */
+const BASE_URL =
+  (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+
+const tex = (name: string) => `${BASE_URL}textures/room/${name}.png`;
 
 export function stepIndexOf(slot: RoomSlot): number {
   return ROOM_STEPS.findIndex((s) => s.slot === slot);
@@ -89,21 +102,18 @@ export const ROOM_DONE = ROOM_STEPS.length;
 
 /* ------------------------------------------------------------- persistence */
 
+/**
+ * The room lives on the server now (`src/profile/protocol.ts`); this is the
+ * copy the menu draws before the first answer comes back, and the whole of it
+ * in a build with no server behind one.
+ */
 const KEY = 'brokerstars.room';
 
 export function loadRoom(): number {
-  try {
-    const n = Number(window.localStorage.getItem(KEY));
-    return Number.isFinite(n) ? Math.min(ROOM_DONE, Math.max(0, Math.floor(n))) : 0;
-  } catch {
-    return 0;
-  }
+  const n = Number(read(KEY));
+  return Number.isFinite(n) ? Math.min(ROOM_DONE, Math.max(0, Math.floor(n))) : 0;
 }
 
 export function saveRoom(done: number): void {
-  try {
-    window.localStorage.setItem(KEY, String(done));
-  } catch {
-    /* storage unavailable — the room resets next session */
-  }
+  write(KEY, String(done));
 }

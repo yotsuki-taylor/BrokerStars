@@ -29,6 +29,12 @@ CREATE INDEX IF NOT EXISTS players_by_stars ON players (stars DESC, updated_at A
 CREATE TABLE IF NOT EXISTS results (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   player_id   TEXT NOT NULL REFERENCES players (id),
+  -- Minted by the client, once per finished match, and the whole of what makes
+  -- handing one in idempotent: a submission that never got its answer can be
+  -- sent again without paying twice for the same match. NULL on every row
+  -- written before the column existed, which a UNIQUE index in SQLite allows
+  -- as many of as it likes.
+  token       TEXT,
   -- enough to replay the match: same seed, same league, same board
   seed        TEXT NOT NULL,
   league      INTEGER NOT NULL,
@@ -42,5 +48,33 @@ CREATE TABLE IF NOT EXISTS results (
   created_at  INTEGER NOT NULL
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS results_by_token ON results (token);
 CREATE INDEX IF NOT EXISTS results_by_player ON results (player_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS results_unverified ON results (verified, created_at);
+
+-- What a player owns: the room behind the menu, the clothes on the trader, and
+-- the ledger the star balance is read off.
+--
+-- Three numbers rather than one balance, because the board and the shop want
+-- different things out of the same stars. `players.stars` above is what was
+-- EARNED and never goes down — that is what the table ranks on. Here is what
+-- was spent, and what was granted outside a match: the migration of a save made
+-- before this table existed, and the developer's free purchases. In hand is
+-- earned + granted - spent, and it is worked out on read, so no two columns can
+-- drift apart.
+--
+-- `owned` and `outfit` are JSON of one rarity per slot -- {"torso":"rare"}. A
+-- slot is climbed in order, so its top rung describes the whole of it; see
+-- src/profile/protocol.ts, which both sides read this shape out of.
+CREATE TABLE IF NOT EXISTS profiles (
+  -- the same Telegram user id as players.id, and no foreign key on purpose:
+  -- a player can open the game and dress up before ever finishing a match
+  id         TEXT PRIMARY KEY,
+  room       INTEGER NOT NULL DEFAULT 0,
+  owned      TEXT NOT NULL DEFAULT '{}',
+  outfit     TEXT NOT NULL DEFAULT '{}',
+  spent      INTEGER NOT NULL DEFAULT 0,
+  granted    INTEGER NOT NULL DEFAULT 0,
+  first_seen INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);

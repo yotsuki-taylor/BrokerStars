@@ -7,6 +7,8 @@
  * built by stacking whole images with no per-item offsets.
  */
 
+import { read, write } from './store';
+
 export type Slot = 'hat' | 'neck' | 'torso' | 'hand' | 'access';
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'mythic' | 'legend';
 
@@ -200,13 +202,13 @@ export const SPRITE_W = 474;
 export const SPRITE_H = 732;
 
 /**
- * Everything in this file above the sprite plumbing is plain data, and the duel
- * server imports it: working out what a duellist's clothes are worth happens on
- * the object that runs the match, not in the browser that claims them (see
- * `worker/src/duel.ts`). A Worker has neither Vite's `import.meta.env` nor a
- * `window`, so the two places this module touches a platform — here and
- * `store()` further down — reach for it rather than name it, and the file
- * compiles in a build that has neither.
+ * Everything in this file above the sprite plumbing is plain data, and the
+ * server imports it: what a duellist's clothes are worth is worked out on the
+ * object that runs the match (`worker/src/duel.ts`), and what a rung costs is
+ * charged where the wardrobe is kept (`worker/src/profile.ts`) — not in the
+ * browser that asks for either. A Worker has neither Vite's `import.meta.env`
+ * nor a `window`, so the one place this module touches a platform reaches for
+ * it rather than names it, and `./store` does the same for the other.
  */
 const BASE_URL =
   (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
@@ -381,17 +383,13 @@ export function randomOutfit(rand: () => number): Outfit {
 
 /* ------------------------------------------------------------- persistence */
 
+/**
+ * The wardrobe lives on the server now (`src/profile/protocol.ts`). These two
+ * keys are the copy the menu and the shop draw before the first answer comes
+ * back, and the whole of it in a build with no server behind one.
+ */
 const OWNED_KEY = 'brokerstars.owned';
 const OUTFIT_KEY = 'brokerstars.outfit';
-
-/** The store, when there is one, reached through `globalThis` — see `BASE_URL`. */
-interface KeyValueStore {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
-
-const store = (): KeyValueStore | null =>
-  (globalThis as { localStorage?: KeyValueStore }).localStorage ?? null;
 
 /**
  * Nobody starts dressed. The commons used to be granted and force-merged back
@@ -403,7 +401,7 @@ export const STARTER: Outfit = {};
 
 export function loadOwned(): Set<string> {
   try {
-    const raw = store()?.getItem(OWNED_KEY);
+    const raw = read(OWNED_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? new Set(arr.map(String)) : new Set();
@@ -413,16 +411,12 @@ export function loadOwned(): Set<string> {
 }
 
 export function saveOwned(owned: Set<string>): void {
-  try {
-    store()?.setItem(OWNED_KEY, JSON.stringify([...owned]));
-  } catch {
-    /* storage unavailable — purchases do not survive the session */
-  }
+  write(OWNED_KEY, JSON.stringify([...owned]));
 }
 
 export function loadOutfit(): Outfit {
   try {
-    const raw = store()?.getItem(OUTFIT_KEY);
+    const raw = read(OUTFIT_KEY);
     if (!raw) return { ...STARTER };
     const parsed = JSON.parse(raw) as Outfit;
     const out: Outfit = {};
@@ -438,9 +432,5 @@ export function loadOutfit(): Outfit {
 }
 
 export function saveOutfit(outfit: Outfit): void {
-  try {
-    store()?.setItem(OUTFIT_KEY, JSON.stringify(outfit));
-  } catch {
-    /* same as above */
-  }
+  write(OUTFIT_KEY, JSON.stringify(outfit));
 }

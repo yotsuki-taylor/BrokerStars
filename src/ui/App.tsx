@@ -38,7 +38,19 @@ import Shop from './Shop';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
-import { submitResult } from './api';
+import {
+  buyItem as buyItemOnServer,
+  buyRoomStep,
+  flushPending,
+  mintToken,
+  openProfile,
+  refreshProfile,
+  refundItem as refundItemOnServer,
+  refundRoomStep,
+  submitResult,
+  wearOutfit,
+} from './api';
+import { setOf, topsOf, type Profile } from '../profile/protocol';
 import {
   DuelSocket,
   applySync,
@@ -377,6 +389,63 @@ export default function App() {
   ui.current.paused =
     devOpen || helpOpen || pauseOpen || settingsOpen || countdown !== null || screen !== 'match';
 
+  /* ------------------------------------------------------------ the profile */
+
+  /**
+   * What the server says the player owns, made true on this end.
+   *
+   * The `save*` calls are still made. `localStorage` stopped being where any of
+   * this lives, but it is what the menu draws before the first answer comes
+   * back, and it is all there is when the game is opened outside Telegram or
+   * against a build with no server behind it.
+   */
+  const applyProfile = useCallback((p: Profile) => {
+    setStars(p.stars);
+    saveStars(p.stars);
+    setRoomDone(p.room);
+    saveRoom(p.room);
+    const bought = setOf(p.owned);
+    setOwned(bought);
+    saveOwned(bought);
+    setOutfit(p.outfit);
+    saveOutfit(p.outfit);
+  }, []);
+
+  /**
+   * Whatever the server answers replaces what this end drew in the meantime.
+   * Every purchase is applied here first and sent second, so the shop never
+   * waits on a network — and if the server disagrees, this is where the stars
+   * snap back to what they really are.
+   */
+  const reconcile = useCallback(
+    (answer: Promise<Profile | null>) => {
+      void answer.then((p) => p && applyProfile(p));
+    },
+    [applyProfile],
+  );
+
+  /**
+   * One handshake on the way in, carrying whatever this browser already had.
+   * For everybody who was playing before any of this was kept on a server, that
+   * save IS their progress, and this is the moment it is handed over — once,
+   * and only while the server has nothing of its own for them.
+   */
+  useEffect(() => {
+    // Matches played while the server was unreachable go up first. They are
+    // stars on the board, and the balance is built out of the board — asking
+    // for it before they land would answer short by exactly them.
+    reconcile(
+      flushPending().then(() =>
+        openProfile({
+          stars: loadStars(),
+          room: loadRoom(),
+          owned: topsOf(loadOwned()),
+          outfit: loadOutfit(),
+        }),
+      ),
+    );
+  }, [reconcile]);
+
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
     let raf = 0;
@@ -500,14 +569,23 @@ export default function App() {
           // the server reads the outcome and works the stars out from its own
           // table. Fire and forget — a leaderboard that cannot be reached must
           // never be something the player has to wait for or notice.
-          void submitResult({
-            seed: st.seed.toString(36),
-            league: li,
-            outcome:
-              st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
-            netWorth: Math.round(me.netWorth),
-            tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
-          });
+          // ...and then asks what that came to. The award above is this end's
+          // arithmetic and the server's is the one that counts; asking now
+          // rather than at the shop door means the balance is already right by
+          // the time anybody walks up to it.
+          reconcile(
+            submitResult({
+              seed: st.seed.toString(36),
+              league: li,
+              outcome:
+                st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
+              netWorth: Math.round(me.netWorth),
+              tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
+              // minted here, once, and kept with the match if it has to be sent
+              // again: the same match twice must not be paid for twice
+              token: mintToken(),
+            }).then(refreshProfile),
+          );
 
           setSeenCompanies((prev) => {
             const next = withSeen(prev, st.cfg.stocks.map((x) => x.id));
@@ -742,6 +820,9 @@ export default function App() {
               saveStars(next);
               return next;
             });
+            // The object that ran the match wrote the stars itself before it
+            // sent this. Asking for the balance back is how they arrive here.
+            reconcile(refreshProfile());
           }
           break;
         }
@@ -761,7 +842,7 @@ export default function App() {
           break;
       }
     },
-    [closeDuel, rerender, showTrade],
+    [closeDuel, reconcile, rerender, showTrade],
   );
 
   const connect = useCallback(
@@ -922,14 +1003,26 @@ export default function App() {
     rerender();
   };
 
-  // Changing clothes changes the terms, but not for a match that already
-  // exists: perks are read when restart() builds the next one.
-  const equip = (slot: Slot, rarity: Rarity) => {
+  /**
+   * Put it on, here. Kept apart from `equip` because a purchase already dresses
+   * the player on the server as part of the sale, and telling it twice would
+   * race the sale it belongs to.
+   */
+  const putOn = (slot: Slot, rarity: Rarity) => {
     setOutfit((prev) => {
       const next = { ...prev, [slot]: rarity };
       saveOutfit(next);
       return next;
     });
+  };
+
+  // Changing clothes changes the terms, but not for a match that already
+  // exists: perks are read when restart() builds the next one. The server is
+  // told because a duel dresses each side out of the wardrobe it keeps, not out
+  // of what the browser says it is wearing.
+  const equip = (slot: Slot, rarity: Rarity) => {
+    putOn(slot, rarity);
+    reconcile(wearOutfit({ ...outfitRef.current, [slot]: rarity }));
     haptic();
   };
 
@@ -944,8 +1037,12 @@ export default function App() {
       saveOwned(next);
       return next;
     });
-    equip(slot, rarity);
+    putOn(slot, rarity);
     haptic('heavy');
+    // The sale itself is the server's: it holds the balance, it knows what a
+    // rung costs, and it decides whether this one was next. Everything above is
+    // what this end expects to be told, drawn early so the shop feels instant.
+    reconcile(buyItemOnServer(slot, rarity, freeMode));
   };
 
   /**
@@ -961,6 +1058,7 @@ export default function App() {
       saveOwned(next);
       return next;
     });
+    reconcile(refundItemOnServer(slot, rarity));
     if (outfit[slot] !== rarity) return;
     const below = rarityBelow(rarity);
     setOutfit((prev) => {
@@ -990,6 +1088,7 @@ export default function App() {
       return next;
     });
     haptic('heavy');
+    reconcile(buyRoomStep(freeMode));
   };
 
   /** Dev only: step the room back and hand the stars back. */
@@ -1001,6 +1100,7 @@ export default function App() {
       saveRoom(next);
       return next;
     });
+    reconcile(refundRoomStep());
   };
 
   const toggleFree = () => {

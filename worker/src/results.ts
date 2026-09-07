@@ -19,6 +19,14 @@ export interface Env {
    * the same reason that is: it names this deployment, it does not protect it.
    */
   WEBAPP_URL?: string;
+  /**
+   * The developer's Telegram id, if there is one. Not a secret — it is already
+   * baked into the client bundle as `VITE_ADMIN_ID` — and not a way in either:
+   * all it buys is free purchases and refunds in the shop, and only for a
+   * caller whose id arrived on a signature Telegram put there. See
+   * `profile.ts`.
+   */
+  ADMIN_ID?: string;
   DUEL: DurableObjectNamespace;
 }
 
@@ -99,9 +107,40 @@ export interface Recorded {
   tradedWell: boolean;
   /** what the SERVER decided to pay */
   stars: number;
+  /**
+   * The client's name for this match, minted once when it finished. It is what
+   * makes handing one in safe to repeat: see `alreadyPaid` and the UNIQUE index
+   * the insert below leans on.
+   */
+  token: string;
 }
 
-/** One match into the two tables: the running total the board reads, and the row kept for a replay check. */
+/**
+ * Was this match already handed in and paid for? A submission whose answer
+ * never arrived gets sent again — that is the whole point of the token — and
+ * this is what tells the second attempt from a second match.
+ *
+ * Null means no, and a number means yes and this is what it paid, so the answer
+ * to a repeat is the same answer the first one would have given.
+ */
+export async function alreadyPaid(env: Env, token: string): Promise<number | null> {
+  const row = await env.DB.prepare(`SELECT stars FROM results WHERE token = ?1`)
+    .bind(token)
+    .first<{ stars: number }>();
+  return row ? row.stars : null;
+}
+
+/**
+ * One match into the two tables: the running total the board reads, and the row
+ * kept for a replay check.
+ *
+ * The two statements go in one batch, which is the only reason a duplicate
+ * cannot be paid for twice. `alreadyPaid` above is the polite check and it has
+ * a gap in it — two retries in flight at once both pass it — so the UNIQUE index
+ * on `token` is the one that actually holds: the second insert raises, D1 rolls
+ * the whole batch back, and the star count in `players` never moved. The caller
+ * treats that raise as "already had it", because that is what it means.
+ */
 export async function record(env: Env, caller: Caller, r: Recorded): Promise<void> {
   const now = Date.now();
   await env.DB.batch([
@@ -128,8 +167,8 @@ export async function record(env: Env, caller: Caller, r: Recorded): Promise<voi
     ),
     env.DB.prepare(
       `INSERT INTO results (player_id, seed, league, outcome, net_worth, traded_well, stars,
-                            verified, created_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)`,
+                            verified, token, created_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8, ?9)`,
     ).bind(
       caller.id,
       r.seed,
@@ -138,6 +177,7 @@ export async function record(env: Env, caller: Caller, r: Recorded): Promise<voi
       r.netWorth,
       r.tradedWell ? 1 : 0,
       r.stars,
+      r.token,
       now,
     ),
   ]);

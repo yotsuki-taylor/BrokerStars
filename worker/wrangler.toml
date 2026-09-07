@@ -14,8 +14,16 @@ enabled = true
 # it, so the Worker has to know the address (worker/src/bot.ts). Public, and in
 # here beside the database id below for the same reason that is: it names this
 # deployment rather than protecting it.
+#
+# ADMIN_ID is the developer's Telegram id, the same one the game is built with
+# as VITE_ADMIN_ID. All it buys is free purchases and refunds in the shop, and
+# only for a caller whose id arrived on a signature Telegram put there — so
+# unlike the client's own copy of it (src/ui/admin.ts, which says as much) this
+# one is actually checked. Leave it out and nobody gets the dev prices, which
+# is the right answer for a deployment that is not yours.
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
+# ADMIN_ID = "165233146"
 
 [[d1_databases]]
 binding = "DB"

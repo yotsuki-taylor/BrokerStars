@@ -31,7 +31,9 @@ import { Rng } from '../../src/sim/rng';
 import { TRADE_FRACTION, applyAction, undoLast } from '../../src/sim/trading';
 import type { MatchState } from '../../src/sim/types';
 import { perksFor } from '../../src/ui/perks';
-import { RARITIES, SLOTS, type Outfit } from '../../src/ui/wardrobe';
+import type { Outfit } from '../../src/ui/wardrobe';
+import { cleanOutfit } from '../../src/profile/protocol';
+import { outfitOf } from './profile';
 import {
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
@@ -73,20 +75,6 @@ const MAX_MESSAGES_PER_SECOND = 25;
 
 /** How long the finished object hangs around before it clears itself out. */
 const LINGER_MS = 120_000;
-
-/** Outfit from an untrusted message: five known slots, five known rarities, nothing else. */
-function cleanOutfit(raw: unknown): Outfit {
-  const out: Outfit = {};
-  if (!raw || typeof raw !== 'object') return out;
-  const src = raw as Record<string, unknown>;
-  for (const slot of SLOTS) {
-    const r = src[slot];
-    if (typeof r === 'string' && (RARITIES as string[]).includes(r)) {
-      out[slot] = r as Outfit[typeof slot];
-    }
-  }
-  return out;
-}
 
 export class Duel implements DurableObject {
   private meta: Meta | null = null;
@@ -277,7 +265,12 @@ export class Duel implements DurableObject {
       meta.players[1] = {
         id: caller.id,
         name: String(msg.name ?? caller.name).slice(0, 24) || caller.name,
-        outfit: cleanOutfit(msg.outfit),
+        // Out of the wardrobe the server keeps, not out of the hello. Clothes
+        // are perks — a cheaper spread, a longer rope, an ability the other
+        // side has not got — and this is a match against somebody who can open
+        // a console. Their own word for it is taken only when there is no row
+        // at all, which means a client that has never synced.
+        outfit: (await outfitOf(this.env, caller.id)) ?? cleanOutfit(msg.outfit),
         payLeague: 0,
       };
       await this.save();
@@ -539,6 +532,11 @@ export class Duel implements DurableObject {
             netWorth: Math.round(Math.max(0, t.netWorth)),
             tradedWell: well,
             stars: paid.total,
+            // A duel has no client to mint one, and needs none: this object is
+            // this match, so its own id and the seat name the payout exactly.
+            // `finish` already refuses to run twice, and this is the same
+            // promise written where the database can keep it.
+            token: `duel:${this.state.id.toString()}:${s}`,
           },
         );
       } catch (err) {

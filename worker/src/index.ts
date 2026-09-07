@@ -15,9 +15,16 @@
  * payout from its own copy of the table (`results.ts`). For a duel it does not
  * even say that: the Durable Object in `duel.ts` ran the match itself and knows.
  *
- * What is deliberately NOT here: any notion of the player's local star balance.
- * The board ranks stars EARNED, which the server adds up itself, so spending
- * them in the shop cannot cost anybody their place.
+ * WHAT IS OWNED. The room behind the menu and the clothes on the trader used to
+ * live in one browser's `localStorage` and nowhere else, so a cleared cache or
+ * a new phone was the end of them. They live here now (`profile.ts`), which is
+ * what makes them survive both — and, not incidentally, what lets a duel dress
+ * each side out of this database rather than out of what their browser claims
+ * to be wearing.
+ *
+ * The board still ranks stars EARNED, which the server adds up itself. What a
+ * player has in hand is that minus what they have spent, worked out on read, so
+ * buying a hat still cannot cost anybody their place in the table.
  *
  * The bot lives here too, on `/tg` (see `bot.ts`). It has two jobs, both of
  * them one message long, and this is where the token already is — so there is
@@ -25,9 +32,20 @@
  */
 
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
+import { cleanClaim, cleanOutfit } from '../../src/profile/protocol';
+import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate } from './bot';
-import { REWARDS, record, topLeague, type Env, type Outcome, type Row } from './results';
-import { botUsername, sameSecret, verifyInitData, webhookSecret } from './telegram';
+import * as profiles from './profile';
+import {
+  REWARDS,
+  alreadyPaid,
+  record,
+  topLeague,
+  type Env,
+  type Outcome,
+  type Row,
+} from './results';
+import { botUsername, type Caller, sameSecret, verifyInitData, webhookSecret } from './telegram';
 
 export { Duel } from './duel';
 export { verifyInitData } from './telegram';
@@ -109,7 +127,16 @@ interface Submission {
   outcome?: unknown;
   netWorth?: unknown;
   tradedWell?: unknown;
+  /** the client's name for this match — see `alreadyPaid` in results.ts */
+  token?: unknown;
 }
+
+/**
+ * A submission is repeatable, and this is the length of the name it repeats
+ * under. The client mints a UUID; anything longer than this is not one, and is
+ * cut rather than refused.
+ */
+const MAX_TOKEN = 64;
 
 async function submit(request: Request, env: Env) {
   if (!env.BOT_TOKEN) {
@@ -134,6 +161,21 @@ async function submit(request: Request, env: Env) {
   const netWorth = Math.round(Number(body.netWorth));
   const seed = String(body.seed ?? '').slice(0, 32);
   const tradedWell = body.tradedWell === true;
+  const token = String(body.token ?? '').slice(0, MAX_TOKEN);
+
+  if (!token) return bad(400, 'no token');
+
+  /**
+   * Handed in already? Then this is the same match arriving twice, which is a
+   * thing the client is *encouraged* to do: a submission whose answer was lost
+   * to a dropped connection is queued and sent again, because the alternative
+   * is a player who played a match and was not paid for it.
+   *
+   * The answer is the answer the first attempt earned, so a retry looks like a
+   * success to everything downstream and nothing is added to anybody's total.
+   */
+  const paid = await alreadyPaid(env, token);
+  if (paid !== null) return json({ ok: true, stars: paid, already: true });
 
   if (!Number.isInteger(league) || league < 0 || league >= REWARDS.length) {
     return bad(400, 'no such league');
@@ -158,8 +200,132 @@ async function submit(request: Request, env: Env) {
   const base = outcome === 'win' ? table.win : outcome === 'draw' ? table.draw : 0;
   const stars = base + (tradedWell ? table.profit : 0);
 
-  await record(env, caller, { seed, league, outcome, netWorth, tradedWell, stars });
+  try {
+    await record(env, caller, { seed, league, outcome, netWorth, tradedWell, stars, token });
+  } catch (err) {
+    // Two retries in flight at once both got past the check above, and the
+    // UNIQUE index caught the loser. The batch rolled back, so nothing was paid
+    // twice — and from the caller's side this is a success, because the match
+    // it was asking about is in fact recorded.
+    const already = await alreadyPaid(env, token);
+    if (already === null) throw err;
+    return json({ ok: true, stars: already, already: true });
+  }
   return json({ ok: true, stars });
+}
+
+/* -------------------------------------------------------------- the profile */
+
+/**
+ * Every profile route starts the same way: a body, a signature, and the row
+ * that signature belongs to. Nothing is read here without one either — a
+ * wardrobe is not the leaderboard, and there is nobody it is public reading
+ * for.
+ */
+async function whoIsAsking(
+  request: Request,
+  env: Env,
+): Promise<{ caller: Caller; body: Record<string, unknown> } | Response> {
+  if (!env.BOT_TOKEN) return bad(503, 'no bot token configured');
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return bad(400, 'not json');
+  }
+  const initData = typeof body.initData === 'string' ? body.initData : '';
+  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  if (!caller) return bad(401, 'bad signature');
+  return { caller, body };
+}
+
+/** The whole profile, every time: the client's job is to draw what comes back. */
+const sent = async (env: Env, caller: Caller, held: profiles.Held, error?: string) =>
+  json({ ok: !error, error, profile: profiles.view(held, await profiles.earnedBy(env, caller.id)) });
+
+/**
+ * Where a session starts. The body may carry `claim` — what this browser had in
+ * `localStorage` before any of it was kept here — and `profile.ts` decides
+ * whether that is still worth believing.
+ */
+async function openProfile(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  const claim = body.claim == null ? null : cleanClaim(body.claim);
+  return sent(env, caller, await profiles.open(env, caller, claim));
+}
+
+/** Which slot and rung a message is about, or nothing if it is about neither. */
+function itemIn(body: Record<string, unknown>): { slot: Slot; rarity: Rarity } | null {
+  const slot = String(body.slot ?? '');
+  const rarity = String(body.rarity ?? '');
+  if (!(SLOTS as readonly string[]).includes(slot)) return null;
+  if (!(RARITIES as readonly string[]).includes(rarity)) return null;
+  return { slot: slot as Slot, rarity: rarity as Rarity };
+}
+
+/**
+ * Buying, and the reason a refusal still answers 200 with the profile in it: a
+ * client that thought it could afford something and could not is a client whose
+ * picture of the world is out of date, and the cure for that is the up to date
+ * one rather than an error code. It redraws, the stars snap back to what they
+ * really are, and the button says NEED N MORE.
+ */
+async function buy(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  const held = await profiles.open(env, caller, null);
+  const earned = await profiles.earnedBy(env, caller.id);
+  // free mode is the dev panel's, and the server honours it for one signed id
+  const free = body.free === true && profiles.isAdmin(env, caller.id);
+
+  let out: profiles.Bought;
+  if (body.room === true) {
+    out = profiles.buyRoom(held, earned, free);
+  } else {
+    const item = itemIn(body);
+    if (!item) return bad(400, 'no such item');
+    out = profiles.buyItem(held, earned, item.slot, item.rarity, free);
+  }
+
+  if (!out.ok) return sent(env, caller, held, out.error);
+  await profiles.save(env, caller.id, out.held);
+  return sent(env, caller, out.held);
+}
+
+/** Changing clothes costs nothing and can only ever put on what is owned. */
+async function wear(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  const held = profiles.wear(await profiles.open(env, caller, null), cleanOutfit(body.outfit));
+  await profiles.save(env, caller.id, held);
+  return sent(env, caller, held);
+}
+
+/** The dev panel's undo, checked against a signature rather than against a bundle. */
+async function refund(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  if (!profiles.isAdmin(env, caller.id)) return bad(403, 'not the developer');
+
+  const held = await profiles.open(env, caller, null);
+  let out: profiles.Bought;
+  if (body.room === true) {
+    out = profiles.refundRoom(held);
+  } else {
+    const item = itemIn(body);
+    if (!item) return bad(400, 'no such item');
+    out = profiles.refundItem(held, item.slot, item.rarity);
+  }
+
+  if (!out.ok) return sent(env, caller, held, out.error);
+  await profiles.save(env, caller.id, out.held);
+  return sent(env, caller, out.held);
 }
 
 /* ----------------------------------------------------------------- duels */
@@ -203,7 +369,12 @@ async function newDuel(request: Request, env: Env) {
     body: JSON.stringify({
       id: caller.id,
       name: caller.name,
-      outfit: body.outfit,
+      // What the host is wearing, out of the wardrobe the server keeps rather
+      // than out of the message — clothes are perks, and a duel is played
+      // against somebody who can open a console. Their own word for it is taken
+      // only when there is no row at all, which means a client that has never
+      // synced (see `profile.ts`).
+      outfit: (await profiles.outfitOf(env, caller.id)) ?? body.outfit,
       league: body.league,
     }),
   });
@@ -284,6 +455,13 @@ export default {
     }
 
     if (url.pathname === '/result' && request.method === 'POST') return submit(request, env);
+
+    if (request.method === 'POST') {
+      if (url.pathname === '/profile') return openProfile(request, env);
+      if (url.pathname === '/profile/buy') return buy(request, env);
+      if (url.pathname === '/profile/wear') return wear(request, env);
+      if (url.pathname === '/profile/refund') return refund(request, env);
+    }
 
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);
 
