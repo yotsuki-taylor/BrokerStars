@@ -12,3 +12,8 @@ tsconfig.tsbuildinfo
 worker/node_modules
 worker/.wrangler
 .dev.vars
+
+# Database dumps taken before a migration. Real rows: Telegram user ids and the
+# names people chose, which is not something to put in a public repository.
+# Kept out of git on purpose, and kept on disk on purpose — see worker/README.md.
+worker/backups
