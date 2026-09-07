@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { COMPANIES, TRAIT_LABEL, type Company } from '../sim/companies';
 import { AWARDS, GROUPS, type Award, type AwardGroup } from '../awards/catalogue';
 import type { Profile } from '../profile/protocol';
-import { LogoMask, Lock, money } from './components';
+import { Check, LogoMask, Lock, money } from './components';
 import { LEAGUES, leagueName } from './leagues';
 import { t, tr, type Key } from './i18n';
 
@@ -165,7 +165,7 @@ function AwardsTab({ profile }: { profile: Profile | null }) {
               const bar = got ? null : progressOf(a, profile);
               return (
                 <div key={a.id} className={`award${got ? ' got' : ''}`}>
-                  <span className="award-mark">{got ? '★' : <Lock size={13} />}</span>
+                  <span className="award-mark">{got ? <Check size={13} /> : <Lock size={13} />}</span>
                   <span className="award-text">
                     <b>{awardName(a)}</b>
                     <i>{awardLine(a)}</i>
@@ -187,7 +187,7 @@ function AwardsTab({ profile }: { profile: Profile | null }) {
         {secret.map((a) =>
           has(a) ? (
             <div key={a.id} className="award got">
-              <span className="award-mark">★</span>
+              <span className="award-mark"><Check size={13} /></span>
               <span className="award-text">
                 <b>{awardName(a)}</b>
                 <i>{awardLine(a)}</i>

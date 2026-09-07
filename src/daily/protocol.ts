@@ -7,18 +7,18 @@
  * and `src/profile/protocol.ts` are shared: the shape is written once, and
  * changing it breaks the build on both sides rather than in production.
  *
- * WHY A SECOND CURRENCY. Stars are earned by playing and spent on the room and
- * the wardrobe — everything a star buys makes the next match go better. Dollars
+ * WHY A SECOND CURRENCY. Coins are earned by playing and spent on the room and
+ * the wardrobe — everything a coin buys makes the next match go better. Dollars
  * are meant for the other half of the game, the metagame counter where a player
  * buys a piece of a company rather than a hat, and mixing the two would make
  * every purchase there a purchase not made in the shop. So they are a separate
  * balance, they are earned a separate way — turning up, rather than winning —
  * and the shop cannot see them at all.
  *
- * Note what a dollar balance is NOT: it is not `players.stars`, which the board
- * ranks on and which must never go down, so there is no earned/spent/granted
- * split here. One number, and the counter that will eventually spend it takes
- * from it.
+ * Note what a dollar balance is NOT: it is not the coin total the board ranks
+ * on (`players.stars`, a column that kept its old name), which must never go
+ * down, so there is no earned/spent/granted split here. One number, and the
+ * counter that will eventually spend it takes from it.
  *
  * WHAT A DAY IS. `Math.floor(now / 86400000)` — the UTC day, counted off the
  * epoch by both sides. Not a local day, deliberately: a player who flies east
@@ -73,7 +73,7 @@ export type Counts =
 /**
  * One of the day's quests.
  *
- * `goal` is what the counter has to reach and `stars` is what reaching it pays.
+ * `goal` is what the counter has to reach and `coins` is what reaching it pays.
  * All three fields are read by the screen that draws the row AND by the server
  * that counts and pays, so a quest cannot be advertised as one thing and
  * settled as another — the same arrangement `src/awards/catalogue.ts` uses.
@@ -86,8 +86,8 @@ export interface Quest {
   id: string;
   counts: Counts;
   goal: number;
-  /** stars paid for finishing it — quests pay the soft currency, not dollars */
-  stars: number;
+  /** coins paid for finishing it — quests pay the soft currency, not dollars */
+  coins: number;
   /**
    * Needs somebody else at the other end of it — which today means a duel.
    *
@@ -98,7 +98,7 @@ export interface Quest {
    *
    * It is also why the two of them pay a little more than their difficulty
    * deserves. A duel is eighty seconds like any other match — the work is in
-   * arranging it, and that is what the extra star is for.
+   * arranging it, and that is what the extra coin is for.
    */
   social?: boolean;
 }
@@ -123,28 +123,28 @@ export const QUESTS_A_DAY = 3;
  * permanently shut for a whole class of player, which is a different thing from
  * the duels, where the door opens the moment somebody answers.
  *
- * WHAT IT PAYS. A day comes to between six and ten stars, which is about one
+ * WHAT IT PAYS. A day comes to between six and ten coins, which is about one
  * good match in the silver hall. That is the shape it should be — enough that
  * doing the rounds is worth the taps, not so much that the shop is better
  * reached by turning up than by playing.
  *
- * Quest stars are `granted`, not earned: see `claimQuest` in
+ * Quest coins are `granted`, not earned: see `claimQuest` in
  * `worker/src/profile.ts` for why the leaderboard does not see them.
  */
 export const QUESTS: Quest[] = [
-  { id: 'play-3', counts: 'matches', goal: 3, stars: 2 },
-  { id: 'play-5', counts: 'matches', goal: 5, stars: 3 },
-  { id: 'win-1', counts: 'wins', goal: 1, stars: 2 },
-  { id: 'win-2', counts: 'wins', goal: 2, stars: 3 },
-  { id: 'gain', counts: 'profit', goal: 1, stars: 2 },
-  { id: 'trades-20', counts: 'trades', goal: 20, stars: 2 },
+  { id: 'play-3', counts: 'matches', goal: 3, coins: 2 },
+  { id: 'play-5', counts: 'matches', goal: 5, coins: 3 },
+  { id: 'win-1', counts: 'wins', goal: 1, coins: 2 },
+  { id: 'win-2', counts: 'wins', goal: 2, coins: 3 },
+  { id: 'gain', counts: 'profit', goal: 1, coins: 2 },
+  { id: 'trades-20', counts: 'trades', goal: 20, coins: 2 },
   // Starting cash is 10 000 and roughly a fifth of matches clear 20 000, so
   // this is a good evening rather than a great one — see `src/awards/catalogue.ts`
   // for where those numbers come from.
-  { id: 'nw-15k', counts: 'best', goal: 15_000, stars: 3 },
-  { id: 'no-bust-3', counts: 'survived', goal: 3, stars: 2 },
-  { id: 'duel-1', counts: 'duels', goal: 1, stars: 3, social: true },
-  { id: 'duel-win', counts: 'duelWins', goal: 1, stars: 4, social: true },
+  { id: 'nw-15k', counts: 'best', goal: 15_000, coins: 3 },
+  { id: 'no-bust-3', counts: 'survived', goal: 3, coins: 2 },
+  { id: 'duel-1', counts: 'duels', goal: 1, coins: 3, social: true },
+  { id: 'duel-win', counts: 'duelWins', goal: 1, coins: 4, social: true },
 ];
 
 export const QUEST_IDS: string[] = QUESTS.map((q) => q.id);

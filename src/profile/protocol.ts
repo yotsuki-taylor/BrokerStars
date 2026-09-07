@@ -1,6 +1,6 @@
 /**
  * The wire for what a player owns: the room behind the menu, the clothes on
- * the trader, and the stars still in hand.
+ * the trader, and the coins still in hand.
  *
  * Both ends import this file — the browser from `src/ui/api.ts`, the Worker
  * from `worker/src/profile.ts` — for the same reason `src/duel/protocol.ts` is
@@ -20,7 +20,7 @@
  * cost more than losing a hat did — and half of it was on the server already
  * (`players.top_league`, which is what a duel pays each side by), so the split
  * had stopped making sense. Wins are counted by the server as matches are
- * handed in, the same way stars are, rather than being something the client
+ * handed in, the same way coins are, rather than being something the client
  * banks and reports.
  *
  * What is deliberately NOT here: the company archive, the board preferences,
@@ -56,14 +56,30 @@ export type Wins = number[];
 
 /** Everything the server keeps for one player, as the browser receives it. */
 export interface Profile {
-  /** stars in hand: earned + granted − spent, all three of them the server's */
-  stars: number;
-  /** stars EARNED, which is what the board ranks on and what spending never touches */
+  /**
+   * Coins in hand: earned + granted − spent, all three of them the server's.
+   *
+   * The database column behind it is still called `stars`, and so is the field
+   * `stars` the server keeps emitting beside this one — see `cleanProfile`.
+   * The rename is a rename of the GAME's vocabulary, because Telegram sells a
+   * currency called Stars and the shop must not look like it charges those.
+   * What a column is called is not something a player can see, and renaming it
+   * would be a migration bought with nothing.
+   */
+  coins: number;
+  /**
+   * @deprecated The same number under its old name, sent by the server for one
+   * release so that a browser holding a bundle from before the rename keeps
+   * working whichever side is deployed first. Nothing reads it but
+   * `cleanProfile`, and it goes as soon as every deployment has turned over.
+   */
+  stars?: number;
+  /** coins EARNED, which is what the board ranks on and what spending never touches */
   earned: number;
   spent: number;
   /**
    * The hard currency, paid by the daily bonus and by nothing else yet. One
-   * number rather than the three above, because unlike stars it is nobody's
+   * number rather than the three above, because unlike coins it is nobody's
    * ranking: see `src/daily/protocol.ts`.
    */
   dollars: number;
@@ -91,7 +107,7 @@ export interface Profile {
  * believed, which is once and only while the server has nothing of its own.
  */
 export interface Claim {
-  stars: number;
+  coins: number;
   room: number;
   owned: Tops;
   outfit: Outfit;
@@ -107,10 +123,10 @@ export interface Claim {
 /**
  * A fat-finger guard on the claim, not a security boundary — the claim is
  * believed or it is not, and that decision is made elsewhere. The whole
- * wardrobe plus the whole room is 8750 stars at today's prices, so nothing
+ * wardrobe plus the whole room is 8750 coins at today's prices, so nothing
  * legitimate is within an order of magnitude of this.
  */
-export const MAX_CLAIM_STARS = 100_000;
+export const MAX_CLAIM_COINS = 100_000;
 
 export const rankOf = (rarity: Rarity): number => RARITIES.indexOf(rarity);
 
@@ -136,15 +152,15 @@ export function cleanRoom(raw: unknown): number {
   return Number.isFinite(n) ? Math.min(ROOM_DONE, Math.max(0, n)) : 0;
 }
 
-/** A whole number of stars, never negative. */
+/** A whole number of coins, never negative. */
 export function cleanCount(raw: unknown): number {
   const n = Math.floor(Number(raw));
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 
 /** The same, but capped: only a claim is ever read through this one. */
-export const cleanClaimedStars = (raw: unknown): number =>
-  Math.min(MAX_CLAIM_STARS, cleanCount(raw));
+export const cleanClaimedCoins = (raw: unknown): number =>
+  Math.min(MAX_CLAIM_COINS, cleanCount(raw));
 
 /**
  * A ladder off the wire: `count` numbers, none of them negative, padded and cut
@@ -175,7 +191,10 @@ export function cleanClaim(raw: unknown, leagues: number): Claim {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const owned = cleanTops(src.owned);
   return {
-    stars: cleanClaimedStars(src.stars),
+    // `coins` from a client that has been renamed, `stars` from one that has
+    // not yet loaded the new bundle. Both are read for a release or two; see
+    // `cleanProfile` for the same seam pointing the other way.
+    coins: cleanClaimedCoins(src.coins ?? src.stars),
     room: cleanRoom(src.room),
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
@@ -184,9 +203,9 @@ export function cleanClaim(raw: unknown, leagues: number): Claim {
   };
 }
 
-/** Nothing bought, nothing won, no stars: a claim with nothing in it to keep. */
+/** Nothing bought, nothing won, no coins: a claim with nothing in it to keep. */
 export const emptyClaim = (c: Claim): boolean =>
-  c.stars === 0 &&
+  c.coins === 0 &&
   c.room === 0 &&
   Object.keys(c.owned).length === 0 &&
   c.wins.every((n) => n === 0) &&
@@ -235,10 +254,15 @@ export function mergeTops(a: Tops, b: Tops): Tops {
 export function cleanProfile(raw: unknown, leagues: number): Profile | null {
   if (!raw || typeof raw !== 'object') return null;
   const src = raw as Record<string, unknown>;
-  if (typeof src.stars !== 'number' || !Number.isFinite(src.stars)) return null;
+  // A server that has not been redeployed yet still calls this `stars`. Read
+  // both, prefer the new name, and drop the old one once every deployment has
+  // turned over — without this the first client to ship ahead of the Worker
+  // would read no balance at all and fall back to `localStorage` for everyone.
+  const balance = src.coins ?? src.stars;
+  if (typeof balance !== 'number' || !Number.isFinite(balance)) return null;
   const owned = cleanTops(src.owned);
   return {
-    stars: Math.max(0, Math.floor(src.stars)),
+    coins: Math.max(0, Math.floor(balance)),
     earned: cleanCount(src.earned),
     spent: cleanCount(src.spent),
     room: cleanRoom(src.room),

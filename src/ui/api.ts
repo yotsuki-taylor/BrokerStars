@@ -4,7 +4,7 @@
  * Everything here is allowed to fail. The game is a single-player experience
  * that happens to keep a board and, since the room and the wardrobe moved off
  * the phone, a profile; if either is down, unreachable, or simply not
- * configured for this build, matches still play, stars are still earned and
+ * configured for this build, matches still play, coins are still earned and
  * everything is still written to `localStorage` exactly as it used to be.
  * Nothing in this file throws at a caller and nothing blocks a render.
  *
@@ -51,7 +51,7 @@ export interface BoardRow {
   rank: number;
   id: string;
   name: string;
-  stars: number;
+  coins: number;
   matches: number;
   wins: number;
   best_net_worth: number;
@@ -168,14 +168,14 @@ export function mintToken(): string {
  * What became of one attempt, and what to do about it.
  *
  * The distinction that matters is `retry` against `drop`. A match that was
- * played and could not be handed in is stars the player earned and did not get,
+ * played and could not be handed in is coins the player earned and did not get,
  * because the balance is the server's now — so it is kept and sent again. A
  * match the server actively refused will be refused the same way forever, and
  * keeping it is only a queue that never empties.
  */
 export type Verdict = 'done' | 'later' | 'retry' | 'drop';
 
-/** Exported for the test that pins it down: getting this wrong loses stars. */
+/** Exported for the test that pins it down: getting this wrong loses coins. */
 export function verdictOf(answer: Answer | null): Verdict {
   if (!answer) return 'retry'; // nothing came back: no network, or too slow
   if (answer.status === 200) return 'done';
@@ -197,7 +197,7 @@ const send = async (result: MatchResult): Promise<Verdict> =>
  * attempt reached the database and only its answer was lost — the most likely
  * failure of the lot, and the one a timeout looks exactly like. Now the server
  * recognises the second arrival, so the choice is not "risk double pay or lose
- * the stars" any more.
+ * the coins" any more.
  */
 const PENDING_KEY = 'brokerstars.pending';
 
@@ -232,7 +232,7 @@ function keep(result: MatchResult): void {
 }
 
 /**
- * Hand a finished match in. Note what is NOT sent: how many stars it was worth.
+ * Hand a finished match in. Note what is NOT sent: how many coins it was worth.
  * The server works that out from its own table, so this cannot inflate it.
  *
  * Never throws and never blocks anything the player can see; a match that does
@@ -246,7 +246,7 @@ export async function submitResult(result: MatchResult): Promise<void> {
 
 /**
  * Everything still owed, tried again. Called on the way in, before the profile
- * is asked for — the stars these are worth have to be on the board before the
+ * is asked for — the coins these are worth have to be on the board before the
  * balance built out of it is read, or the answer would be short by exactly
  * them.
  */
@@ -271,11 +271,11 @@ export async function flushPending(): Promise<void> {
 /* ------------------------------------------------------------- the profile */
 
 /**
- * The room, the wardrobe and the stars in hand, which the server now keeps —
+ * The room, the wardrobe and the coins in hand, which the server now keeps —
  * see `src/profile/protocol.ts` for why. Every one of these answers with the
  * whole profile as it stands afterwards, including the refusals: a client that
  * thought it could afford something and could not wants the truth, not an
- * error code, and the truth is what redraws the star count and the button.
+ * error code, and the truth is what redraws the coin count and the button.
  *
  * All of them are still allowed to fail, exactly like the board above. Without
  * a server, or opened outside Telegram where nothing can be signed, they answer

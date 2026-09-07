@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Lock, Star, tex } from './components';
+import { Lock, Coin, tex } from './components';
 import { t } from './i18n';
 import { LEAGUES, leagueBlurb, leagueName, unlockedCount, winsOwed } from './leagues';
 
@@ -17,13 +17,13 @@ const badge = (file: string) => tex(`leagues/${file}`);
  * only ever changes when the snapped card changes, not every frame.
  */
 export default function LeagueSelect({
-  stars,
+  coins,
   wins,
   initial,
   onPlay,
   onBack,
 }: {
-  stars: number;
+  coins: number;
   /** wins banked in each league, index for index with LEAGUES */
   wins: number[];
   /** league to open on — the last one played */
@@ -122,9 +122,9 @@ export default function LeagueSelect({
           {t('common.back')}
         </button>
         <span className="spacer" />
-        <div className="star-count">
-          <Star size={20} />
-          <b>{stars}</b>
+        <div className="coin-count">
+          <Coin size={20} />
+          <b>{coins}</b>
         </div>
       </header>
 
@@ -158,11 +158,11 @@ export default function LeagueSelect({
 
         <div className="league-pay">
           <span className="pay-chip">
-            <Star size={16} />
+            <Coin size={16} />
             <b>{league.reward.win}</b> {t('leagues.win')}
           </span>
           <span className="pay-chip">
-            <Star size={16} />
+            <Coin size={16} />
             <b>{league.reward.profit}</b> {t('leagues.gain', { n: 40 })}
           </span>
         </div>

@@ -9,7 +9,7 @@ import {
   Cross,
   Dollar,
   Gear,
-  Star,
+  Coin,
   Tie,
   Trophy,
   money,
@@ -20,7 +20,7 @@ import type { Outfit } from './wardrobe';
 
 /** Main menu: the player's room, the player standing in it, and the way out to a match. */
 export default function Menu({
-  stars,
+  coins,
   dollars,
   nudge,
   outfit,
@@ -40,7 +40,7 @@ export default function Menu({
   onDaily,
   onSettings,
 }: {
-  stars: number;
+  coins: number;
   /** the hard currency, which so far only the daily bonus pays */
   dollars: number;
   /** something is waiting behind the DAILY button — see `worthATap` */
@@ -65,7 +65,7 @@ export default function Menu({
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
   const [confirming, setConfirming] = useState(false);
   const price = freeMode ? 0 : (step?.price ?? 0);
-  const affordable = stars >= price;
+  const affordable = coins >= price;
 
   // never leave the confirm state hanging over a different upgrade
   useEffect(() => setConfirming(false), [roomDone]);
@@ -79,7 +79,7 @@ export default function Menu({
           two things behind it now, so the corner opens a menu instead, and the
           counters move across to give it the left-hand side.
 
-          Two currencies, two counters, and the dollars go on the inside: stars
+          Two currencies, two counters, and the dollars go on the inside: coins
           have been in that corner since the first build, and moving them to
           make room for the newcomer would cost more than it bought. */}
       <header className="menu-top">
@@ -91,9 +91,9 @@ export default function Menu({
           <Dollar size={18} />
           <b>{money(dollars)}</b>
         </div>
-        <div className="star-count">
-          <Star size={20} />
-          <b>{stars}</b>
+        <div className="coin-count">
+          <Coin size={20} />
+          <b>{coins}</b>
         </div>
       </header>
 
@@ -169,7 +169,7 @@ export default function Menu({
                 t('menu.free')
               ) : (
                 <>
-                  <Star size={15} /> {price}
+                  <Coin size={15} /> {price}
                 </>
               )}
             </button>

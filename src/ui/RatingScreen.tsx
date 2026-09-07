@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, Star } from './components';
+import { Lock, Coin } from './components';
 import { boardConfigured, fetchBoard, myId, type Board, type BoardRow } from './api';
 import { t } from './i18n';
 
 /**
  * The leaderboard the Worker keeps (see worker/).
  *
- * It ranks stars EARNED rather than stars held, so spending them in the shop
+ * It ranks coins EARNED rather than coins held, so spending them in the shop
  * cannot cost anybody their place, and it is read-only here: the client never
  * says what it scored, only what happened, and the server does the arithmetic.
  *
@@ -34,8 +34,8 @@ function RatingLine({ row }: { row: BoardRow }) {
       <span className="rating-matches">
         {row.matches} {t('rating.matches')}
       </span>
-      <span className="rating-stars">
-        <Star size={12} /> {row.stars}
+      <span className="rating-coins">
+        <Coin size={12} /> {row.coins}
       </span>
     </div>
   );

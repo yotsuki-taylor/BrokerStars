@@ -77,9 +77,9 @@ export interface Held {
   room: number;
   owned: Tops;
   outfit: Outfit;
-  /** stars handed over the counter, ever */
+  /** coins handed over the counter, ever */
   spent: number;
-  /** stars from somewhere other than a match: the migration, and free purchases */
+  /** coins from somewhere other than a match: the migration, and free purchases */
   granted: number;
   /** wins banked in each league, lowest first */
   wins: Wins;
@@ -92,7 +92,7 @@ export interface Held {
   /** companies this player has met, which used to live in the browser */
   seen: string[];
   /**
-   * The hard currency. A balance rather than the earned/spent pair the stars
+   * The hard currency. A balance rather than the earned/spent pair the coins
    * are, because nothing ranks on it: see `src/daily/protocol.ts`.
    */
   dollars: number;
@@ -131,7 +131,7 @@ export const untouched = (h: Held): boolean =>
   Object.keys(h.awards).length === 0;
 
 /**
- * Stars in hand. Never stored, always worked out: `players.stars` is the
+ * Coins in hand. Never stored, always worked out: `players.stars` is the
  * board's own running total of what was EARNED and spending must not touch it,
  * so the balance is the three numbers subtracted at the moment somebody asks.
  * Two columns that could drift apart would be one column too many.
@@ -146,6 +146,12 @@ export const balance = (h: Held, earned: number): number =>
  * the judge measured them against.
  */
 export const view = (h: Held, earned: number, at: Standing): Profile => ({
+  coins: balance(h, earned),
+  // The old name, alongside the new one, for as long as there may be a browser
+  // out there holding a bundle from before the rename. A client that has been
+  // updated reads `coins` and ignores this; one that has not reads this and
+  // never notices. Drop it once every deployment has turned over — the reader
+  // on the other side is `cleanProfile` in `src/profile/protocol.ts`.
   stars: balance(h, earned),
   earned,
   spent: h.spent,
@@ -202,7 +208,7 @@ export function buyItem(
 ): Bought {
   if (nextRung(h.owned, slot) !== rarity) return { ok: false, error: 'not the next rung' };
   const price = free ? 0 : PRICES[rarity];
-  if (balance(h, earned) < price) return { ok: false, error: 'not enough stars' };
+  if (balance(h, earned) < price) return { ok: false, error: 'not enough coins' };
   return {
     ok: true,
     held: {
@@ -218,7 +224,7 @@ export function buyItem(
 export function buyRoom(h: Held, earned: number, free: boolean): Bought {
   if (h.room >= ROOM_DONE) return { ok: false, error: 'the room is finished' };
   const price = free ? 0 : ROOM_STEPS[h.room].price;
-  if (balance(h, earned) < price) return { ok: false, error: 'not enough stars' };
+  if (balance(h, earned) < price) return { ok: false, error: 'not enough coins' };
   return { ok: true, held: { ...h, room: h.room + 1, spent: h.spent + price } };
 }
 
@@ -227,7 +233,7 @@ export function buyRoom(h: Held, earned: number, free: boolean): Bought {
  * ladder ends up with a hole in it that nothing can fill.
  *
  * `spent` is floored at zero because a rung bought in free mode cost nothing,
- * and refunding it would otherwise mint stars. The game's own dev panel has
+ * and refunding it would otherwise mint coins. The game's own dev panel has
  * always had that asymmetry; the floor is what stops it compounding.
  */
 export function refundItem(h: Held, slot: Slot, rarity: Rarity): Bought {
@@ -247,7 +253,7 @@ export function refundItem(h: Held, slot: Slot, rarity: Rarity): Bought {
   };
 }
 
-/** Developer only: step the room back and hand the stars back. */
+/** Developer only: step the room back and hand the coins back. */
 export function refundRoom(h: Held): Bought {
   if (h.room <= 0) return { ok: false, error: 'the room is bare already' };
   return {
@@ -315,14 +321,15 @@ export function claimBonus(h: Held, now: number): Bought {
 }
 
 /**
- * A finished quest, cashed in for its stars.
+ * A finished quest, cashed in for its coins.
  *
- * WHY `granted` AND NOT THE BOARD. `players.stars` is what the leaderboard
+ * WHY `granted` AND NOT THE BOARD. `players.stars` — the column kept its old
+ * name — is what the leaderboard
  * ranks on, and it is a running total of what matches paid. A quest reward is
  * not that. Two players with identical match records should not be separated in
  * the table by which of them remembered to tap a button — the board is a
  * ranking of how well people play, and a daily is a reward for doing the
- * rounds. So the stars land in `granted`, which is where every star that did
+ * rounds. So the coins land in `granted`, which is where every coin that did
  * not come out of a match already goes, and they are spendable in the shop
  * exactly like any other. It keeps `players.stars` a pure sum of the `results`
  * table as well, which is what the replay check will one day want to verify
@@ -344,7 +351,7 @@ export function claimQuest(h: Held, id: string, now: number): Bought {
     ok: true,
     held: {
       ...h,
-      granted: h.granted + quest.stars,
+      granted: h.granted + quest.coins,
       daily: { ...daily, taken: [...daily.taken, id] },
     },
   };
@@ -355,7 +362,7 @@ export function claimQuest(h: Held, id: string, now: number): Bought {
 /**
  * One more win in one league, which is how the ladder is climbed.
  *
- * Counted here rather than reported by the client, for the reason the stars
+ * Counted here rather than reported by the client, for the reason the coins
  * are: a league that opens because a browser said so is not a league that was
  * earned. The caller is `/result`, once per match actually recorded — a
  * re-sent submission never reaches this far, because the token is recognised
@@ -387,8 +394,8 @@ export function bankWin(h: Held, league: number): Held {
  * The arithmetic is chosen so that nobody can come out behind. `spent` is set
  * to what the claimed room and wardrobe would have cost, and `granted` tops the
  * balance up to what the browser said was in hand — so a player keeps their
- * stars AND their purchases. A player whose save was lost but whose matches the
- * board remembers claims nothing, and gets their earned stars back as a balance
+ * coins AND their purchases. A player whose save was lost but whose matches the
+ * board remembers claims nothing, and gets their earned coins back as a balance
  * instead: the door does not shut on an empty claim, so their real save can
  * still walk in from another phone afterwards.
  */
@@ -401,7 +408,7 @@ export function claimInto(h: Held, earned: number, claim: Claim): Held {
     owned,
     outfit: wearable(owned, claim.outfit),
     spent,
-    granted: Math.max(0, claim.stars + spent - earned),
+    granted: Math.max(0, claim.coins + spent - earned),
     // The ladder is the one thing here the server would otherwise have no way
     // of reconstructing: it starts counting wins today, and everything climbed
     // before that only exists in the save being handed over.

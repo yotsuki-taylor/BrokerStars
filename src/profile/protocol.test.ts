@@ -114,7 +114,7 @@ describe('a claim, before the server is asked to believe it', () => {
 
   it('survives a save that is not there at all', () => {
     expect(claim(undefined)).toEqual({
-      stars: 0,
+      coins: 0,
       room: 0,
       owned: {},
       outfit: {},
@@ -125,7 +125,7 @@ describe('a claim, before the server is asked to believe it', () => {
 });
 
 describe('a profile coming back', () => {
-  it('is nothing at all when the answer has no stars in it', () => {
+  it('is nothing at all when the answer has no coins in it', () => {
     expect(cleanProfile({ room: 3 }, LEAGUE_COUNT)).toBeNull();
     expect(cleanProfile(null, LEAGUE_COUNT)).toBeNull();
   });
@@ -133,7 +133,7 @@ describe('a profile coming back', () => {
   it('trims an outfit the wardrobe does not cover, and squares the ladder up', () => {
     const p = cleanProfile(
       {
-        stars: 5,
+        coins: 5,
         earned: 9,
         spent: 4,
         room: 2,
@@ -152,7 +152,7 @@ describe('a profile coming back', () => {
       LEAGUE_COUNT,
     );
     expect(p).toEqual({
-      stars: 5,
+      coins: 5,
       earned: 9,
       spent: 4,
       room: 2,

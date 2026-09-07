@@ -28,9 +28,9 @@ export const SLOT_LABEL: Record<Slot, string> = {
  *
  * Rarities inside a slot are a ladder, bought in order, so these are step
  * prices rather than the price of an item standing alone: taking a slot from
- * bare to legend is 50+200+300+400+600 = 1550 stars whichever way you come at
+ * bare to legend is 50+200+300+400+600 = 1550 coins whichever way you come at
  * it. Skipping used to be strictly better — buy the rare and the two rungs you
- * passed over were stars thrown away — which meant the shop punished you for
+ * passed over were coins thrown away — which meant the shop punished you for
  * buying what you could afford today.
  *
  * WHY THEY ARE THIS BIG. The old curve was 4/7/12/20/40, and the trouble with
@@ -38,10 +38,10 @@ export const SLOT_LABEL: Record<Slot, string> = {
  * item on it cost about a fifth of an evening, and a whole wardrobe went in six
  * days. Clothes hand out perks that change how every subsequent match is
  * played — the neck slot hands out the abilities outright — so they were at
- * once the biggest lever in the game and the cheapest thing in it. Seven stars
+ * once the biggest lever in the game and the cheapest thing in it. Seven coins
  * for an ability is not a price.
  *
- * THE SHAPE IS THE LEAGUE'S. A league pays 2.2 stars a match in the bronze pit
+ * THE SHAPE IS THE LEAGUE'S. A league pays 2.2 coins a match in the bronze pit
  * and 12.2 under the crown, and the day's quests add about 7.5 on top of
  * whatever gets played (`src/daily/protocol.ts`). Against that, at eight
  * matches an evening, these prices come to 2 / 5.6 / 5.9 / 5.5 / 5.7 days per
@@ -56,7 +56,7 @@ export const SLOT_LABEL: Record<Slot, string> = {
  * matches — and at 200 the player spent five days being told NOTHING TO USE ·
  * BUY A NECK ITEM before owning anything at all. It is cheap on purpose.
  *
- * The whole wardrobe is 7750 stars, or three to seven months depending on how
+ * The whole wardrobe is 7750 coins, or three to seven months depending on how
  * much somebody plays. That is the horizon, and it is meant to be one.
  */
 export const PRICES: Record<Rarity, number> = {

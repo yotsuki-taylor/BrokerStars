@@ -356,7 +356,7 @@ export default function App() {
   /** rerolls of the board still owed this match, and a board the player named */
   const [rerollsLeft, setRerollsLeft] = useState(0);
   const forcedRef = useRef<readonly string[] | null>(null);
-  const [stars, setStars] = useState(loadStars);
+  const [coins, setStars] = useState(loadStars);
   /** the hard currency, and the day it is paid out by — see `src/daily/protocol.ts` */
   const [dollars, setDollars] = useState(loadDollars);
   const [daily, setDaily] = useState(loadDaily);
@@ -427,8 +427,8 @@ export default function App() {
     setProfile(p);
     setSeenCompanies(new Set(p.seen));
     saveSeen(new Set(p.seen));
-    setStars(p.stars);
-    saveStars(p.stars);
+    setStars(p.coins);
+    saveStars(p.coins);
     setDollars(p.dollars);
     saveDollars(p.dollars);
     // The server has already rolled the day over; this end rolls it again only
@@ -455,7 +455,7 @@ export default function App() {
   /**
    * Whatever the server answers replaces what this end drew in the meantime.
    * Every purchase is applied here first and sent second, so the shop never
-   * waits on a network — and if the server disagrees, this is where the stars
+   * waits on a network — and if the server disagrees, this is where the coins
    * snap back to what they really are.
    */
   const reconcile = useCallback(
@@ -473,12 +473,12 @@ export default function App() {
    */
   useEffect(() => {
     // Matches played while the server was unreachable go up first. They are
-    // stars on the board, and the balance is built out of the board — asking
+    // coins on the board, and the balance is built out of the board — asking
     // for it before they land would answer short by exactly them.
     reconcile(
       flushPending().then(() =>
         openProfile({
-          stars: loadStars(),
+          coins: loadStars(),
           room: loadRoom(),
           owned: topsOf(loadOwned()),
           outfit: loadOutfit(),
@@ -609,7 +609,7 @@ export default function App() {
           hold(li, null);
 
           // The board hears about the match, but not about what it was worth:
-          // the server reads the outcome and works the stars out from its own
+          // the server reads the outcome and works the coins out from its own
           // table. Fire and forget — a leaderboard that cannot be reached must
           // never be something the player has to wait for or notice.
           // ...and then asks what that came to. The award above is this end's
@@ -886,7 +886,7 @@ export default function App() {
           }
           // Asked for whatever the payout came to, and now asked for
           // unconditionally: the object that ran the match settled the day's
-          // quests along with the stars, and a duel lost for nothing still
+          // quests along with the coins, and a duel lost for nothing still
           // counted as a match played. Unlike a bot match, this end does not
           // keep its own tally of a duel — the mirror it draws is not where the
           // trades were made, and one honest answer beats two guesses.
@@ -1097,7 +1097,7 @@ export default function App() {
   const buy = (slot: Slot, rarity: Rarity) => {
     if (!isBuyable(owned, slot, rarity)) return;
     const price = freeMode ? 0 : PRICES[rarity];
-    if (stars < price) return;
+    if (coins < price) return;
     addStars(-price);
     setOwned((prev) => {
       const next = new Set(prev).add(itemId(slot, rarity));
@@ -1147,7 +1147,7 @@ export default function App() {
   const renovate = () => {
     if (roomDone >= ROOM_DONE) return;
     const price = freeMode ? 0 : ROOM_STEPS[roomDone].price;
-    if (stars < price) return;
+    if (coins < price) return;
     addStars(-price);
     setRoomDone((prev) => {
       const next = prev + 1;
@@ -1158,7 +1158,7 @@ export default function App() {
     reconcile(buyRoomStep(freeMode));
   };
 
-  /** Dev only: step the room back and hand the stars back. */
+  /** Dev only: step the room back and hand the coins back. */
   const undoRenovate = () => {
     if (!admin || roomDone === 0) return;
     addStars(ROOM_STEPS[roomDone - 1].price);
@@ -1199,7 +1199,7 @@ export default function App() {
   /**
    * One finished quest, cashed in.
    *
-   * Same shape as the bonus and as a purchase: the stars appear at once and
+   * Same shape as the bonus and as a purchase: the coins appear at once and
    * whatever the server answers replaces them. The guard is this end's own
    * picture of the day and only stops a double tap — whether the quest is
    * really finished, and what it really pays, is settled by `claimQuest` on the
@@ -1209,7 +1209,7 @@ export default function App() {
     const today = rolled(daily, Date.now());
     const quest = questsToday(today.day).find((q) => q.id === id);
     if (!quest || !questReady(today, quest)) return;
-    addStars(quest.stars);
+    addStars(quest.coins);
     setDaily(() => {
       const next = { ...today, taken: [...today.taken, id] };
       saveDaily(next);
@@ -1223,7 +1223,7 @@ export default function App() {
    * One finished match, counted against the day — this end's copy of what
    * `settle` does on the server.
    *
-   * Kept in step for the reason the star count is: the screen has to be right
+   * Kept in step for the reason the coin count is: the screen has to be right
    * before the answer comes back, and it has to be right at all in a build with
    * no server behind it. The server's answer overwrites this the moment it
    * lands.
@@ -1282,7 +1282,7 @@ export default function App() {
     return (
       <div className="app">
         <LeagueSelect
-          stars={stars}
+          coins={coins}
           wins={leagueWins}
           initial={league}
           onBack={() => setScreen('menu')}
@@ -1422,7 +1422,7 @@ export default function App() {
       <div className="app">
         <Shop
           mode={screen}
-          stars={stars}
+          coins={coins}
           owned={owned}
           outfit={outfit}
           admin={admin}
@@ -1443,7 +1443,7 @@ export default function App() {
             left open past midnight is holding yesterday, and yesterday's taken
             bonus would leave the button dark on a day that owes one. */}
         <Menu
-          stars={stars}
+          coins={coins}
           dollars={dollars}
           nudge={worthATap(rolled(daily, Date.now()))}
           outfit={outfit}

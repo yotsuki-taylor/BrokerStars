@@ -2,7 +2,7 @@
  * The dollar balance and the day, as this browser last saw them.
  *
  * The server owns both — see `worker/src/profile.ts` — and this is the mirror,
- * kept for exactly the two reasons `progress.ts` keeps a star count: it is what
+ * kept for exactly the two reasons `progress.ts` keeps a coin count: it is what
  * the menu draws before the first answer arrives, and it is all there is when
  * the game is opened outside Telegram or against a build with no server behind
  * it. Whatever the server says replaces it (`applyProfile` in `App.tsx`).

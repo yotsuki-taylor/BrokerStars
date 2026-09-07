@@ -3,7 +3,7 @@
  * Meta, like progress.ts and renovation.ts: the simulation knows nothing about
  * leagues, it only ever sees the bot preset a league names.
  *
- * A league is one opponent from CONFIG.bot, one star payout, and one gate: a
+ * A league is one opponent from CONFIG.bot, one coin payout, and one gate: a
  * number of wins in that league before the next one opens.
  */
 
@@ -129,7 +129,7 @@ const emptyWins = (): number[] => LEAGUES.map(() => 0);
 /**
  * The ladder lives on the server now (`src/profile/protocol.ts`): the server
  * counts a win itself when the match is handed in, exactly as it counts the
- * stars. This is the copy the menu reads before the first answer comes back,
+ * coins. This is the copy the menu reads before the first answer comes back,
  * and the whole of it in a build with no server behind one.
  */
 export function loadWins(): number[] {

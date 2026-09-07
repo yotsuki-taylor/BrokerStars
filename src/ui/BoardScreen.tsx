@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { t, tr } from './i18n';
 import { TRAIT_LABEL, poolFor, type Company, type StockConfig } from '../sim/companies';
-import { Check, Cross, LogoMask, Lock, Star } from './components';
+import { Check, Cross, LogoMask, Lock, Coin } from './components';
 import type { BoardPrefs } from './board';
 import type { UiPerks } from './perks';
 
@@ -156,7 +156,7 @@ export default function BoardScreen({
                       onClick={() => setPin(s.id)}
                       aria-label="always draw this one"
                     >
-                      <Star size={14} />
+                      <Coin size={14} />
                     </button>
                   )}
                   {ui.bans > 0 && (
@@ -179,7 +179,7 @@ export default function BoardScreen({
         <div className="board-standing">
           {prefs.pin && (
             <span className="pay-chip">
-              <Star size={13} /> {t('board.always', { name: nameOf(prefs.pin, pool) })}
+              <Coin size={13} /> {t('board.always', { name: nameOf(prefs.pin, pool) })}
             </span>
           )}
           {prefs.ban && (

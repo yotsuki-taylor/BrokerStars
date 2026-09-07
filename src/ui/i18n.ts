@@ -100,7 +100,7 @@ const EN = {
   'help.trading':
     'BUY goes long, and one tap commits a quarter of your cash. SELL closes a long, or opens a short when you hold nothing — then you profit when the price falls. Big orders move the price against you, so the rival feels every trade you make.',
   'help.entry':
-    'Dashed line on the chart is your average entry: a long is in profit above it, a short below. Win a match to earn stars — the tougher the league, the bigger the payout. Bank enough wins in a league and the next one opens.',
+    'Dashed line on the chart is your average entry: a long is in profit above it, a short below. Win a match to earn coins — the tougher the league, the bigger the payout. Bank enough wins in a league and the next one opens.',
   'help.gotIt': 'GOT IT',
 
   'leagues.title': 'CHOOSE YOUR LEAGUE',
@@ -168,10 +168,10 @@ const EN = {
   /* The leaderboard names itself once and the main menu reads the same key, so
      the button and the screen it opens can never drift apart. */
   'rating.title': 'RATING',
-  'rating.header': 'STARS EARNED',
+  'rating.header': 'COINS EARNED',
   'rating.matches': 'MATCHES',
   'rating.loading': 'LOADING',
-  'rating.offline': 'The board is not answering. Your stars are safe — they are kept on this device too.',
+  'rating.offline': 'The board is not answering. Your coins are safe — they are kept on this device too.',
   'rating.noServer': 'This build has no board behind it.',
   'rating.empty': 'Nobody has finished a match yet. Be first.',
   'rating.onlyInTelegram': 'Open the game in Telegram and your own matches will count.',
@@ -295,7 +295,7 @@ const EN = {
   'result.gap': '{league} · {mine} vs {theirs} · gap {gap}%',
   'result.winPay': 'WIN +{n}',
   'result.noWin': 'NO WIN',
-  'result.gainPay': '+{n}% GAIN +{stars}',
+  'result.gainPay': '+{n}% GAIN +{coins}',
   'result.unlocked': '{name} UNLOCKED',
   'result.yourResult': 'YOUR RESULT',
   'result.bestTrade': 'BEST TRADE',
@@ -351,7 +351,7 @@ const RU: Record<Key, string> = {
   'help.trading':
     'BUY открывает лонг, одно нажатие вкладывает четверть твоих денег. SELL закрывает лонг, а если ничего нет — открывает шорт, и тогда ты зарабатываешь на падении. Крупные заявки двигают цену против тебя, так что соперник чувствует каждую твою сделку.',
   'help.entry':
-    'Пунктир на графике — твоя средняя цена входа: лонг в плюсе выше неё, шорт ниже. За победу дают звёзды, и чем выше лига, тем больше. Набери достаточно побед в лиге — откроется следующая.',
+    'Пунктир на графике — твоя средняя цена входа: лонг в плюсе выше неё, шорт ниже. За победу дают монеты, и чем выше лига, тем больше. Набери достаточно побед в лиге — откроется следующая.',
   'help.gotIt': 'ПОНЯТНО',
 
   'leagues.title': 'ВЫБЕРИ ЛИГУ',
@@ -418,10 +418,10 @@ const RU: Record<Key, string> = {
   'archive.achievementsSoon': 'То, что стоит сделать, хотя никто не просил. Пока решаем, что именно.',
 
   'rating.title': 'РЕЙТИНГ',
-  'rating.header': 'ЗВЁЗД ЗАРАБОТАНО',
+  'rating.header': 'МОНЕТ ЗАРАБОТАНО',
   'rating.matches': 'МАТЧЕЙ',
   'rating.loading': 'ЗАГРУЖАЕМ',
-  'rating.offline': 'Таблица не отвечает. Звёзды не потеряны — они хранятся и на этом устройстве.',
+  'rating.offline': 'Таблица не отвечает. Монеты не потеряны — они хранятся и на этом устройстве.',
   'rating.noServer': 'В этой сборке таблицы нет.',
   'rating.empty': 'Никто ещё не доиграл ни одного матча. Будь первым.',
   'rating.onlyInTelegram': 'Открой игру в Telegram, и твои матчи начнут считаться.',
@@ -532,7 +532,7 @@ const RU: Record<Key, string> = {
   'result.gap': '{league} · {mine} против {theirs} · разрыв {gap}%',
   'result.winPay': 'ПОБЕДА +{n}',
   'result.noWin': 'БЕЗ ПОБЕДЫ',
-  'result.gainPay': '+{n}% ПРИБЫЛИ +{stars}',
+  'result.gainPay': '+{n}% ПРИБЫЛИ +{coins}',
   'result.unlocked': '{name} ОТКРЫТА',
   'result.yourResult': 'ТВОЙ РЕЗУЛЬТАТ',
   'result.bestTrade': 'ЛУЧШАЯ СДЕЛКА',

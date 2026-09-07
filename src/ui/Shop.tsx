@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Character from './Character';
-import { Check, Cross, Lock, Star } from './components';
+import { Check, Cross, Lock, Coin } from './components';
 import { t, tr } from './i18n';
 import {
   CATALOGUE,
@@ -46,7 +46,7 @@ function thumbStyle(slot: Slot, rarity: Rarity): React.CSSProperties {
 
 export default function Shop({
   mode,
-  stars,
+  coins,
   owned,
   outfit,
   admin,
@@ -57,7 +57,7 @@ export default function Shop({
   onBack,
 }: {
   mode: 'shop' | 'equip';
-  stars: number;
+  coins: number;
   owned: Set<string>;
   outfit: Outfit;
   admin: boolean;
@@ -92,7 +92,7 @@ export default function Shop({
    */
   const below = selected ? rarityBelow(selected) : null;
   const price = freeMode ? 0 : selected ? PRICES[selected] : 0;
-  const canAfford = stars >= price;
+  const canAfford = coins >= price;
   // preview wears whatever is highlighted, so you see it before paying for it
   const preview: Outfit = selected ? { ...outfit, [slot]: selected } : outfit;
 
@@ -108,9 +108,9 @@ export default function Shop({
           {t('common.back')}
         </button>
         <span className="spacer" />
-        <div className="star-count">
-          <Star size={20} />
-          <b>{stars}</b>
+        <div className="coin-count">
+          <Coin size={20} />
+          <b>{coins}</b>
         </div>
       </header>
 
@@ -164,7 +164,7 @@ export default function Shop({
                   <Lock size={10} />
                 ) : (
                   <>
-                    <Star size={9} /> {PRICES[r]}
+                    <Coin size={9} /> {PRICES[r]}
                   </>
                 )}
               </span>
@@ -233,11 +233,11 @@ export default function Shop({
             t('shop.buyFree')
           ) : canAfford ? (
             <>
-              {t('shop.buy')} <Star size={16} /> {price}
+              {t('shop.buy')} <Coin size={16} /> {price}
             </>
           ) : (
             <>
-              {t('shop.need')} <Star size={16} /> {price - stars} {t('shop.more')}
+              {t('shop.need')} <Coin size={16} /> {price - coins} {t('shop.more')}
             </>
           )}
         </button>

@@ -18,14 +18,14 @@ export interface RoomStep {
 
 /**
  * Renovation order, exactly as it is offered. All eight numbers live here and
- * nowhere else, and they come to 1000 stars.
+ * nowhere else, and they come to 1000 coins.
  *
  * DELIBERATELY A TENTH OF THE WARDROBE, WHICH IS 7750. The room is the one
  * thing a player buys that does nothing: it changes the picture behind the
  * menu and not a single number in a match, where every rung of a slot hands
  * out a perk. A cosmetic that costs what a perk costs is a cosmetic nobody
  * sane buys, and this used to be worse in the other direction — the eight
- * steps came to 144 stars against a wardrobe of 415, so the room was a quarter
+ * steps came to 144 coins against a wardrobe of 415, so the room was a quarter
  * of everything there was to buy and finished in an afternoon.
  *
  * The shape follows two rules. No step costs more than the SECOND rung of a

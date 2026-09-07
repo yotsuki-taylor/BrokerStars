@@ -1,6 +1,6 @@
 /**
  * Meta progression. Deliberately outside sim/ — the simulation has no idea
- * stars exist, and a match plays out identically whether or not it pays any.
+ * coins exist, and a match plays out identically whether or not it pays any.
  */
 
 const KEY = 'brokerstars.stars';
@@ -40,12 +40,12 @@ export interface Award {
 /** What the trader's neck is worth at the pay window. See ui/perks.ts. */
 export interface AwardMods {
   /** multiplies the whole payout */
-  starMult: number;
+  coinMult: number;
   /** a defeat pays what a draw would */
   lossPaysDraw: boolean;
 }
 
-export const NO_MODS: AwardMods = { starMult: 1, lossPaysDraw: false };
+export const NO_MODS: AwardMods = { coinMult: 1, lossPaysDraw: false };
 
 /** Surrendering pays nothing — otherwise an early lead could be cashed out. */
 export const NO_AWARD: Award = { win: 0, profit: 0, total: 0 };
@@ -61,8 +61,8 @@ export function awardFor(
   const bonus = tradedWell ? table.profit : 0;
   // rounded a part at a time, so the two numbers on the result screen still
   // add up to the total the player is handed
-  const win = Math.round(base * mods.starMult);
-  const profit = Math.round(bonus * mods.starMult);
+  const win = Math.round(base * mods.coinMult);
+  const profit = Math.round(bonus * mods.coinMult);
   return { win, profit, total: win + profit };
 }
 
@@ -93,6 +93,6 @@ export function saveStars(n: number): void {
   try {
     window.localStorage.setItem(KEY, String(Math.max(0, Math.floor(n))));
   } catch {
-    /* storage unavailable — stars simply do not persist this session */
+    /* storage unavailable — coins simply do not persist this session */
   }
 }

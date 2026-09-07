@@ -138,9 +138,9 @@ describe('a day off the wire', () => {
 });
 
 describe('what a day pays', () => {
-  it('is a round thousand, and quests pay stars rather than dollars', () => {
+  it('is a round thousand, and quests pay coins rather than dollars', () => {
     expect(DAILY_BONUS).toBe(1000);
-    for (const q of QUESTS) expect(q.stars).toBeGreaterThan(0);
+    for (const q of QUESTS) expect(q.coins).toBeGreaterThan(0);
   });
 
   it('gives every quest a goal that can actually be reached', () => {
@@ -181,7 +181,7 @@ describe('the three a day is dealt', () => {
 
   it('has a day come to something between one and two good matches', () => {
     for (let d = 20_000; d < 20_200; d++) {
-      const paid = questsFor(d).reduce((n, q) => n + q.stars, 0);
+      const paid = questsFor(d).reduce((n, q) => n + q.coins, 0);
       expect(paid).toBeGreaterThanOrEqual(6);
       expect(paid).toBeLessThanOrEqual(10);
     }

@@ -1,7 +1,7 @@
 /**
  * Who has earned what.
  *
- * On the server for the reason the stars and the ladder are: an award the
+ * On the server for the reason the coins and the ladder are: an award the
  * browser hands itself is a line in `localStorage`, and this one would be a
  * line saying you beat ten people. It is also the only way an award survives a
  * new phone, which is what the last few changes were all for.

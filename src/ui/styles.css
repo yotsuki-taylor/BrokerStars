@@ -869,7 +869,7 @@ body {
   gap: 8px;
 }
 
-.star-count {
+.coin-count {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -880,7 +880,7 @@ body {
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
 
-.star-count b {
+.coin-count b {
   font-size: 18px;
   letter-spacing: 0.5px;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
@@ -1389,6 +1389,43 @@ body {
 .menu-btn.action.broke svg path {
   fill: #ffc02e;
   stroke: #0a1f3c;
+}
+
+/* The coin needs the opposite treatment on a gold button, and needs it in
+   three parts. Filled solid dark it is a bullet point; left as it is drawn it
+   is a ring, because the disc is the colour of the button under it. Dark disc,
+   gold rim and gold shine keeps it a coin. */
+.menu-btn.action .coin .disc,
+.menu-btn.reno-btn .coin .disc {
+  fill: #3a2000;
+  stroke: none;
+}
+
+.menu-btn.action .coin .rim,
+.menu-btn.action .coin .shine,
+.menu-btn.reno-btn .coin .rim,
+.menu-btn.reno-btn .coin .shine {
+  stroke: #ffc02e;
+  opacity: 0.6;
+}
+
+/* ...and back to an ordinary coin once the button is not gold any more */
+.menu-btn.action.broke .coin .disc,
+.menu-btn.reno-btn:disabled .coin .disc {
+  fill: #ffc02e;
+  stroke: #0a1f3c;
+}
+
+.menu-btn.action.broke .coin .rim,
+.menu-btn.reno-btn:disabled .coin .rim {
+  stroke: #0a1f3c;
+  opacity: 0.45;
+}
+
+.menu-btn.action.broke .coin .shine,
+.menu-btn.reno-btn:disabled .coin .shine {
+  stroke: #fff3cd;
+  opacity: 1;
 }
 
 .menu-btn.action.broke {
@@ -2320,7 +2357,7 @@ body {
 }
 
 /* The mark carries its own state in its colour, not just in its background:
-   a gold star on a slightly darker button reads as "on" to nobody. */
+   a gold coin on a slightly darker button reads as "on" to nobody. */
 .mark {
   width: 28px;
   height: 24px;
@@ -2594,7 +2631,7 @@ body {
   gap: 4px;
 }
 
-/* rank, name, matches, stars — the name is the only part allowed to grow */
+/* rank, name, matches, coins — the name is the only part allowed to grow */
 .rating-line {
   display: grid;
   grid-template-columns: 26px 1fr auto auto;
@@ -2631,7 +2668,7 @@ body {
   opacity: 0.5;
 }
 
-.rating-stars {
+.rating-coins {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2647,7 +2684,7 @@ body {
 
 /* ---------- the day: the bonus, the quests, and the way in to them ---------- */
 
-/* The dollar counter, beside the stars and deliberately not matching them.
+/* The dollar counter, beside the coins and deliberately not matching them.
    Two pills of the same blue in the same corner read as one number split in
    half, so this one is green and a shade narrower — the difference has to
    survive being glanced at, not studied. */

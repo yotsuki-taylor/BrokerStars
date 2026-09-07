@@ -13,7 +13,7 @@
  * different charts for the rest of the match, and there is no way for either to
  * find out. Here the chart is the same because there is only one of it. The
  * abilities land on the same state for the same reason, and so does the result,
- * which is why the stars a duel pays can be written straight to the board
+ * which is why the coins a duel pays can be written straight to the board
  * without anybody being asked what they won.
  *
  * What this object deliberately does not do is survive its own eviction. The
@@ -260,7 +260,7 @@ export class Duel implements DurableObject {
     else {
       // Note what the first branch already covers: a host who opens their own
       // link comes back as the host rather than sitting down opposite
-      // themselves, so there is no duelling yourself for the winner's stars.
+      // themselves, so there is no duelling yourself for the winner's coins.
       seat = 1;
       meta.players[1] = {
         id: caller.id,

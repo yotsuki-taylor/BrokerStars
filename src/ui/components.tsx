@@ -30,16 +30,46 @@ export function LogoMask({ file, color, className }: { file: string; color: stri
   );
 }
 
-/** No star in the texture set yet, so it is drawn inline. */
-export function Star({ size = 18 }: { size?: number }) {
+/**
+ * The soft currency: a coin, and it used to be a star.
+ *
+ * The rename is not cosmetic. Telegram has a currency of its own called Stars,
+ * and the plan is to sell dollars for them — so a shop that charges "stars"
+ * would have been asking which ones, in a dialog where getting it wrong costs
+ * real money. Nothing in the game is called a star any more.
+ *
+ * Drawn rather than a texture, like every other mark in this file, and given a
+ * rim and a highlight rather than left a flat disc: at 9px in the shop grid a
+ * plain circle is a dot, and the rim is what still reads as struck metal.
+ *
+ * The three parts carry class names because the gold buttons have to recolour
+ * them separately. A gold coin on an orange button is an invisible coin, and
+ * filling the whole thing dark instead — which is what the old star did, and
+ * what the CSS still did to this by inheritance — turns it into a bullet point.
+ * On gold it goes dark disc with a gold rim, which still reads as a coin.
+ */
+export function Coin({ size = 18 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
-      <path
-        d="M12 2.6l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.9z"
-        fill="#ffc02e"
+    <svg className="coin" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <circle className="disc" cx="12" cy="12" r="9.2" fill="#ffc02e" stroke="#0a1f3c" strokeWidth="1.7" />
+      <circle
+        className="rim"
+        cx="12"
+        cy="12"
+        r="5.8"
+        fill="none"
         stroke="#0a1f3c"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
+        strokeWidth="1.2"
+        opacity="0.45"
+      />
+      {/* the shine, top left, where the light in this game always comes from */}
+      <path
+        className="shine"
+        d="M8.4 7.9a5.5 5.5 0 013.2-1.6"
+        fill="none"
+        stroke="#fff3cd"
+        strokeWidth="1.6"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -276,7 +306,7 @@ export function Briefcase({ size = 18 }: { size?: number }) {
   );
 }
 
-/** RATING. A cup, not a star: the star is already what stars are. */
+/** RATING. A cup, not a coin: the coin is already what the currency is. */
 export function Trophy({ size = 18 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">

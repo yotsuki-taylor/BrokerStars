@@ -78,7 +78,10 @@ export function award(league: number, outcome: Outcome, tradedWell: boolean) {
 export interface Row {
   id: string;
   name: string;
+  /** the column's own name, kept: the board query selects it twice, see `top` */
   stars: number;
+  /** the same number under the name the game uses now */
+  coins: number;
   matches: number;
   wins: number;
   best_net_worth: number;
@@ -89,7 +92,7 @@ export interface Row {
  * The highest league this player has ever finished a match in, as the server
  * remembers it — never as the client claims. A duel pays each side at their
  * own ladder position rather than at whoever's league was played, or beating
- * one friend under the crown would be worth eighteen stars to somebody who has
+ * one friend under the crown would be worth eighteen coins to somebody who has
  * never left the bronze pit.
  */
 export async function topLeague(env: Env, id: string): Promise<number> {

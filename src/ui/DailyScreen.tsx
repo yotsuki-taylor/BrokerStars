@@ -9,7 +9,7 @@ import {
   type Daily,
   type Quest,
 } from '../daily/protocol';
-import { Check, Dollar, Star, money, tex } from './components';
+import { Check, Dollar, Coin, money, tex } from './components';
 import { t, type Key } from './i18n';
 
 /**
@@ -22,7 +22,7 @@ import { t, type Key } from './i18n';
  * The three quests under it are dealt by the day itself — `questsFor(day)` in
  * `src/daily/protocol.ts` works them out from the date rather than storing a
  * pick, so this screen and the server that counts them cannot be looking at
- * different ones. They are counted as matches are handed in and paid in stars
+ * different ones. They are counted as matches are handed in and paid in coins
  * when the player comes and takes them: a finished quest wears the same gold
  * the menu button was wearing, and its bar turns into a COLLECT.
  *
@@ -122,7 +122,7 @@ export default function DailyScreen({
                 <i>{t(questKey(q, 'text'), { n: goalText(q) })}</i>
               </span>
               <span className="quest-pay">
-                <Star size={13} /> {q.stars}
+                <Coin size={13} /> {q.coins}
               </span>
 
               {/* The bar and the button stand in the same place: a finished
@@ -131,7 +131,7 @@ export default function DailyScreen({
                   three. */}
               {done && !taken ? (
                 <button className="quest-take" onClick={() => onClaimQuest(q.id)}>
-                  {t('daily.collect', { n: q.stars })}
+                  {t('daily.collect', { n: q.coins })}
                 </button>
               ) : (
                 <span className="quest-bar">

@@ -5,8 +5,8 @@ import { mintToken, verdictOf } from './api';
  * What to do with a match that did not go through.
  *
  * This is a short function and it decides something that cannot be seen going
- * wrong: the star balance is the server's now, so a match dropped instead of
- * kept is stars the player earned and will never be paid. Keeping one that will
+ * wrong: the coin balance is the server's now, so a match dropped instead of
+ * kept is coins the player earned and will never be paid. Keeping one that will
  * never be accepted is the other mistake, and it is only a queue that never
  * empties.
  */

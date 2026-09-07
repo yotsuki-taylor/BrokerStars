@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { drawNetWorthChart } from './chart';
-import { Star, money, signed } from './components';
+import { Coin, money, signed } from './components';
 import type { MatchState } from '../sim/types';
 import { t as tt } from './i18n';
 import { REWARDS, type Award } from './progress';
@@ -71,12 +71,12 @@ export default function ResultScreen({
 
       {award && (
         <div className={`payout${award.total ? '' : ' empty'}`}>
-          <Star size={22} />
+          <Coin size={22} />
           <b>+{award.total}</b>
           <span>
             {award.win > 0 ? tt('result.winPay', { n: award.win }) : tt('result.noWin')}
             {award.profit > 0
-              ? `  ·  ${tt('result.gainPay', { n: Math.round(REWARDS.profitBar * 100), stars: award.profit })}`
+              ? `  ·  ${tt('result.gainPay', { n: Math.round(REWARDS.profitBar * 100), coins: award.profit })}`
               : ''}
           </span>
         </div>

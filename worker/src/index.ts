@@ -9,7 +9,7 @@
  * token, so a Worker holding that token can tell a real Telegram user from a
  * curl. Nothing is written without one. That check is `telegram.ts`.
  *
- * WHAT IT PAID. The client does not get to say how many stars it earned. For a
+ * WHAT IT PAID. The client does not get to say how many coins it earned. For a
  * match against a bot it says what happened — which league, won or lost,
  * whether the match cleared the profit bar — and the server works out the
  * payout from its own copy of the table (`results.ts`). For a duel it does not
@@ -22,7 +22,7 @@
  * each side out of this database rather than out of what their browser claims
  * to be wearing.
  *
- * The board still ranks stars EARNED, which the server adds up itself. What a
+ * The board still ranks coins EARNED, which the server adds up itself. What a
  * player has in hand is that minus what they have spent, worked out on read, so
  * buying a hat still cannot cost anybody their place in the table.
  *
@@ -85,7 +85,11 @@ const bad = (status: number, error: string) => json({ error }, status);
 
 async function top(env: Env, limit: number, me: string | null) {
   const { results } = await env.DB.prepare(
-    `SELECT id, name, stars, matches, wins, best_net_worth, top_league
+    // `stars` twice: once under the column's own name and once under the one
+    // the game calls it now. A browser holding a bundle from before the rename
+    // reads the first, an updated one reads the second, and neither cares which
+    // side was deployed first. The alias goes when the old bundles are gone.
+    `SELECT id, name, stars, stars AS coins, matches, wins, best_net_worth, top_league
        FROM players
       WHERE matches > 0
       ORDER BY stars DESC, updated_at ASC
@@ -101,7 +105,8 @@ async function top(env: Env, limit: number, me: string | null) {
   let mine = null;
   if (me && !rows.some((r) => r.you)) {
     const row = await env.DB.prepare(
-      `SELECT id, name, stars, matches, wins, best_net_worth, top_league FROM players WHERE id = ?1`,
+      `SELECT id, name, stars, stars AS coins, matches, wins, best_net_worth, top_league
+         FROM players WHERE id = ?1`,
     )
       .bind(me)
       .first<Row>();
@@ -298,7 +303,7 @@ function itemIn(body: Record<string, unknown>): { slot: Slot; rarity: Rarity } |
  * Buying, and the reason a refusal still answers 200 with the profile in it: a
  * client that thought it could afford something and could not is a client whose
  * picture of the world is out of date, and the cure for that is the up to date
- * one rather than an error code. It redraws, the stars snap back to what they
+ * one rather than an error code. It redraws, the coins snap back to what they
  * really are, and the button says NEED N MORE.
  */
 async function buy(request: Request, env: Env) {

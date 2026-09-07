@@ -84,7 +84,7 @@ describe('buying a rung', () => {
   it('refuses what the balance does not cover', () => {
     expect(buyItem(EMPTY, PRICES.common - 1, 'torso', 'common', false)).toEqual({
       ok: false,
-      error: 'not enough stars',
+      error: 'not enough coins',
     });
   });
 
@@ -157,7 +157,7 @@ describe('the developer handing things back', () => {
     expect(refundItem(h, 'hat', 'common').ok).toBe(false);
   });
 
-  it('cannot mint stars by refunding what was never paid for', () => {
+  it('cannot mint coins by refunding what was never paid for', () => {
     // bought in free mode: spent never went up, so it must not come down
     const free = buyItem(EMPTY, 0, 'hat', 'common', true);
     expect(free.ok).toBe(true);
@@ -192,19 +192,19 @@ describe('getting dressed', () => {
 
 describe('the migration', () => {
   const claim = (over: Record<string, unknown> = {}) =>
-    cleanClaim({ stars: 0, room: 0, owned: {}, outfit: {}, wins: [], ...over }, LEAGUES);
+    cleanClaim({ coins: 0, room: 0, owned: {}, outfit: {}, wins: [], ...over }, LEAGUES);
 
   it('takes a save at its word while the server has nothing of its own', () => {
     expect(untouched(EMPTY)).toBe(true);
-    const h = claimInto(EMPTY, 0, claim({ stars: 7, room: 3, owned: { hat: 'rare' } }));
+    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: { hat: 'rare' } }));
     expect(h.room).toBe(3);
     expect(h.owned.hat).toBe('rare');
-    // and the stars the player could see are still there afterwards
+    // and the coins the player could see are still there afterwards
     expect(balance(h, 0)).toBe(7);
   });
 
   it('books the purchases as spent, so the board is not paying for them twice', () => {
-    const h = claimInto(EMPTY, 0, claim({ stars: 7, room: 3, owned: { hat: 'rare' } }));
+    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: { hat: 'rare' } }));
     expect(h.spent).toBe(priceOf({ hat: 'rare' }, 3));
   });
 
@@ -213,13 +213,13 @@ describe('the migration', () => {
     // earned, with some left over: nothing has to be granted to make it add up
     const spent = priceOf({ hat: 'uncommon' }, 1);
     const earned = spent + 17;
-    const h = claimInto(EMPTY, earned, claim({ stars: 17, room: 1, owned: { hat: 'uncommon' } }));
+    const h = claimInto(EMPTY, earned, claim({ coins: 17, room: 1, owned: { hat: 'uncommon' } }));
     expect(h.granted).toBe(0);
     expect(balance(h, earned)).toBe(17);
   });
 
   it('shuts the door behind the first save with anything in it', () => {
-    const h = claimInto(EMPTY, 0, claim({ stars: 7 }));
+    const h = claimInto(EMPTY, 0, claim({ coins: 7 }));
     expect(untouched(h)).toBe(false);
   });
 
@@ -229,7 +229,7 @@ describe('the migration', () => {
     expect(untouched(claimInto(EMPTY, 0, claim()))).toBe(true);
   });
 
-  it('hands the earned stars back to a player whose save was lost', () => {
+  it('hands the earned coins back to a player whose save was lost', () => {
     const h = claimInto(EMPTY, 55, claim());
     expect(balance(h, 55)).toBe(55);
   });
@@ -255,7 +255,7 @@ describe('the migration', () => {
   });
 
   it('caps a claim that has clearly been edited by hand', () => {
-    const h = claimInto(EMPTY, 0, claim({ stars: 1e12 }));
+    const h = claimInto(EMPTY, 0, claim({ coins: 1e12 }));
     expect(balance(h, 0)).toBe(100_000);
   });
 });
@@ -337,7 +337,7 @@ describe("the day's bonus", () => {
     expect(out.held.daily.day).toBe(dayOf(NOON));
   });
 
-  it('touches nothing else on the profile, stars included', () => {
+  it('touches nothing else on the profile, coins included', () => {
     const rich = { ...EMPTY, spent: 12, granted: 4 };
     const out = claimBonus(rich, NOON);
     if (!out.ok) return;
@@ -363,20 +363,20 @@ describe("collecting a quest", () => {
     ...over,
   });
 
-  it('pays the stars the catalogue advertises and marks it collected', () => {
+  it('pays the coins the catalogue advertises and marks it collected', () => {
     const out = claimQuest(finished(), first.id, NOON);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.granted).toBe(first.stars);
+    expect(out.held.granted).toBe(first.coins);
     expect(out.held.daily.taken).toEqual([first.id]);
   });
 
   it('pays into granted, so the leaderboard never sees it', () => {
-    // the board ranks stars EARNED from matches; two players with the same
+    // the board ranks coins EARNED from matches; two players with the same
     // match record must not be separated by who tapped a button
     const out = claimQuest(finished(), first.id, NOON);
     if (!out.ok) return;
-    expect(balance(out.held, 10)).toBe(10 + first.stars);
+    expect(balance(out.held, 10)).toBe(10 + first.coins);
   });
 
   it('refuses a quest that is not finished', () => {
@@ -463,7 +463,7 @@ describe('a match counted against the day', () => {
       expect(out.ok).toBe(true);
       if (!out.ok) return;
       held = out.held;
-      paid += q.stars;
+      paid += q.coins;
     }
     expect(held.granted).toBe(paid);
     for (const q of done) expect(claimQuest(held, q.id, NOON).ok).toBe(false);
@@ -486,7 +486,7 @@ describe('a match counted against the day', () => {
     const out = claimQuest(held, quest.id, day.at);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.granted).toBe(quest.stars);
+    expect(out.held.granted).toBe(quest.coins);
   });
 
   it('does not let a bot match finish a duel quest', () => {
