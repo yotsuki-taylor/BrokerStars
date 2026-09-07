@@ -324,6 +324,10 @@ interface Layer {
  * Bottom-to-top draw order. The two-piece garments straddle the neck item:
  * shirt body, then the chain that tucks under the collar, then the collar,
  * then whatever hangs in front. The bare hand caps the stack.
+ *
+ * Eyewear goes on before the hat, not after: glasses sit on a face and a brim
+ * comes down over the temples, so a stetson drawn under its own sunglasses
+ * reads as the glasses floating in front of the hat.
  */
 export function buildLayers(outfit: Outfit): Layer[] {
   const out: Layer[] = [];
@@ -348,9 +352,9 @@ export function buildLayers(outfit: Outfit): Layer[] {
   half('neck', 'up');
   push('face', tex('face'));
   push('hair', tex('hair-1'));
+  whole('access');
   whole('hat');
   whole('hand');
-  whole('access');
   // The bare hand goes last: it grips whatever the hand slot is holding, so the
   // fingers have to sit in front of it and of everything else. With nothing
   // held there is nothing to grip, and the sprite is a free-floating hand
