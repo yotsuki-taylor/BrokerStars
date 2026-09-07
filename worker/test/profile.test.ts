@@ -6,17 +6,32 @@ import {
   bankWin,
   buyItem,
   buyRoom,
+  claimBonus,
   claimInto,
+  claimQuest,
   priceOf,
   refundItem,
   refundRoom,
   untouched,
   wear,
+  withToday,
   type Held,
 } from '../src/profile';
 import { ROOM_DONE, ROOM_STEPS } from '../../src/ui/renovation';
 import { PRICES } from '../../src/ui/wardrobe';
 import { cleanClaim, setOf, topsOf } from '../../src/profile/protocol';
+import {
+  DAILY_BONUS,
+  MS_PER_DAY,
+  countMatch,
+  dayOf,
+  freshDay,
+  QUESTS,
+  questsFor,
+  type DayFacts,
+  type Quest,
+} from '../../src/daily/protocol';
+import type { MatchFacts } from '../src/awards';
 
 /**
  * The shop, as the server plays it. Every rule that decides whether a player
@@ -256,5 +271,226 @@ describe('climbing the ladder', () => {
     const before = { ...EMPTY, wins: EMPTY.wins.slice() };
     bankWin(before, 2);
     expect(before.wins[2]).toBe(0);
+  });
+});
+
+describe("the day's bonus", () => {
+  const NOON = 20_000 * MS_PER_DAY + 12 * 3_600_000;
+
+  it('pays a thousand dollars and marks the day taken', () => {
+    const out = claimBonus(EMPTY, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.dollars).toBe(DAILY_BONUS);
+    expect(out.held.daily).toEqual({ ...freshDay(dayOf(NOON)), bonus: true });
+  });
+
+  it('refuses the second one of the same day rather than paying twice', () => {
+    const first = claimBonus(EMPTY, NOON);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(claimBonus(first.held, NOON + 60_000)).toEqual({
+      ok: false,
+      error: 'the bonus is taken today',
+    });
+  });
+
+  it('pays again tomorrow, and the dollars from today are still there', () => {
+    const first = claimBonus(EMPTY, NOON);
+    if (!first.ok) return;
+    const second = claimBonus(first.held, NOON + MS_PER_DAY);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.held.dollars).toBe(DAILY_BONUS * 2);
+  });
+
+  it('rolls the row itself before anything reads it, row or no row', () => {
+    // the newest player of all comes through EMPTY rather than through a
+    // stored row, and EMPTY carries a day that is no day
+    expect(withToday(EMPTY, NOON).daily.day).toBe(dayOf(NOON));
+    const yesterday = {
+      ...EMPTY,
+      daily: { ...freshDay(dayOf(NOON) - 1), bonus: true, taken: ['win-1'] },
+    };
+    expect(withToday(yesterday, NOON).daily).toEqual(freshDay(dayOf(NOON)));
+  });
+
+  it('hands back the very same row when the day has not moved', () => {
+    const today = { ...EMPTY, daily: freshDay(dayOf(NOON)) };
+    expect(withToday(today, NOON)).toBe(today);
+  });
+
+  it('rolls a day held over from yesterday rather than reading it as today', () => {
+    // the row is rolled on the way out of the database as well, but the rule
+    // has to hold here too: this is the function that decides whether anybody
+    // is paid, and it must not be able to answer about yesterday
+    const stale = { ...EMPTY, daily: { ...freshDay(dayOf(NOON) - 1), bonus: true } };
+    const out = claimBonus(stale, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.daily.day).toBe(dayOf(NOON));
+  });
+
+  it('touches nothing else on the profile, stars included', () => {
+    const rich = { ...EMPTY, spent: 12, granted: 4 };
+    const out = claimBonus(rich, NOON);
+    if (!out.ok) return;
+    expect(balance(out.held, 30)).toBe(balance(rich, 30));
+  });
+
+  it('shuts the migration door: a bonus taken is the server having something', () => {
+    const out = claimBonus(EMPTY, NOON);
+    if (!out.ok) return;
+    expect(untouched(out.held)).toBe(false);
+  });
+});
+
+describe("collecting a quest", () => {
+  const NOON = 20_000 * MS_PER_DAY + 12 * 3_600_000;
+  const DAY = dayOf(NOON);
+  const [first, , third] = questsFor(DAY);
+
+  /** a row standing on today, with one quest finished */
+  const finished = (over: Partial<Held> = {}): Held => ({
+    ...EMPTY,
+    daily: { ...freshDay(DAY), progress: { [first.id]: first.goal } },
+    ...over,
+  });
+
+  it('pays the stars the catalogue advertises and marks it collected', () => {
+    const out = claimQuest(finished(), first.id, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.granted).toBe(first.stars);
+    expect(out.held.daily.taken).toEqual([first.id]);
+  });
+
+  it('pays into granted, so the leaderboard never sees it', () => {
+    // the board ranks stars EARNED from matches; two players with the same
+    // match record must not be separated by who tapped a button
+    const out = claimQuest(finished(), first.id, NOON);
+    if (!out.ok) return;
+    expect(balance(out.held, 10)).toBe(10 + first.stars);
+  });
+
+  it('refuses a quest that is not finished', () => {
+    const bare = { ...EMPTY, daily: freshDay(DAY) };
+    expect(claimQuest(bare, first.id, NOON)).toEqual({ ok: false, error: 'not finished' });
+  });
+
+  it('refuses the second collection of the same one rather than paying twice', () => {
+    const out = claimQuest(finished(), first.id, NOON);
+    if (!out.ok) return;
+    expect(claimQuest(out.held, first.id, NOON)).toEqual({
+      ok: false,
+      error: 'already collected',
+    });
+  });
+
+  it('refuses a quest today was never dealt, however finished it looks', () => {
+    const never = QUESTS.find((q) => !questsFor(DAY).some((x) => x.id === q.id));
+    expect(never, 'the catalogue is bigger than one day').toBeDefined();
+    if (!never) return;
+    const claiming = {
+      ...EMPTY,
+      daily: { ...freshDay(DAY), progress: { [never.id]: never.goal } },
+    };
+    expect(claimQuest(claiming, never.id, NOON).ok).toBe(false);
+  });
+
+  it('refuses a name that is not a quest at all', () => {
+    expect(claimQuest(finished(), 'free-money', NOON).ok).toBe(false);
+  });
+
+  it('refuses one finished yesterday: the day rolls before anything is paid', () => {
+    const stale = {
+      ...EMPTY,
+      daily: { ...freshDay(DAY - 1), progress: { [first.id]: first.goal } },
+    };
+    const out = claimQuest(stale, first.id, NOON);
+    expect(out).toEqual({ ok: false, error: 'not finished' });
+  });
+
+  it('leaves the bonus and the other quests where they were', () => {
+    const out = claimQuest(finished(), first.id, NOON);
+    if (!out.ok) return;
+    expect(out.held.daily.bonus).toBe(false);
+    expect(out.held.daily.taken).not.toContain(third.id);
+    expect(out.held.dollars).toBe(0);
+  });
+});
+
+describe('a match counted against the day', () => {
+  const NOON = 20_000 * MS_PER_DAY + 12 * 3_600_000;
+  const DAY = dayOf(NOON);
+
+  /** the first day that deals a quest of some description, and noon on it */
+  function findDay(wanted: (q: Quest) => boolean): { n: number; at: number } {
+    for (let d = 20_000; d < 20_400; d++) {
+      if (questsFor(d).some(wanted)) return { n: d, at: d * MS_PER_DAY + 12 * 3_600_000 };
+    }
+    throw new Error('no day deals one');
+  }
+
+  const match = (over: Partial<DayFacts> = {}): DayFacts => ({
+    outcome: 'win',
+    netWorth: 16_000,
+    tradedWell: true,
+    bankrupt: false,
+    trades: 9,
+    duel: false,
+    ...over,
+  });
+
+  it('can be played into a collectable quest and collected once', () => {
+    // the whole loop, on the pure functions the routes are built out of
+    let held: Held = { ...EMPTY, daily: freshDay(DAY) };
+    for (let i = 0; i < 6; i++) {
+      held = { ...held, daily: countMatch(held.daily, match(), NOON) };
+    }
+    const done = questsFor(DAY).filter((q) => (held.daily.progress[q.id] ?? 0) >= q.goal);
+    expect(done.length, 'six good matches should finish all three').toBe(3);
+
+    let paid = 0;
+    for (const q of done) {
+      const out = claimQuest(held, q.id, NOON);
+      expect(out.ok).toBe(true);
+      if (!out.ok) return;
+      held = out.held;
+      paid += q.stars;
+    }
+    expect(held.granted).toBe(paid);
+    for (const q of done) expect(claimQuest(held, q.id, NOON).ok).toBe(false);
+  });
+
+  it('lets a duel finish a duel quest, facts and all', () => {
+    // the point of the assertion is as much that `MatchFacts` goes straight
+    // into `countMatch` — a superset, nothing mapped — as that it counts
+    const day = findDay((q) => Boolean(q.social));
+    const quest = questsFor(day.n).find((q) => q.social);
+    expect(quest, 'some day deals a duel quest').toBeDefined();
+    if (!quest) return;
+
+    const facts: MatchFacts = { ...match({ duel: true }), duel: true };
+    let held: Held = { ...EMPTY, daily: freshDay(day.n) };
+    for (let i = 0; i < quest.goal; i++) {
+      held = { ...held, daily: countMatch(held.daily, facts, day.at) };
+    }
+
+    const out = claimQuest(held, quest.id, day.at);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.granted).toBe(quest.stars);
+  });
+
+  it('does not let a bot match finish a duel quest', () => {
+    const day = findDay((q) => Boolean(q.social));
+    const quest = questsFor(day.n).find((q) => q.social);
+    if (!quest) return;
+    let held: Held = { ...EMPTY, daily: freshDay(day.n) };
+    for (let i = 0; i < 5; i++) {
+      held = { ...held, daily: countMatch(held.daily, match({ duel: false }), day.at) };
+    }
+    expect(claimQuest(held, quest.id, day.at)).toEqual({ ok: false, error: 'not finished' });
   });
 });

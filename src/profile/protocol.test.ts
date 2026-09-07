@@ -144,6 +144,8 @@ describe('a profile coming back', () => {
         duelWins: 2,
         streak: 1,
         seen: [COMPANIES[0].id, 'ghost-corp'],
+        dollars: 2000,
+        daily: { day: 20_000, bonus: true, progress: { 'win-1': 1, ghost: 9 }, taken: ['ghost'] },
         bestNetWorth: 31_000,
         topLeague: 1,
       },
@@ -163,6 +165,10 @@ describe('a profile coming back', () => {
       duelWins: 2,
       streak: 1,
       seen: [COMPANIES[0].id],
+      dollars: 2000,
+      // a quest this build does not have goes the way the award did, out of
+      // the progress AND out of what has been cashed in
+      daily: { day: 20_000, bonus: true, progress: { 'win-1': 1 }, taken: [] },
       bestNetWorth: 31_000,
       topLeague: 1,
     });

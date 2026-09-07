@@ -94,6 +94,15 @@ CREATE TABLE IF NOT EXISTS profiles (
   streak     INTEGER NOT NULL DEFAULT 0,
   spent      INTEGER NOT NULL DEFAULT 0,
   granted    INTEGER NOT NULL DEFAULT 0,
+  -- The hard currency, paid by the daily bonus and spent by nothing yet. One
+  -- column and not three, unlike the stars above: nothing ranks on it, so
+  -- there is no total that has to survive being spent.
+  dollars    INTEGER NOT NULL DEFAULT 0,
+  -- The day: JSON of {day, bonus, progress, taken}, where `day` is whole UTC
+  -- days since the epoch and everything beside it is about that day and no
+  -- other. Rolling over is not a job that runs -- the day simply stops
+  -- matching and the rest is discarded on the next read (src/daily/protocol.ts).
+  daily      TEXT NOT NULL DEFAULT '{}',
   first_seen INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

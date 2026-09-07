@@ -45,6 +45,43 @@ export function Star({ size = 18 }: { size?: number }) {
   );
 }
 
+/**
+ * The hard currency, and deliberately not another gold disc.
+ *
+ * A star and a coin side by side in the same corner of the menu read as one
+ * thing seen twice, which is the opposite of what two currencies want from a
+ * counter. So the dollar is green and it is a note rather than a coin: the two
+ * counters differ in colour AND in outline, which is what makes them tell apart
+ * at a glance rather than after a squint.
+ *
+ * The glyph is drawn — an S in two arcs with a bar through it — for the reason
+ * every other mark in this file is: a typed `$` falls back to whatever face the
+ * system has and stops matching the game.
+ */
+export function Dollar({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <rect
+        x="1.8"
+        y="4.6"
+        width="20.4"
+        height="14.8"
+        rx="3"
+        fill="#3ecb74"
+        stroke="#0a1f3c"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M15 9.3c-.8-.9-1.9-1.4-3.1-1.4-1.8 0-2.9.8-2.9 2 0 1.3 1.2 1.7 3 2.1 2.1.5 3.4 1.1 3.4 2.7 0 1.5-1.3 2.5-3.3 2.5-1.4 0-2.7-.5-3.5-1.4M12 6.3v11.4"
+        fill="none"
+        stroke="#0a1f3c"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Confirm / cancel marks, drawn rather than typed: the glyphs are unreliable. */
 export function Check({ size = 20 }: { size?: number }) {
   return (
@@ -199,6 +236,42 @@ export function Cards({ size = 18 }: { size?: number }) {
         stroke="currentColor"
         strokeWidth="2.2"
       />
+    </svg>
+  );
+}
+
+/**
+ * DAILY. The trader's own case, which is what the bonus art is a picture of.
+ *
+ * It sits on its own round button rather than in the column of four, so unlike
+ * the marks above it is the whole of the button and gets to be drawn a little
+ * heavier. Same 24-box and same `currentColor` all the same: the button dims
+ * its picture with its border when there is nothing inside to come and get.
+ */
+export function Briefcase({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path
+        d="M9 7V5.7A1.7 1.7 0 0110.7 4h2.6A1.7 1.7 0 0115 5.7V7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="2.8"
+        y="7"
+        width="18.4"
+        height="13.2"
+        rx="2.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      {/* the band across the case, with the clasp sitting on it */}
+      <path d="M2.8 12.4h18.4" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <rect x="10.2" y="10.6" width="3.6" height="3.6" rx="1" fill="currentColor" />
     </svg>
   );
 }

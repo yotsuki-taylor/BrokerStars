@@ -312,6 +312,30 @@ export const buyRoomStep = (free: boolean): Promise<Profile | null> =>
 export const wearOutfit = (outfit: Outfit): Promise<Profile | null> =>
   profileCall('/profile/wear', { outfit });
 
+/**
+ * Take today's bonus.
+ *
+ * Which day it is, and whether today's has already gone, are the server's to
+ * decide — a browser whose clock is a day ahead is the whole reason it is not
+ * this end's arithmetic. The game draws the thousand dollars immediately all
+ * the same, and the profile that comes back is what it settles on: a second tap
+ * from a second phone is answered with the balance as it really is, not with
+ * another thousand.
+ */
+export const claimDailyBonus = (): Promise<Profile | null> =>
+  profileCall('/profile/daily', { claim: 'bonus' });
+
+/**
+ * Collect one finished quest.
+ *
+ * The id is all that goes up. What the quest is worth, whether today dealt it
+ * and whether it is actually finished are the server's to work out from the
+ * day and the row it keeps — a client that names a quest it never had gets a
+ * refusal and the profile as it stands, like every other refusal here.
+ */
+export const claimDailyQuest = (id: string): Promise<Profile | null> =>
+  profileCall('/profile/daily', { claim: id });
+
 /** Dev only, and the server checks that for itself against a signed id. */
 export const refundItem = (slot: Slot, rarity: Rarity): Promise<Profile | null> =>
   profileCall('/profile/refund', { slot, rarity });

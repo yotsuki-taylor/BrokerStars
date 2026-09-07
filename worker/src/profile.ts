@@ -29,6 +29,16 @@ import {
   type Slot,
 } from '../../src/ui/wardrobe';
 import {
+  DAILY_BONUS,
+  EMPTY_DAILY,
+  cleanDaily,
+  countMatch,
+  questDone,
+  questsToday,
+  rolled,
+  type Daily,
+} from '../../src/daily/protocol';
+import {
   cleanOutfit,
   cleanTops,
   cleanWins,
@@ -81,6 +91,13 @@ export interface Held {
   streak: number;
   /** companies this player has met, which used to live in the browser */
   seen: string[];
+  /**
+   * The hard currency. A balance rather than the earned/spent pair the stars
+   * are, because nothing ranks on it: see `src/daily/protocol.ts`.
+   */
+  dollars: number;
+  /** the bonus and the quests, for the day named inside it */
+  daily: Daily;
 }
 
 export const EMPTY: Held = {
@@ -94,6 +111,8 @@ export const EMPTY: Held = {
   duelWins: 0,
   streak: 0,
   seen: [],
+  dollars: 0,
+  daily: EMPTY_DAILY,
 };
 
 /**
@@ -108,6 +127,7 @@ export const untouched = (h: Held): boolean =>
   Object.keys(h.owned).length === 0 &&
   h.wins.every((n) => n === 0) &&
   h.seen.length === 0 &&
+  h.dollars === 0 &&
   Object.keys(h.awards).length === 0;
 
 /**
@@ -137,6 +157,10 @@ export const view = (h: Held, earned: number, at: Standing): Profile => ({
   duelWins: h.duelWins,
   streak: h.streak,
   seen: h.seen,
+  dollars: h.dollars,
+  // Already today's: `change` rolls the day before it hands the row to
+  // anything, so nothing that reaches here can answer about yesterday.
+  daily: h.daily,
   bestNetWorth: at.bestNetWorth,
   topLeague: at.topLeague,
 });
@@ -241,6 +265,91 @@ export function wear(h: Held, outfit: Outfit): Held {
   return { ...h, outfit: wearable(h.owned, outfit) };
 }
 
+/* ----------------------------------------------------------------- the day */
+
+/**
+ * Today's bonus, and the only thing in the game that pays for turning up.
+ *
+ * Which day it is is decided HERE, off this server's clock, for the reason the
+ * payout of a match is: a browser that says it is tomorrow is a browser that
+ * says it is owed another thousand. The day the row is holding was already
+ * rolled forward on the way out of the database (`read`), so this only has to
+ * ask whether today's has gone.
+ *
+ * A second tap is refused rather than rounded, and the refusal comes back with
+ * the profile as it really stands — so a client that drew the thousand
+ * optimistically and was wrong redraws to the truth. There is no token here and
+ * none is needed: unlike handing a match in, the operation is naturally
+ * idempotent, because the second attempt finds `bonus` already set.
+ */
+/**
+ * The row with today's day on it, rolling yesterday's away if that is what it
+ * is holding.
+ *
+ * This is the one place the rollover happens, and it is in `change` rather than
+ * in `read` for a reason worth writing down: a player who has never had a row
+ * does not come through `read` at all, they come through `EMPTY` — and `EMPTY`
+ * carries a day that is no day. Rolling on the way out of the database would
+ * leave exactly the newest player looking at a profile whose day is `NO_DAY`.
+ *
+ * Nothing has to be cleared on a schedule and nothing sweeps the table: a day
+ * simply stops matching and everything under it is dropped the next time the
+ * row is touched. A player who does not open the game for a month costs nothing
+ * to keep.
+ *
+ * The same object comes back when the day has not moved, so the common case
+ * allocates nothing.
+ */
+export function withToday(h: Held, now: number): Held {
+  const daily = rolled(h.daily, now);
+  return daily === h.daily ? h : { ...h, daily };
+}
+
+export function claimBonus(h: Held, now: number): Bought {
+  const daily = rolled(h.daily, now);
+  if (daily.bonus) return { ok: false, error: 'the bonus is taken today' };
+  return {
+    ok: true,
+    held: { ...h, dollars: h.dollars + DAILY_BONUS, daily: { ...daily, bonus: true } },
+  };
+}
+
+/**
+ * A finished quest, cashed in for its stars.
+ *
+ * WHY `granted` AND NOT THE BOARD. `players.stars` is what the leaderboard
+ * ranks on, and it is a running total of what matches paid. A quest reward is
+ * not that. Two players with identical match records should not be separated in
+ * the table by which of them remembered to tap a button — the board is a
+ * ranking of how well people play, and a daily is a reward for doing the
+ * rounds. So the stars land in `granted`, which is where every star that did
+ * not come out of a match already goes, and they are spendable in the shop
+ * exactly like any other. It keeps `players.stars` a pure sum of the `results`
+ * table as well, which is what the replay check will one day want to verify
+ * against.
+ *
+ * Three refusals, all of them checked here rather than trusted from the body:
+ * a quest today was not dealt, a quest that is not finished, and one that has
+ * been collected already. `taken` is what makes the last of those safe to
+ * retry — a second attempt finds the id in the list and is refused, so a lost
+ * answer costs nobody anything.
+ */
+export function claimQuest(h: Held, id: string, now: number): Bought {
+  const daily = rolled(h.daily, now);
+  const quest = questsToday(daily.day).find((q) => q.id === id);
+  if (!quest) return { ok: false, error: 'no such quest today' };
+  if (daily.taken.includes(id)) return { ok: false, error: 'already collected' };
+  if (!questDone(daily, quest)) return { ok: false, error: 'not finished' };
+  return {
+    ok: true,
+    held: {
+      ...h,
+      granted: h.granted + quest.stars,
+      daily: { ...daily, taken: [...daily.taken, id] },
+    },
+  };
+}
+
 /* -------------------------------------------------------------- the ladder */
 
 /**
@@ -307,6 +416,11 @@ export function claimInto(h: Held, earned: number, claim: Claim): Held {
     // The archive is different: which companies a player has met is not
     // recoverable from anything the server kept, so it rides in like the room.
     seen: [...new Set([...h.seen, ...claim.seen])],
+    // Neither of these is claimed, and neither ever will be. Dollars did not
+    // exist before this table did, so there is no save anywhere holding any —
+    // and a currency a client may claim is a currency a console mints.
+    dollars: h.dollars,
+    daily: h.daily,
   };
 }
 
@@ -333,6 +447,8 @@ interface StoredRow {
   streak: number;
   spent: number;
   granted: number;
+  dollars: number;
+  daily: string;
   updated_at: number;
 }
 
@@ -379,7 +495,7 @@ export async function standingOf(env: Env, id: string): Promise<Standing> {
 export async function read(env: Env, id: string): Promise<Stored | null> {
   const row = await env.DB.prepare(
     `SELECT room, owned, outfit, wins, awards, seen, duel_wins, streak,
-            spent, granted, updated_at
+            spent, granted, dollars, daily, updated_at
        FROM profiles WHERE id = ?1`,
   )
     .bind(id)
@@ -399,6 +515,10 @@ export async function read(env: Env, id: string): Promise<Stored | null> {
       seen: cleanSeen(parse(row.seen)),
       duelWins: Math.max(0, row.duel_wins),
       streak: Math.max(0, row.streak),
+      dollars: Math.max(0, row.dollars),
+      // Exactly what is stored, yesterday's day included. `change` rolls it —
+      // see `withToday`, and see why it is there and not here.
+      daily: cleanDaily(parse(row.daily)),
     },
   };
 }
@@ -431,6 +551,7 @@ export async function write(
   const wins = JSON.stringify(h.wins);
   const awards = JSON.stringify(h.awards);
   const seen = JSON.stringify(h.seen);
+  const daily = JSON.stringify(h.daily);
 
   const res =
     version === null
@@ -439,13 +560,13 @@ export async function write(
         await env.DB.prepare(
           `INSERT INTO profiles (id, room, owned, outfit, wins, awards, seen,
                                  duel_wins, streak, spent, granted,
-                                 first_seen, updated_at)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
+                                 dollars, daily, first_seen, updated_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)
            ON CONFLICT (id) DO NOTHING`,
         )
           .bind(
             id, h.room, owned, outfit, wins, awards, seen,
-            h.duelWins, h.streak, h.spent, h.granted, now,
+            h.duelWins, h.streak, h.spent, h.granted, h.dollars, daily, now,
           )
           .run()
       : await env.DB.prepare(
@@ -460,12 +581,14 @@ export async function write(
                   streak     = ?9,
                   spent      = ?10,
                   granted    = ?11,
-                  updated_at = MAX(updated_at + 1, ?12)
-            WHERE id = ?1 AND updated_at = ?13`,
+                  dollars    = ?12,
+                  daily      = ?13,
+                  updated_at = MAX(updated_at + 1, ?14)
+            WHERE id = ?1 AND updated_at = ?15`,
         )
           .bind(
             id, h.room, owned, outfit, wins, awards, seen,
-            h.duelWins, h.streak, h.spent, h.granted, now, version,
+            h.duelWins, h.streak, h.spent, h.granted, h.dollars, daily, now, version,
           )
           .run();
 
@@ -503,7 +626,9 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
     const earned = await earnedBy(env, caller.id);
     const at = await standingOf(env, caller.id);
     const stored = await read(env, caller.id);
-    const held = stored?.held ?? EMPTY;
+    // Today first, before anything is decided or drawn: every rule below, and
+    // the profile that goes back to the browser, is about the day it is now.
+    const held = withToday(stored?.held ?? EMPTY, Date.now());
 
     const out = apply(held, earned, at);
     if (!out.ok) return { held, earned, at, error: out.error };
@@ -558,7 +683,12 @@ export async function settle(
     // times is a lift, not a climb, so a duel banks no league win.
     const climbed =
       m.facts.outcome === 'win' && !m.facts.duel ? bankWin(held, m.league) : held;
-    return { ok: true, held: afterMatch(withSeen(climbed, m.companies), at, m.facts, now) };
+    // The day's quests hear about it next, and unlike the ladder they hear
+    // about a duel too: there is no ladder here to inflate, and a duel is a
+    // match that was played. `MatchFacts` is a superset of what the day counts,
+    // so it goes straight in.
+    const counted = { ...climbed, daily: countMatch(climbed.daily, m.facts, now) };
+    return { ok: true, held: afterMatch(withSeen(counted, m.companies), at, m.facts, now) };
   });
 }
 

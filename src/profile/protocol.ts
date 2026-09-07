@@ -29,6 +29,7 @@
  */
 
 import { cleanAwards } from '../awards/catalogue';
+import { cleanDaily, type Daily } from '../daily/protocol';
 import { COMPANIES } from '../sim/companies';
 import { ROOM_DONE } from '../ui/renovation';
 import { RARITIES, SLOTS, itemId, type Outfit, type Rarity, type Slot } from '../ui/wardrobe';
@@ -60,6 +61,14 @@ export interface Profile {
   /** stars EARNED, which is what the board ranks on and what spending never touches */
   earned: number;
   spent: number;
+  /**
+   * The hard currency, paid by the daily bonus and by nothing else yet. One
+   * number rather than the three above, because unlike stars it is nobody's
+   * ranking: see `src/daily/protocol.ts`.
+   */
+  dollars: number;
+  /** the bonus and the quests as they stand TODAY — already rolled over */
+  daily: Daily;
   /** renovation steps finished, 0..ROOM_DONE */
   room: number;
   owned: Tops;
@@ -237,6 +246,11 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
     outfit: wearable(owned, cleanOutfit(src.outfit)),
     wins: cleanWins(src.wins, leagues),
     awards: cleanAwards(src.awards),
+    dollars: cleanCount(src.dollars),
+    // The server rolls the day over before it answers, so this is today's by
+    // the time it gets here. `DailyScreen` rolls it again anyway, for the game
+    // left open across midnight.
+    daily: cleanDaily(src.daily),
     duelWins: cleanCount(src.duelWins),
     streak: cleanCount(src.streak),
     seen: cleanSeen(src.seen),

@@ -335,6 +335,39 @@ async function wear(request: Request, env: Env) {
   );
 }
 
+/**
+ * Collecting something the day owes: the bonus, or one finished quest.
+ *
+ * One route with a `claim` in the body rather than one per thing to collect —
+ * they want the same signature check, the same compare-and-set and the same
+ * "here is the whole profile afterwards" answer, and the only difference
+ * between them is which pure function decides.
+ *
+ * Nothing is read out of the body but the name. Which quests today has, whether
+ * that one is finished and what it pays are all worked out on this side, from
+ * the day and the row — a client that names a quest it was never dealt, or one
+ * it has not finished, gets a refusal and the truth (`claimQuest`).
+ *
+ * The clock is read here and handed down, so the whole of the decision stays a
+ * pure function of a row and a moment, which is what makes it testable without
+ * a database.
+ */
+async function daily(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  const claim = typeof body.claim === 'string' ? body.claim : '';
+  if (!claim) return bad(400, 'no such claim');
+  const now = Date.now();
+  return sent(
+    await profiles.change(env, caller, (held) =>
+      claim === 'bonus'
+        ? profiles.claimBonus(held, now)
+        : profiles.claimQuest(held, claim, now),
+    ),
+  );
+}
+
 /** The dev panel's undo, checked against a signature rather than against a bundle. */
 async function refund(request: Request, env: Env) {
   const asked = await whoIsAsking(request, env);
@@ -485,6 +518,7 @@ export default {
       if (url.pathname === '/profile') return openProfile(request, env);
       if (url.pathname === '/profile/buy') return buy(request, env);
       if (url.pathname === '/profile/wear') return wear(request, env);
+      if (url.pathname === '/profile/daily') return daily(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
     }
 

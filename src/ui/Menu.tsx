@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import Character from './Character';
 import Room from './Room';
-import { Cards, Cart, Check, Cross, Gear, Star, Tie, Trophy } from './components';
+import {
+  Briefcase,
+  Cards,
+  Cart,
+  Check,
+  Cross,
+  Dollar,
+  Gear,
+  Star,
+  Tie,
+  Trophy,
+  money,
+} from './components';
 import { t, tr } from './i18n';
 import { ROOM_DONE, ROOM_STEPS } from './renovation';
 import type { Outfit } from './wardrobe';
@@ -9,6 +21,8 @@ import type { Outfit } from './wardrobe';
 /** Main menu: the player's room, the player standing in it, and the way out to a match. */
 export default function Menu({
   stars,
+  dollars,
+  nudge,
   outfit,
   roomDone,
   admin,
@@ -23,9 +37,14 @@ export default function Menu({
   onEquip,
   onArchive,
   onRating,
+  onDaily,
   onSettings,
 }: {
   stars: number;
+  /** the hard currency, which so far only the daily bonus pays */
+  dollars: number;
+  /** something is waiting behind the DAILY button — see `worthATap` */
+  nudge: boolean;
   outfit: Outfit;
   roomDone: number;
   admin: boolean;
@@ -40,6 +59,7 @@ export default function Menu({
   onEquip: () => void;
   onArchive: () => void;
   onRating: () => void;
+  onDaily: () => void;
   onSettings: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
@@ -57,17 +77,37 @@ export default function Menu({
 
       {/* The corner used to be the help button and nothing else. Help is one of
           two things behind it now, so the corner opens a menu instead, and the
-          stars move across to give it the left-hand side. */}
+          counters move across to give it the left-hand side.
+
+          Two currencies, two counters, and the dollars go on the inside: stars
+          have been in that corner since the first build, and moving them to
+          make room for the newcomer would cost more than it bought. */}
       <header className="menu-top">
         <button className="icon-btn accent" onClick={onSettings} aria-label="settings">
           <Gear size={22} />
         </button>
         <span className="spacer" />
+        <div className="dollar-count">
+          <Dollar size={18} />
+          <b>{money(dollars)}</b>
+        </div>
         <div className="star-count">
           <Star size={20} />
           <b>{stars}</b>
         </div>
       </header>
+
+      {/* Off to the side rather than down in the column of four: the column is
+          places to go, and this is a thing to collect. It lights up when there
+          is something behind it, which is the only reason a button that leads
+          nowhere new belongs on the main screen at all. */}
+      <button
+        className={`daily-btn${nudge ? ' nudge' : ''}`}
+        onClick={onDaily}
+        aria-label={t('menu.daily')}
+      >
+        <Briefcase size={30} />
+      </button>
 
       <div className="hero">
         <Character outfit={outfit} />

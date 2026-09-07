@@ -28,6 +28,7 @@ import {
 } from './components';
 import BoardScreen from './BoardScreen';
 import ArchiveScreen from './ArchiveScreen';
+import DailyScreen from './DailyScreen';
 import DuelScreen, { type DuelPhase } from './DuelScreen';
 import DevPanel from './DevPanel';
 import LeagueSelect from './LeagueSelect';
@@ -41,6 +42,8 @@ import { loadSeen, saveSeen, withSeen } from './archive';
 import {
   buyItem as buyItemOnServer,
   buyRoomStep,
+  claimDailyBonus,
+  claimDailyQuest,
   flushPending,
   mintToken,
   openProfile,
@@ -51,6 +54,18 @@ import {
   wearOutfit,
 } from './api';
 import { setOf, topsOf, type Profile } from '../profile/protocol';
+import {
+  DAILY_BONUS,
+  bonusReady,
+  countMatch,
+  questDone,
+  questReady,
+  questsToday,
+  rolled,
+  worthATap,
+  type DayFacts,
+} from '../daily/protocol';
+import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
 import {
   DuelSocket,
   applySync,
@@ -331,6 +346,7 @@ export default function App() {
     | 'equip'
     | 'archive'
     | 'rating'
+    | 'daily'
     | 'leagues'
     | 'board'
     | 'duel'
@@ -341,6 +357,9 @@ export default function App() {
   const [rerollsLeft, setRerollsLeft] = useState(0);
   const forcedRef = useRef<readonly string[] | null>(null);
   const [stars, setStars] = useState(loadStars);
+  /** the hard currency, and the day it is paid out by — see `src/daily/protocol.ts` */
+  const [dollars, setDollars] = useState(loadDollars);
+  const [daily, setDaily] = useState(loadDaily);
   /** companies the player has met — filed by the match that put them up */
   const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
@@ -410,6 +429,12 @@ export default function App() {
     saveSeen(new Set(p.seen));
     setStars(p.stars);
     saveStars(p.stars);
+    setDollars(p.dollars);
+    saveDollars(p.dollars);
+    // The server has already rolled the day over; this end rolls it again only
+    // for a game that was left open past midnight (see the render below).
+    setDaily(p.daily);
+    saveDaily(p.daily);
     setRoomDone(p.room);
     saveRoom(p.room);
     const bought = setOf(p.owned);
@@ -613,6 +638,22 @@ export default function App() {
             const next = withSeen(prev, st.cfg.stocks.map((x) => x.id));
             if (next !== prev) saveSeen(next);
             return next;
+          });
+
+          // And the day's quests, on this end, from the same facts that went
+          // up. Inside this branch rather than outside it on purpose: a
+          // surrendered match is never handed in, so the server never counts
+          // one, and counting it here would put the two out of step.
+          countTowardsDay({
+            outcome:
+              st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
+            netWorth: Math.round(me.netWorth),
+            tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
+            bankrupt: me.bankrupt,
+            trades: me.trades.length,
+            // this branch is the bot match; a duel is counted by the server
+            // that ran it and arrives back on the refreshed profile
+            duel: false,
           });
         }
 
@@ -842,10 +883,14 @@ export default function App() {
               saveStars(next);
               return next;
             });
-            // The object that ran the match wrote the stars itself before it
-            // sent this. Asking for the balance back is how they arrive here.
-            reconcile(refreshProfile());
           }
+          // Asked for whatever the payout came to, and now asked for
+          // unconditionally: the object that ran the match settled the day's
+          // quests along with the stars, and a duel lost for nothing still
+          // counted as a match played. Unlike a bot match, this end does not
+          // keep its own tally of a duel — the mirror it draws is not where the
+          // trades were made, and one honest answer beats two guesses.
+          reconcile(refreshProfile());
           break;
         }
 
@@ -1125,6 +1170,72 @@ export default function App() {
     reconcile(refundRoomStep());
   };
 
+  /**
+   * Today's bonus, drawn here and settled on the server.
+   *
+   * Same shape as a purchase: the thousand appears at once so the button feels
+   * like a button, and whatever the server answers replaces it. The guard is
+   * this end's own picture of the day and is only there to stop a double tap —
+   * a browser whose clock is a day out gets its answer from `/profile/daily`,
+   * which counts days off its own.
+   */
+  const takeDailyBonus = () => {
+    const today = rolled(daily, Date.now());
+    if (!bonusReady(today)) return;
+    setDollars((prev) => {
+      const next = prev + DAILY_BONUS;
+      saveDollars(next);
+      return next;
+    });
+    setDaily(() => {
+      const next = { ...today, bonus: true };
+      saveDaily(next);
+      return next;
+    });
+    haptic('heavy');
+    reconcile(claimDailyBonus());
+  };
+
+  /**
+   * One finished quest, cashed in.
+   *
+   * Same shape as the bonus and as a purchase: the stars appear at once and
+   * whatever the server answers replaces them. The guard is this end's own
+   * picture of the day and only stops a double tap — whether the quest is
+   * really finished, and what it really pays, is settled by `claimQuest` on the
+   * other side.
+   */
+  const takeQuest = (id: string) => {
+    const today = rolled(daily, Date.now());
+    const quest = questsToday(today.day).find((q) => q.id === id);
+    if (!quest || !questReady(today, quest)) return;
+    addStars(quest.stars);
+    setDaily(() => {
+      const next = { ...today, taken: [...today.taken, id] };
+      saveDaily(next);
+      return next;
+    });
+    haptic('heavy');
+    reconcile(claimDailyQuest(id));
+  };
+
+  /**
+   * One finished match, counted against the day — this end's copy of what
+   * `settle` does on the server.
+   *
+   * Kept in step for the reason the star count is: the screen has to be right
+   * before the answer comes back, and it has to be right at all in a build with
+   * no server behind it. The server's answer overwrites this the moment it
+   * lands.
+   */
+  const countTowardsDay = (facts: DayFacts) => {
+    setDaily((prev) => {
+      const next = countMatch(prev, facts, Date.now());
+      saveDaily(next);
+      return next;
+    });
+  };
+
   const toggleFree = () => {
     if (!admin) return;
     setFreeMode((prev) => {
@@ -1292,6 +1403,20 @@ export default function App() {
     );
   }
 
+  if (screen === 'daily') {
+    return (
+      <div className="app">
+        <DailyScreen
+          daily={daily}
+          dollars={dollars}
+          onClaimBonus={takeDailyBonus}
+          onClaimQuest={takeQuest}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'shop' || screen === 'equip') {
     return (
       <div className="app">
@@ -1314,8 +1439,13 @@ export default function App() {
   if (screen === 'menu') {
     return (
       <div className="app">
+        {/* `nudge` is rolled here rather than read straight off `daily`: a game
+            left open past midnight is holding yesterday, and yesterday's taken
+            bonus would leave the button dark on a day that owes one. */}
         <Menu
           stars={stars}
+          dollars={dollars}
+          nudge={worthATap(rolled(daily, Date.now()))}
           outfit={outfit}
           roomDone={roomDone}
           admin={admin}
@@ -1330,6 +1460,7 @@ export default function App() {
           onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
           onRating={() => setScreen('rating')}
+          onDaily={() => setScreen('daily')}
           onSettings={() => setSettingsOpen(true)}
         />
         {pauseOpen && !st.finished && (

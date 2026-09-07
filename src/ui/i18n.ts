@@ -74,6 +74,16 @@ const EN = {
   'menu.renovate': 'RENOVATE?',
   'menu.free': 'FREE',
   'menu.roomComplete': 'ROOM COMPLETE',
+  'menu.daily': 'DAILY',
+
+  'daily.bonusTitle': 'DAILY BONUS',
+  'daily.bonusReady': 'Yours for turning up. Come back tomorrow for the next one.',
+  'daily.bonusBackIn': 'Taken today. Back in {time}.',
+  'daily.inHours': '{h}h {m}m',
+  'daily.inMinutes': '{m}m',
+  'daily.questsTitle': 'TODAY’S QUESTS',
+  'daily.collect': 'COLLECT +{n}',
+  'daily.questsRoll': 'Three of these a day, drawn fresh at midnight. Whatever is not collected goes with them.',
 
   'settings.title': 'SETTINGS',
   'settings.help': 'HOW TO PLAY',
@@ -193,6 +203,33 @@ const EN = {
   // The row where an ability would be, for a trader wearing nothing round the
   // neck. Two of them, because the useful half of the sentence is different
   // when the thing is already bought and merely left in the wardrobe.
+  /* ------------------------------------------------------------ the day */
+
+  // One pair per quest in `src/daily/protocol.ts`, keyed the way the awards
+  // are and read the same way (`questKey` in DailyScreen.tsx). `{n}` is the
+  // catalogue's own goal, so the row cannot promise a number the counter is
+  // not measured against.
+  'quest.play-3.name': 'SHOW UP',
+  'quest.play-3.text': 'Play {n} matches today.',
+  'quest.play-5.name': 'A LONG SESSION',
+  'quest.play-5.text': 'Play {n} matches today.',
+  'quest.win-1.name': 'TAKE ONE',
+  'quest.win-1.text': 'Win a match today.',
+  'quest.win-2.name': 'TAKE TWO',
+  'quest.win-2.text': 'Win {n} matches today.',
+  'quest.gain.name': 'TRADE WELL',
+  'quest.gain.text': 'Clear the profit bar in a match today.',
+  'quest.trades-20.name': 'BUSY HANDS',
+  'quest.trades-20.text': 'Make {n} trades today.',
+  'quest.nw-15k.name': 'A GOOD EVENING',
+  'quest.nw-15k.text': 'Finish a match holding {n}.',
+  'quest.no-bust-3.name': 'STILL STANDING',
+  'quest.no-bust-3.text': 'Finish {n} matches today without going broke.',
+  'quest.duel-1.name': 'CALL SOMEBODY',
+  'quest.duel-1.text': 'Play a duel today. Losing one still counts.',
+  'quest.duel-win.name': 'SETTLE IT',
+  'quest.duel-win.text': 'Win a duel today.',
+
   /* ---------------------------------------------------------------- awards */
 
   'award.group.money': 'ON THE WHISTLE',
@@ -287,6 +324,17 @@ const RU: Record<Key, string> = {
   'menu.renovate': 'ОБНОВИТЬ?',
   'menu.free': 'ДАРОМ',
   'menu.roomComplete': 'КОМНАТА ГОТОВА',
+  'menu.daily': 'ДЕНЬ',
+
+  'daily.bonusTitle': 'ЕЖЕДНЕВНЫЙ БОНУС',
+  'daily.bonusReady': 'Просто за то, что зашёл. Завтра будет ещё один.',
+  'daily.bonusBackIn': 'Сегодня уже забран. Вернётся через {time}.',
+  'daily.inHours': '{h} ч {m} мин',
+  'daily.inMinutes': '{m} мин',
+  'daily.questsTitle': 'ЗАДАНИЯ НА СЕГОДНЯ',
+  'daily.collect': 'ЗАБРАТЬ +{n}',
+  'daily.questsRoll':
+    'Три штуки в день, новые каждую полночь. Что не забрал — уйдёт вместе с ними.',
 
   'settings.title': 'НАСТРОЙКИ',
   'settings.help': 'СПРАВКА',
@@ -402,6 +450,27 @@ const RU: Record<Key, string> = {
   'match.noCash': 'НЕТ ДЕНЕГ',
   'match.takeBack': 'ОТМЕНИТЬ СДЕЛКУ',
   'match.abilityUsed': '{name} · ПОТРАЧЕНО',
+  'quest.play-3.name': 'ПРИЙТИ',
+  'quest.play-3.text': 'Сыграй сегодня {n} матча.',
+  'quest.play-5.name': 'ДОЛГИЙ ВЕЧЕР',
+  'quest.play-5.text': 'Сыграй сегодня {n} матчей.',
+  'quest.win-1.name': 'ВЗЯТЬ СВОЁ',
+  'quest.win-1.text': 'Выиграй сегодня матч.',
+  'quest.win-2.name': 'ВЗЯТЬ ДВАЖДЫ',
+  'quest.win-2.text': 'Выиграй сегодня {n} матча.',
+  'quest.gain.name': 'ХОРОШО ПОТОРГОВАТЬ',
+  'quest.gain.text': 'Возьми сегодня планку по прибыли в матче.',
+  'quest.trades-20.name': 'БЕЗ ПЕРЕРЫВА',
+  'quest.trades-20.text': 'Соверши сегодня {n} сделок.',
+  'quest.nw-15k.name': 'ХОРОШИЙ ВЕЧЕР',
+  'quest.nw-15k.text': 'Закончи матч с капиталом {n}.',
+  'quest.no-bust-3.name': 'НА НОГАХ',
+  'quest.no-bust-3.text': 'Закончи сегодня {n} матча, ни разу не разорившись.',
+  'quest.duel-1.name': 'ПОЗВАТЬ ДРУГА',
+  'quest.duel-1.text': 'Сыграй сегодня дуэль. Проигранная тоже считается.',
+  'quest.duel-win.name': 'РАЗОБРАТЬСЯ',
+  'quest.duel-win.text': 'Выиграй сегодня дуэль.',
+
   'award.group.money': 'НА СВИСТКЕ',
   'award.group.duel': 'ПРОТИВ ЛЮДЕЙ',
   'award.group.league': 'ЛЕСТНИЦА',
