@@ -409,6 +409,14 @@ export default function App() {
     saveOwned(bought);
     setOutfit(p.outfit);
     saveOutfit(p.outfit);
+    saveWins(p.wins);
+    winsRef.current = p.wins;
+    setLeagueWins(p.wins);
+    // The ladder can come back shorter than this end had it — a match played
+    // while the server was unreachable and never handed in is a win nobody but
+    // this phone saw. Standing in a league that just closed is not a state any
+    // screen is written for, so step down to the top of what is open.
+    setLeague((l) => Math.min(l, unlockedCount(p.wins) - 1));
   }, []);
 
   /**
@@ -441,6 +449,7 @@ export default function App() {
           room: loadRoom(),
           owned: topsOf(loadOwned()),
           outfit: loadOutfit(),
+          wins: loadWins(),
         }),
       ),
     );

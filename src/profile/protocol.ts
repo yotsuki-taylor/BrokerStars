@@ -15,9 +15,17 @@
  * each duellist out of this table rather than out of what their browser
  * claimed to be wearing (`worker/src/duel.ts`).
  *
- * What is deliberately NOT here: leagues, the company archive and board
- * preferences. Those stay in `localStorage`, because none of them is a thing
- * bought with stars and none of them is what a player loses sleep over.
+ * The ladder is here too, and it was the last thing that was not. It gates
+ * which leagues are open and what a match pays, so losing it to a new phone
+ * cost more than losing a hat did — and half of it was on the server already
+ * (`players.top_league`, which is what a duel pays each side by), so the split
+ * had stopped making sense. Wins are counted by the server as matches are
+ * handed in, the same way stars are, rather than being something the client
+ * banks and reports.
+ *
+ * What is deliberately NOT here: the company archive, the board preferences,
+ * the language, and which league was played last. None of them is progress —
+ * they are conveniences, and they are allowed to differ between two phones.
  */
 
 import { ROOM_DONE } from '../ui/renovation';
@@ -32,6 +40,17 @@ import { RARITIES, SLOTS, itemId, type Outfit, type Rarity, type Slot } from '..
  */
 export type Tops = Partial<Record<Slot, Rarity>>;
 
+/**
+ * Wins banked in each league, lowest first — the ladder, and the only thing on
+ * a profile the player does not buy.
+ *
+ * How long the array is depends on who is asking, which is why every function
+ * that touches one is told: the game reads `LEAGUE_COUNT` off its own ladder,
+ * and the Worker reads it off `REWARDS`, its deliberate copy of the reward
+ * tables. Neither has to import the other's.
+ */
+export type Wins = number[];
+
 /** Everything the server keeps for one player, as the browser receives it. */
 export interface Profile {
   /** stars in hand: earned + granted − spent, all three of them the server's */
@@ -43,6 +62,7 @@ export interface Profile {
   room: number;
   owned: Tops;
   outfit: Outfit;
+  wins: Wins;
 }
 
 /**
@@ -55,6 +75,7 @@ export interface Claim {
   room: number;
   owned: Tops;
   outfit: Outfit;
+  wins: Wins;
 }
 
 /**
@@ -99,7 +120,23 @@ export function cleanCount(raw: unknown): number {
 export const cleanClaimedStars = (raw: unknown): number =>
   Math.min(MAX_CLAIM_STARS, cleanCount(raw));
 
-export function cleanClaim(raw: unknown): Claim {
+/**
+ * A ladder off the wire: `count` numbers, none of them negative, padded and cut
+ * to whatever length the reader's own ladder is. A save made under a shorter
+ * ladder keeps what it has and gains zeroes.
+ */
+export function cleanWins(raw: unknown, count: number): Wins {
+  const src = Array.isArray(raw) ? raw : [];
+  const out: Wins = [];
+  for (let i = 0; i < count; i++) out.push(cleanCount(src[i]));
+  return out;
+}
+
+/** The better of two ladders, rung by rung. */
+export const mergeWins = (a: Wins, b: Wins): Wins =>
+  a.map((n, i) => Math.max(n, b[i] ?? 0));
+
+export function cleanClaim(raw: unknown, leagues: number): Claim {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const owned = cleanTops(src.owned);
   return {
@@ -107,12 +144,16 @@ export function cleanClaim(raw: unknown): Claim {
     room: cleanRoom(src.room),
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
+    wins: cleanWins(src.wins, leagues),
   };
 }
 
-/** Nothing bought, nothing worn, no stars: a claim with nothing in it to keep. */
+/** Nothing bought, nothing won, no stars: a claim with nothing in it to keep. */
 export const emptyClaim = (c: Claim): boolean =>
-  c.stars === 0 && c.room === 0 && Object.keys(c.owned).length === 0;
+  c.stars === 0 &&
+  c.room === 0 &&
+  Object.keys(c.owned).length === 0 &&
+  c.wins.every((n) => n === 0);
 
 /** You cannot wear what you do not own, and you cannot wear above what you do. */
 export function wearable(owned: Tops, outfit: Outfit): Outfit {
@@ -154,7 +195,7 @@ export function mergeTops(a: Tops, b: Tops): Tops {
  * an old deployment answering a new client is a real thing, and a room of
  * `undefined` draws a blank screen rather than a bare room.
  */
-export function cleanProfile(raw: unknown): Profile | null {
+export function cleanProfile(raw: unknown, leagues: number): Profile | null {
   if (!raw || typeof raw !== 'object') return null;
   const src = raw as Record<string, unknown>;
   if (typeof src.stars !== 'number' || !Number.isFinite(src.stars)) return null;
@@ -166,6 +207,7 @@ export function cleanProfile(raw: unknown): Profile | null {
     room: cleanRoom(src.room),
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
+    wins: cleanWins(src.wins, leagues),
   };
 }
 

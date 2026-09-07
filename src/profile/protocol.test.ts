@@ -4,12 +4,14 @@ import {
   cleanProfile,
   cleanTops,
   mergeTops,
+  mergeWins,
   nextRung,
   setOf,
   topsOf,
   wearable,
 } from './protocol';
 import { ROOM_DONE } from '../ui/renovation';
+import { LEAGUE_COUNT } from '../ui/leagues';
 
 /**
  * The wire between the game and the wardrobe the server keeps. Everything here
@@ -88,28 +90,53 @@ describe('merging two wardrobes', () => {
 });
 
 describe('a claim, before the server is asked to believe it', () => {
+  const claim = (raw: unknown) => cleanClaim(raw, LEAGUE_COUNT);
+
   it('clamps the room to the steps that exist', () => {
-    expect(cleanClaim({ room: 99 }).room).toBe(ROOM_DONE);
-    expect(cleanClaim({ room: -4 }).room).toBe(0);
+    expect(claim({ room: 99 }).room).toBe(ROOM_DONE);
+    expect(claim({ room: -4 }).room).toBe(0);
   });
 
   it('cannot claim to be wearing what it does not claim to own', () => {
-    expect(cleanClaim({ owned: {}, outfit: { hat: 'legend' } }).outfit).toEqual({});
+    expect(claim({ owned: {}, outfit: { hat: 'legend' } }).outfit).toEqual({});
+  });
+
+  it('pads a ladder from a shorter one and cuts a longer one down', () => {
+    expect(claim({ wins: [4, 2] }).wins).toEqual([4, 2, ...Array(LEAGUE_COUNT - 2).fill(0)]);
+    expect(claim({ wins: Array(99).fill(1) }).wins).toHaveLength(LEAGUE_COUNT);
+    expect(claim({ wins: [-3, 'x'] }).wins[0]).toBe(0);
   });
 
   it('survives a save that is not there at all', () => {
-    expect(cleanClaim(undefined)).toEqual({ stars: 0, room: 0, owned: {}, outfit: {} });
+    expect(claim(undefined)).toEqual({
+      stars: 0,
+      room: 0,
+      owned: {},
+      outfit: {},
+      wins: Array(LEAGUE_COUNT).fill(0),
+    });
   });
 });
 
 describe('a profile coming back', () => {
   it('is nothing at all when the answer has no stars in it', () => {
-    expect(cleanProfile({ room: 3 })).toBeNull();
-    expect(cleanProfile(null)).toBeNull();
+    expect(cleanProfile({ room: 3 }, LEAGUE_COUNT)).toBeNull();
+    expect(cleanProfile(null, LEAGUE_COUNT)).toBeNull();
   });
 
-  it('trims an outfit the wardrobe does not cover', () => {
-    const p = cleanProfile({ stars: 5, earned: 9, spent: 4, room: 2, owned: { hat: 'common' }, outfit: { hat: 'legend' } });
+  it('trims an outfit the wardrobe does not cover, and squares the ladder up', () => {
+    const p = cleanProfile(
+      {
+        stars: 5,
+        earned: 9,
+        spent: 4,
+        room: 2,
+        owned: { hat: 'common' },
+        outfit: { hat: 'legend' },
+        wins: [3],
+      },
+      LEAGUE_COUNT,
+    );
     expect(p).toEqual({
       stars: 5,
       earned: 9,
@@ -117,6 +144,17 @@ describe('a profile coming back', () => {
       room: 2,
       owned: { hat: 'common' },
       outfit: { hat: 'common' },
+      wins: [3, ...Array(LEAGUE_COUNT - 1).fill(0)],
     });
+  });
+});
+
+describe('merging two ladders', () => {
+  it('keeps the better count of each league', () => {
+    expect(mergeWins([3, 0, 1], [1, 5, 0])).toEqual([3, 5, 1]);
+  });
+
+  it('is as long as the ladder being merged into', () => {
+    expect(mergeWins([0, 0], [9, 9, 9, 9])).toEqual([9, 9]);
   });
 });

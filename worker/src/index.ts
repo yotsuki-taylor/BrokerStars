@@ -211,6 +211,25 @@ async function submit(request: Request, env: Env) {
     if (already === null) throw err;
     return json({ ok: true, stars: already, already: true });
   }
+
+  // Recorded for the first time, so the ladder hears about it once. Climbing it
+  // is the server's arithmetic for the reason the payout is: a league that opens
+  // because a browser said so is not a league anybody earned. A surrender
+  // arrives here as a loss and banks nothing; a duel never arrives at all.
+  if (outcome === 'win') {
+    try {
+      await profiles.change(env, caller, (held) => ({
+        ok: true,
+        held: profiles.bankWin(held, league),
+      }));
+    } catch (err) {
+      // The match is recorded and paid either way, and a count the player can
+      // put back by winning again is not worth failing the whole submission
+      // over — which would only have it sent to us a second time.
+      console.error('win not banked', err);
+    }
+  }
+
   return json({ ok: true, stars });
 }
 
@@ -240,8 +259,8 @@ async function whoIsAsking(
 }
 
 /** The whole profile, every time: the client's job is to draw what comes back. */
-const sent = async (env: Env, caller: Caller, held: profiles.Held, error?: string) =>
-  json({ ok: !error, error, profile: profiles.view(held, await profiles.earnedBy(env, caller.id)) });
+const sent = (a: profiles.Applied) =>
+  json({ ok: !a.error, error: a.error, profile: profiles.view(a.held, a.earned) });
 
 /**
  * Where a session starts. The body may carry `claim` — what this browser had in
@@ -252,8 +271,8 @@ async function openProfile(request: Request, env: Env) {
   const asked = await whoIsAsking(request, env);
   if (asked instanceof Response) return asked;
   const { caller, body } = asked;
-  const claim = body.claim == null ? null : cleanClaim(body.claim);
-  return sent(env, caller, await profiles.open(env, caller, claim));
+  const claim = body.claim == null ? null : cleanClaim(body.claim, profiles.LEAGUES);
+  return sent(await profiles.open(env, caller, claim));
 }
 
 /** Which slot and rung a message is about, or nothing if it is about neither. */
@@ -277,23 +296,19 @@ async function buy(request: Request, env: Env) {
   if (asked instanceof Response) return asked;
   const { caller, body } = asked;
 
-  const held = await profiles.open(env, caller, null);
-  const earned = await profiles.earnedBy(env, caller.id);
   // free mode is the dev panel's, and the server honours it for one signed id
   const free = body.free === true && profiles.isAdmin(env, caller.id);
+  const room = body.room === true;
+  const item = room ? null : itemIn(body);
+  if (!room && !item) return bad(400, 'no such item');
 
-  let out: profiles.Bought;
-  if (body.room === true) {
-    out = profiles.buyRoom(held, earned, free);
-  } else {
-    const item = itemIn(body);
-    if (!item) return bad(400, 'no such item');
-    out = profiles.buyItem(held, earned, item.slot, item.rarity, free);
-  }
-
-  if (!out.ok) return sent(env, caller, held, out.error);
-  await profiles.save(env, caller.id, out.held);
-  return sent(env, caller, out.held);
+  return sent(
+    await profiles.change(env, caller, (held, earned) =>
+      item
+        ? profiles.buyItem(held, earned, item.slot, item.rarity, free)
+        : profiles.buyRoom(held, earned, free),
+    ),
+  );
 }
 
 /** Changing clothes costs nothing and can only ever put on what is owned. */
@@ -301,9 +316,13 @@ async function wear(request: Request, env: Env) {
   const asked = await whoIsAsking(request, env);
   if (asked instanceof Response) return asked;
   const { caller, body } = asked;
-  const held = profiles.wear(await profiles.open(env, caller, null), cleanOutfit(body.outfit));
-  await profiles.save(env, caller.id, held);
-  return sent(env, caller, held);
+  const outfit = cleanOutfit(body.outfit);
+  return sent(
+    await profiles.change(env, caller, (held) => ({
+      ok: true,
+      held: profiles.wear(held, outfit),
+    })),
+  );
 }
 
 /** The dev panel's undo, checked against a signature rather than against a bundle. */
@@ -313,19 +332,15 @@ async function refund(request: Request, env: Env) {
   const { caller, body } = asked;
   if (!profiles.isAdmin(env, caller.id)) return bad(403, 'not the developer');
 
-  const held = await profiles.open(env, caller, null);
-  let out: profiles.Bought;
-  if (body.room === true) {
-    out = profiles.refundRoom(held);
-  } else {
-    const item = itemIn(body);
-    if (!item) return bad(400, 'no such item');
-    out = profiles.refundItem(held, item.slot, item.rarity);
-  }
+  const room = body.room === true;
+  const item = room ? null : itemIn(body);
+  if (!room && !item) return bad(400, 'no such item');
 
-  if (!out.ok) return sent(env, caller, held, out.error);
-  await profiles.save(env, caller.id, out.held);
-  return sent(env, caller, out.held);
+  return sent(
+    await profiles.change(env, caller, (held) =>
+      item ? profiles.refundItem(held, item.slot, item.rarity) : profiles.refundRoom(held),
+    ),
+  );
 }
 
 /* ----------------------------------------------------------------- duels */

@@ -66,6 +66,11 @@ CREATE INDEX IF NOT EXISTS results_unverified ON results (verified, created_at);
 -- `owned` and `outfit` are JSON of one rarity per slot -- {"torso":"rare"}. A
 -- slot is climbed in order, so its top rung describes the whole of it; see
 -- src/profile/protocol.ts, which both sides read this shape out of.
+--
+-- `updated_at` doubles as the row's version. Every write names the value it
+-- read and is refused if the row has moved since, so two requests from the same
+-- player cannot each write a whole row over the other's -- see `write` in
+-- worker/src/profile.ts. It only ever goes up, even twice in one millisecond.
 CREATE TABLE IF NOT EXISTS profiles (
   -- the same Telegram user id as players.id, and no foreign key on purpose:
   -- a player can open the game and dress up before ever finishing a match
@@ -73,6 +78,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   room       INTEGER NOT NULL DEFAULT 0,
   owned      TEXT NOT NULL DEFAULT '{}',
   outfit     TEXT NOT NULL DEFAULT '{}',
+  -- JSON array of wins per league, lowest first: the ladder. Counted here as
+  -- matches are handed in, never read off what the client claims to have won.
+  wins       TEXT NOT NULL DEFAULT '[]',
   spent      INTEGER NOT NULL DEFAULT 0,
   granted    INTEGER NOT NULL DEFAULT 0,
   first_seen INTEGER NOT NULL,

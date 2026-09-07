@@ -31,7 +31,9 @@ import {
 import {
   cleanOutfit,
   cleanTops,
+  cleanWins,
   mergeTops,
+  mergeWins,
   nextRung,
   rankOf,
   rungBelow,
@@ -39,9 +41,17 @@ import {
   type Claim,
   type Profile,
   type Tops,
+  type Wins,
 } from '../../src/profile/protocol';
-import type { Env } from './results';
+import { REWARDS, type Env } from './results';
 import type { Caller } from './telegram';
+
+/**
+ * How many rungs the ladder has, as this side counts them. `REWARDS` is already
+ * the Worker's own copy of the reward tables — one table per league — so there
+ * is no second number to keep in step.
+ */
+export const LEAGUES = REWARDS.length;
 
 /** The row, unpacked. Every rule below works on one of these and returns another. */
 export interface Held {
@@ -52,9 +62,18 @@ export interface Held {
   spent: number;
   /** stars from somewhere other than a match: the migration, and free purchases */
   granted: number;
+  /** wins banked in each league, lowest first */
+  wins: Wins;
 }
 
-export const EMPTY: Held = { room: 0, owned: {}, outfit: {}, spent: 0, granted: 0 };
+export const EMPTY: Held = {
+  room: 0,
+  owned: {},
+  outfit: {},
+  spent: 0,
+  granted: 0,
+  wins: cleanWins([], LEAGUES),
+};
 
 /**
  * Has the server anything of its own for this player yet? While it has not, the
@@ -62,7 +81,11 @@ export const EMPTY: Held = { room: 0, owned: {}, outfit: {}, spent: 0, granted: 
  * that stops for good.
  */
 export const untouched = (h: Held): boolean =>
-  h.room === 0 && h.spent === 0 && h.granted === 0 && Object.keys(h.owned).length === 0;
+  h.room === 0 &&
+  h.spent === 0 &&
+  h.granted === 0 &&
+  Object.keys(h.owned).length === 0 &&
+  h.wins.every((n) => n === 0);
 
 /**
  * Stars in hand. Never stored, always worked out: `players.stars` is the
@@ -80,6 +103,7 @@ export const view = (h: Held, earned: number): Profile => ({
   room: h.room,
   owned: h.owned,
   outfit: h.outfit,
+  wins: h.wins,
 });
 
 /** What this wardrobe and this much room would have cost, at today's prices. */
@@ -182,6 +206,27 @@ export function wear(h: Held, outfit: Outfit): Held {
   return { ...h, outfit: wearable(h.owned, outfit) };
 }
 
+/* -------------------------------------------------------------- the ladder */
+
+/**
+ * One more win in one league, which is how the ladder is climbed.
+ *
+ * Counted here rather than reported by the client, for the reason the stars
+ * are: a league that opens because a browser said so is not a league that was
+ * earned. The caller is `/result`, once per match actually recorded — a
+ * re-sent submission never reaches this far, because the token is recognised
+ * first.
+ *
+ * A duel does not come this way at all. The ladder is climbed against the bots
+ * on purpose: a friend willing to lose ten times is a lift, not a climb.
+ */
+export function bankWin(h: Held, league: number): Held {
+  if (!Number.isInteger(league) || league < 0 || league >= h.wins.length) return h;
+  const wins = h.wins.slice();
+  wins[league] += 1;
+  return { ...h, wins };
+}
+
 /* ----------------------------------------------------------- the migration */
 
 /**
@@ -213,6 +258,10 @@ export function claimInto(h: Held, earned: number, claim: Claim): Held {
     outfit: wearable(owned, claim.outfit),
     spent,
     granted: Math.max(0, claim.stars + spent - earned),
+    // The ladder is the one thing here the server would otherwise have no way
+    // of reconstructing: it starts counting wins today, and everything climbed
+    // before that only exists in the save being handed over.
+    wins: mergeWins(h.wins, claim.wins),
   };
 }
 
@@ -232,15 +281,23 @@ interface StoredRow {
   room: number;
   owned: string;
   outfit: string;
+  wins: string;
   spent: number;
   granted: number;
+  updated_at: number;
 }
 
-const parse = (raw: string): Tops => {
+/** The row and the version it was read at. Every write names one — see `write`. */
+export interface Stored {
+  held: Held;
+  version: number;
+}
+
+const parse = (raw: string): unknown => {
   try {
-    return cleanTops(JSON.parse(raw));
+    return JSON.parse(raw);
   } catch {
-    return {};
+    return null;
   }
 };
 
@@ -251,55 +308,139 @@ export async function earnedBy(env: Env, id: string): Promise<number> {
   return row?.stars ?? 0;
 }
 
-export async function load(env: Env, id: string): Promise<Held | null> {
+export async function read(env: Env, id: string): Promise<Stored | null> {
   const row = await env.DB.prepare(
-    `SELECT room, owned, outfit, spent, granted FROM profiles WHERE id = ?1`,
+    `SELECT room, owned, outfit, wins, spent, granted, updated_at
+       FROM profiles WHERE id = ?1`,
   )
     .bind(id)
     .first<StoredRow>();
   if (!row) return null;
-  const owned = parse(row.owned);
+  const owned = cleanTops(parse(row.owned));
   return {
-    room: Math.min(ROOM_DONE, Math.max(0, row.room)),
-    owned,
-    outfit: wearable(owned, cleanOutfit(parse(row.outfit))),
-    spent: Math.max(0, row.spent),
-    granted: Math.max(0, row.granted),
+    version: row.updated_at,
+    held: {
+      room: Math.min(ROOM_DONE, Math.max(0, row.room)),
+      owned,
+      outfit: wearable(owned, cleanOutfit(parse(row.outfit))),
+      spent: Math.max(0, row.spent),
+      granted: Math.max(0, row.granted),
+      wins: cleanWins(parse(row.wins), LEAGUES),
+    },
   };
 }
 
-export async function save(env: Env, id: string, h: Held): Promise<void> {
+/**
+ * Write the row back, but only if nobody has written it since it was read.
+ *
+ * Everything above is read-modify-write over a whole row, and without this the
+ * two halves of that could interleave: a purchase and a change of clothes fired
+ * a moment apart — which is what a slow connection makes of two taps — would
+ * both read the same row, and whichever landed second would put the other's
+ * back. The purchase would come out looking like it never happened.
+ *
+ * So `updated_at` is the version as well as the timestamp, and it is what the
+ * WHERE clause matches on. `MAX(updated_at + 1, now)` keeps it climbing even
+ * for two writes inside one millisecond, so no version can ever be reused.
+ * False means the row moved; the caller reads it again and redoes the change
+ * against what is actually there (`change` below).
+ */
+export async function write(
+  env: Env,
+  id: string,
+  h: Held,
+  /** the version this change was worked out from, or null for a row that had none */
+  version: number | null,
+): Promise<boolean> {
   const now = Date.now();
-  await env.DB.prepare(
-    `INSERT INTO profiles (id, room, owned, outfit, spent, granted, first_seen, updated_at)
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
-     ON CONFLICT (id) DO UPDATE SET
-          room       = ?2,
-          owned      = ?3,
-          outfit     = ?4,
-          spent      = ?5,
-          granted    = ?6,
-          updated_at = ?7`,
-  )
-    .bind(id, h.room, JSON.stringify(h.owned), JSON.stringify(h.outfit), h.spent, h.granted, now)
-    .run();
+  const owned = JSON.stringify(h.owned);
+  const outfit = JSON.stringify(h.outfit);
+  const wins = JSON.stringify(h.wins);
+
+  const res =
+    version === null
+      ? // A row that was not there. If one appeared in the meantime this does
+        // nothing, and the caller starts again knowing about it.
+        await env.DB.prepare(
+          `INSERT INTO profiles (id, room, owned, outfit, wins, spent, granted,
+                                 first_seen, updated_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+           ON CONFLICT (id) DO NOTHING`,
+        )
+          .bind(id, h.room, owned, outfit, wins, h.spent, h.granted, now)
+          .run()
+      : await env.DB.prepare(
+          `UPDATE profiles
+              SET room       = ?2,
+                  owned      = ?3,
+                  outfit     = ?4,
+                  wins       = ?5,
+                  spent      = ?6,
+                  granted    = ?7,
+                  updated_at = MAX(updated_at + 1, ?8)
+            WHERE id = ?1 AND updated_at = ?9`,
+        )
+          .bind(id, h.room, owned, outfit, wins, h.spent, h.granted, now, version)
+          .run();
+
+  return (res.meta?.changes ?? 0) > 0;
+}
+
+/**
+ * How many times a change may be worked out again after losing the race. Two
+ * requests from one player is already the unusual case and a third is not a
+ * thing a pair of thumbs can do; this is a guard against spinning, not a queue.
+ */
+const ATTEMPTS = 4;
+
+/** What a route answers with: the state to show, and why nothing changed if so. */
+export interface Applied {
+  held: Held;
+  earned: number;
+  error?: string;
+}
+
+/** A change, worked out against the row as it stands at the moment it is read. */
+export type Change = (h: Held, earned: number) => Bought;
+
+/**
+ * Read, change, write — and if the row moved underneath, read it again and work
+ * the change out afresh rather than writing a decision made about the past.
+ *
+ * The refusals come back rather than throwing: "not the next rung" is an answer
+ * about a real profile and the caller sends that profile back with it.
+ */
+export async function change(env: Env, caller: Caller, apply: Change): Promise<Applied> {
+  let last: Applied | null = null;
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    const earned = await earnedBy(env, caller.id);
+    const stored = await read(env, caller.id);
+    const held = stored?.held ?? EMPTY;
+
+    const out = apply(held, earned);
+    if (!out.ok) return { held, earned, error: out.error };
+
+    if (await write(env, caller.id, out.held, stored?.version ?? null)) {
+      return { held: out.held, earned };
+    }
+    last = { held, earned };
+  }
+  // Four collisions in a row is not a thing that happens to one player; if it
+  // somehow does, the honest answer is the profile as last seen, and the client
+  // redraws to that and can try again.
+  return { ...(last as Applied), error: 'busy' };
 }
 
 /**
  * The profile as it stands: opening a row for a player who has never had one,
  * and folding in the browser's old save when there is one and the door is still
- * open. Every route that reads or changes anything starts here.
+ * open. Every session starts here.
  */
-export async function open(env: Env, caller: Caller, claim: Claim | null): Promise<Held> {
-  const stored = await load(env, caller.id);
-  let held = stored ?? EMPTY;
-  if (claim && untouched(held)) {
-    held = claimInto(held, await earnedBy(env, caller.id), claim);
-    await save(env, caller.id, held);
-  } else if (!stored) {
-    await save(env, caller.id, held);
-  }
-  return held;
+export async function open(env: Env, caller: Caller, claim: Claim | null): Promise<Applied> {
+  return change(env, caller, (held, earned) => ({
+    ok: true,
+    held: claim && untouched(held) ? claimInto(held, earned, claim) : held,
+  }));
 }
 
 /**
@@ -308,6 +449,6 @@ export async function open(env: Env, caller: Caller, claim: Claim | null): Promi
  * own word for it is still worth taking (see `worker/src/duel.ts`).
  */
 export async function outfitOf(env: Env, id: string): Promise<Outfit | null> {
-  const held = await load(env, id);
-  return held ? held.outfit : null;
+  const stored = await read(env, id);
+  return stored ? stored.held.outfit : null;
 }

@@ -7,8 +7,8 @@
     "deploy": "wrangler deploy",
     "schema": "wrangler d1 execute broker-stars --remote --file=./schema.sql",
     "schema:local": "wrangler d1 execute broker-stars --local --file=./schema.sql",
-    "migrate": "wrangler d1 execute broker-stars --remote --file=./migrations/001-results-token.sql",
-    "migrate:local": "wrangler d1 execute broker-stars --local --file=./migrations/001-results-token.sql",
+    "migrate": "wrangler d1 execute broker-stars --remote --file",
+    "migrate:local": "wrangler d1 execute broker-stars --local --file",
     "test": "vitest run"
   },
   "devDependencies": {

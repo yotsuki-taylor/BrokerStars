@@ -8,6 +8,7 @@
  */
 
 import { tr } from './i18n';
+import { read, write } from './store';
 import type { RewardTable } from './progress';
 
 export interface League {
@@ -125,10 +126,15 @@ const PICK_KEY = 'brokerstars.league.pick';
 
 const emptyWins = (): number[] => LEAGUES.map(() => 0);
 
-/** Private browsing and locked-down webviews throw on access, so never assume. */
+/**
+ * The ladder lives on the server now (`src/profile/protocol.ts`): the server
+ * counts a win itself when the match is handed in, exactly as it counts the
+ * stars. This is the copy the menu reads before the first answer comes back,
+ * and the whole of it in a build with no server behind one.
+ */
 export function loadWins(): number[] {
   try {
-    const raw = JSON.parse(window.localStorage.getItem(WINS_KEY) ?? 'null');
+    const raw = JSON.parse(read(WINS_KEY) ?? 'null');
     if (!Array.isArray(raw)) return emptyWins();
     // stored under an older, shorter ladder: keep what is there, pad the rest
     return emptyWins().map((_, i) => {
@@ -141,29 +147,20 @@ export function loadWins(): number[] {
 }
 
 export function saveWins(wins: number[]): void {
-  try {
-    window.localStorage.setItem(WINS_KEY, JSON.stringify(wins));
-  } catch {
-    /* storage unavailable — league progress simply does not persist */
-  }
+  write(WINS_KEY, JSON.stringify(wins));
 }
 
-/** Last league played, clamped to what is actually open. */
+/**
+ * Last league played, clamped to what is actually open. This one stays on the
+ * phone: which desk you sat at last is a convenience, not progress, and it is
+ * allowed to differ between two devices.
+ */
 export function loadPick(wins: number[]): number {
-  let n = 0;
-  try {
-    n = Number(window.localStorage.getItem(PICK_KEY));
-  } catch {
-    n = 0;
-  }
-  if (!Number.isFinite(n)) n = 0;
-  return Math.min(Math.max(0, Math.floor(n)), unlockedCount(wins) - 1);
+  const n = Number(read(PICK_KEY));
+  const i = Number.isFinite(n) ? n : 0;
+  return Math.min(Math.max(0, Math.floor(i)), unlockedCount(wins) - 1);
 }
 
 export function savePick(index: number): void {
-  try {
-    window.localStorage.setItem(PICK_KEY, String(index));
-  } catch {
-    /* storage unavailable */
-  }
+  write(PICK_KEY, String(index));
 }

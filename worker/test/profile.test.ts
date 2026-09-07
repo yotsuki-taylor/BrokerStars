@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY,
+  LEAGUES,
   balance,
+  bankWin,
   buyItem,
   buyRoom,
   claimInto,
@@ -171,7 +173,7 @@ describe('getting dressed', () => {
 
 describe('the migration', () => {
   const claim = (over: Record<string, unknown> = {}) =>
-    cleanClaim({ stars: 0, room: 0, owned: {}, outfit: {}, ...over });
+    cleanClaim({ stars: 0, room: 0, owned: {}, outfit: {}, wins: [], ...over }, LEAGUES);
 
   it('takes a save at its word while the server has nothing of its own', () => {
     expect(untouched(EMPTY)).toBe(true);
@@ -220,8 +222,39 @@ describe('the migration', () => {
     expect([...setOf(h.owned)].sort()).toEqual(['hat-common', 'hat-rare', 'hat-uncommon']);
   });
 
+  it('brings the ladder across, which nothing else could reconstruct', () => {
+    const h = claimInto(EMPTY, 0, claim({ wins: [7, 3] }));
+    expect(h.wins.slice(0, 2)).toEqual([7, 3]);
+    expect(h.wins).toHaveLength(LEAGUES);
+  });
+
+  it('counts a ladder as something worth shutting the door for', () => {
+    // a save with nothing bought but three wins in it is still a save
+    expect(untouched(claimInto(EMPTY, 0, claim({ wins: [3] })))).toBe(false);
+  });
+
   it('caps a claim that has clearly been edited by hand', () => {
     const h = claimInto(EMPTY, 0, claim({ stars: 1e12 }));
     expect(balance(h, 0)).toBe(100_000);
+  });
+});
+
+describe('climbing the ladder', () => {
+  it('counts a win in the league it was won in', () => {
+    const h = bankWin(bankWin(EMPTY, 0), 0);
+    expect(h.wins[0]).toBe(2);
+    expect(h.wins[1]).toBe(0);
+  });
+
+  it('ignores a league that is not on the ladder', () => {
+    expect(bankWin(EMPTY, LEAGUES)).toEqual(EMPTY);
+    expect(bankWin(EMPTY, -1)).toEqual(EMPTY);
+    expect(bankWin(EMPTY, 1.5)).toEqual(EMPTY);
+  });
+
+  it('leaves the one it was given alone', () => {
+    const before = { ...EMPTY, wins: EMPTY.wins.slice() };
+    bankWin(before, 2);
+    expect(before.wins[2]).toBe(0);
   });
 });

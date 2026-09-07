@@ -19,6 +19,7 @@
  */
 
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
+import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
 import type { Outfit, Rarity, Slot } from './wardrobe';
 
@@ -277,7 +278,7 @@ export async function flushPending(): Promise<void> {
  */
 const profileCall = async (path: string, body: Record<string, unknown> = {}) => {
   const answer = ok(await post(path, body)) as { profile?: unknown } | null;
-  return cleanProfile(answer?.profile);
+  return cleanProfile(answer?.profile, LEAGUE_COUNT);
 };
 
 /**

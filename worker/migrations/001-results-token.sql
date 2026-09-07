@@ -5,8 +5,8 @@
 -- so a column added to a table that already exists somewhere lives here instead
 -- and is run once, by hand:
 --
---   npm run migrate           -- against the deployed database
---   npm run migrate:local     -- against the wrangler dev one
+--   npm run migrate -- ./migrations/001-results-token.sql
+--   npm run migrate:local -- ./migrations/001-results-token.sql
 --
 -- A database created from scratch after this already has the column: it is in
 -- `schema.sql` too, on the CREATE TABLE. Running this file against such a
