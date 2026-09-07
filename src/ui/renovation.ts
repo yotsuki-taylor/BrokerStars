@@ -17,19 +17,38 @@ export interface RoomStep {
 }
 
 /**
- * Renovation order, exactly as it is offered. Prices climb so the room stays
- * something to work towards rather than a first-evening purchase — all eight
- * numbers live here and nowhere else, and they come to 144 stars.
+ * Renovation order, exactly as it is offered. All eight numbers live here and
+ * nowhere else, and they come to 1000 stars.
+ *
+ * DELIBERATELY A TENTH OF THE WARDROBE, WHICH IS 7750. The room is the one
+ * thing a player buys that does nothing: it changes the picture behind the
+ * menu and not a single number in a match, where every rung of a slot hands
+ * out a perk. A cosmetic that costs what a perk costs is a cosmetic nobody
+ * sane buys, and this used to be worse in the other direction — the eight
+ * steps came to 144 stars against a wardrobe of 415, so the room was a quarter
+ * of everything there was to buy and finished in an afternoon.
+ *
+ * The shape follows two rules. No step costs more than the SECOND rung of a
+ * slot (`PRICES.uncommon` is 200, the dearest step here is 260 — close enough
+ * that the room never out-prices a garment that actually does something), and
+ * the first step at 20 stays the cheapest purchase in the game, under even the
+ * common. That first one is the tutorial for spending: it is on the menu from
+ * the first minute, and it should be affordable on the first evening.
+ *
+ * At what a league pays and what the day's quests add, the whole room is two
+ * to five weeks — a side goal that finishes while the wardrobe is still
+ * months away, which is the right order for the thing with an award on it and
+ * no effect on play.
  */
 export const ROOM_STEPS: RoomStep[] = [
-  { slot: 'bg', label: 'WALLS & FLOOR', price: 3 },
-  { slot: 'bed', label: 'BED', price: 6 },
-  { slot: 'door', label: 'DOOR', price: 10 },
-  { slot: 'window', label: 'WINDOW', price: 15 },
-  { slot: 'table', label: 'TABLE', price: 20 },
-  { slot: 'shelf', label: 'SHELF', price: 25 },
-  { slot: 'rug', label: 'RUG', price: 30 },
-  { slot: 'picture', label: 'PICTURE', price: 35 },
+  { slot: 'bg', label: 'WALLS & FLOOR', price: 20 },
+  { slot: 'bed', label: 'BED', price: 40 },
+  { slot: 'door', label: 'DOOR', price: 70 },
+  { slot: 'window', label: 'WINDOW', price: 100 },
+  { slot: 'table', label: 'TABLE', price: 130 },
+  { slot: 'shelf', label: 'SHELF', price: 170 },
+  { slot: 'rug', label: 'RUG', price: 210 },
+  { slot: 'picture', label: 'PICTURE', price: 260 },
 ];
 
 /**
