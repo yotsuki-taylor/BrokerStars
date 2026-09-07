@@ -23,7 +23,7 @@ enabled = true
 # is the right answer for a deployment that is not yours.
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
-# ADMIN_ID = "165233146"
+ADMIN_ID = "165233146"
 
 [[d1_databases]]
 binding = "DB"

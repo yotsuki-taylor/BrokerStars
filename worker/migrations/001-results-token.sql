@@ -8,6 +8,11 @@
 --   npm run migrate -- ./migrations/001-results-token.sql
 --   npm run migrate:local -- ./migrations/001-results-token.sql
 --
+-- BEFORE `npm run schema`, not after. The schema builds `results_by_token` over
+-- the column below, so on a database that predates it the schema run dies on
+-- "no such column: token" halfway through. This file goes first and the schema
+-- then finds everything it wants already there.
+--
 -- A database created from scratch after this already has the column: it is in
 -- `schema.sql` too, on the CREATE TABLE. Running this file against such a
 -- database fails on the ALTER with "duplicate column name", which is the right
