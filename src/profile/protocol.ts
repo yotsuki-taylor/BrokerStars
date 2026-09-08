@@ -23,6 +23,11 @@
  * handed in, the same way coins are, rather than being something the client
  * banks and reports.
  *
+ * The portfolio is here for the same reason the coins are, and more so: shares
+ * are bought with a balance the server keeps, at a price the server decides
+ * (`src/market/protocol.ts`), so a book the browser owned would be a book the
+ * browser could write.
+ *
  * What is deliberately NOT here: the company archive, the board preferences,
  * the language, and which league was played last. None of them is progress —
  * they are conveniences, and they are allowed to differ between two phones.
@@ -30,6 +35,7 @@
 
 import { cleanAwards } from '../awards/catalogue';
 import { cleanDaily, type Daily } from '../daily/protocol';
+import { cleanPortfolio, type Portfolio } from '../market/protocol';
 import { COMPANIES } from '../sim/companies';
 import { ROOM_DONE } from '../ui/renovation';
 import { RARITIES, SLOTS, itemId, type Outfit, type Rarity, type Slot } from '../ui/wardrobe';
@@ -78,11 +84,13 @@ export interface Profile {
   earned: number;
   spent: number;
   /**
-   * The hard currency, paid by the daily bonus and by nothing else yet. One
-   * number rather than the three above, because unlike coins it is nobody's
+   * The hard currency, paid by the daily bonus and spent at the share counter.
+   * One number rather than the three above, because unlike coins it is nobody's
    * ranking: see `src/daily/protocol.ts`.
    */
   dollars: number;
+  /** shares held, by company — what the dollars were spent on */
+  portfolio: Portfolio;
   /** the bonus and the quests as they stand TODAY — already rolled over */
   daily: Daily;
   /** renovation steps finished, 0..ROOM_DONE */
@@ -271,6 +279,7 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
     wins: cleanWins(src.wins, leagues),
     awards: cleanAwards(src.awards),
     dollars: cleanCount(src.dollars),
+    portfolio: cleanPortfolio(src.portfolio),
     // The server rolls the day over before it answers, so this is today's by
     // the time it gets here. `DailyScreen` rolls it again anyway, for the game
     // left open across midnight.

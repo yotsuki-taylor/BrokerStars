@@ -31,7 +31,9 @@
  * no process to keep alive anywhere.
  */
 
+import { dayOf } from '../../src/daily/protocol';
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
+import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate } from './bot';
@@ -391,6 +393,71 @@ async function refund(request: Request, env: Env) {
   );
 }
 
+/* ----------------------------------------------------------- the market */
+
+/**
+ * The last fortnight of every company's price, which is the whole of what the
+ * archive needs to draw a row, a chart and a change since yesterday.
+ *
+ * Public and unsigned, because it carries nobody's identity: it is the same
+ * answer for every player alive, which is exactly why it can be cached. What it
+ * is NOT is a formula — the walk behind it is seeded with `MARKET_SALT`, so
+ * sending prices out is not the same as letting anybody work out tomorrow's.
+ * That is the entire reason this route exists rather than the browser computing
+ * its own (`src/market/protocol.ts` says so at more length).
+ *
+ * Five minutes of caching. A price only changes at midnight UTC, so this could
+ * be held far longer — but a stale answer either side of the roll is the one
+ * moment it would be wrong, and the client is told which day it is looking at
+ * anyway.
+ */
+function market(env: Env) {
+  const day = dayOf(Date.now());
+  return new Response(
+    JSON.stringify({ day, prices: marketFor(day, HISTORY_DAYS, env.MARKET_SALT ?? '') }),
+    {
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'public, max-age=300',
+        ...CORS,
+      },
+    },
+  );
+}
+
+/**
+ * Buying or selling shares. The body names a company, a size and a direction,
+ * and nothing else is believed: the price, the day, how many orders are left
+ * and whether this player has ever met the company are all worked out on this
+ * side (`profiles.trade`).
+ *
+ * A refusal answers 200 with the profile in it, for the reason a refused
+ * purchase does — the cure for a client whose picture of the world is out of
+ * date is the up to date one, not an error code.
+ */
+async function tradeShares(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  const id = String(body.company ?? '');
+  const shares = Math.floor(Number(body.shares));
+  const sell = body.sell === true;
+  if (!id) return bad(400, 'no such company');
+  // A size that is not a number, or is absurd, is refused before it reaches a
+  // rule that would only refuse it for being unaffordable.
+  if (!Number.isFinite(shares) || shares <= 0 || shares > 1_000_000) {
+    return bad(400, 'bad size');
+  }
+
+  const now = Date.now();
+  return sent(
+    await profiles.change(env, caller, (held) =>
+      profiles.trade(held, id, shares, sell, env.MARKET_SALT ?? '', now),
+    ),
+  );
+}
+
 /* ----------------------------------------------------------------- duels */
 
 /**
@@ -519,11 +586,17 @@ export default {
 
     if (url.pathname === '/result' && request.method === 'POST') return submit(request, env);
 
+    // The same prices for everybody, so no signature and no identity — see
+    // `market` above for why sending them out is not the same as publishing
+    // the walk that made them.
+    if (url.pathname === '/market' && request.method === 'GET') return market(env);
+
     if (request.method === 'POST') {
       if (url.pathname === '/profile') return openProfile(request, env);
       if (url.pathname === '/profile/buy') return buy(request, env);
       if (url.pathname === '/profile/wear') return wear(request, env);
       if (url.pathname === '/profile/daily') return daily(request, env);
+      if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
     }
 

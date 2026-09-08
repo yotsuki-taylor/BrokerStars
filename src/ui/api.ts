@@ -18,6 +18,7 @@
  *   nothing to send. Reading the board still works: it is public.
  */
 
+import { cleanMarket, type Market } from '../market/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
 import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
@@ -342,3 +343,37 @@ export const refundItem = (slot: Slot, rarity: Rarity): Promise<Profile | null> 
 
 export const refundRoomStep = (): Promise<Profile | null> =>
   profileCall('/profile/refund', { room: true });
+
+/**
+ * Buy or sell shares.
+ *
+ * What is NOT sent: the price. The server works that out for the day it is on
+ * its own clock, with a salt that never leaves it — which is the whole reason
+ * the browser asks for prices below instead of computing them. A refusal comes
+ * back as the profile as it really stands, like every other one here.
+ */
+export const tradeShares = (
+  company: string,
+  shares: number,
+  sell: boolean,
+): Promise<Profile | null> => profileCall('/profile/trade', { company, shares, sell });
+
+/* -------------------------------------------------------------- the market */
+
+/**
+ * The last fortnight of every company's price.
+ *
+ * Public reading, like the board: it is the same answer for everybody and
+ * carries nobody's identity, so it needs no signature and works in a plain
+ * browser. Null when there is no server configured at all — and then the
+ * archive falls back to computing the walk itself with no salt, which is the
+ * same bargain every other number here strikes in a build with no server
+ * (`src/ui/market.ts`).
+ */
+export async function fetchMarket(): Promise<Market | null> {
+  if (!BASE) return null;
+  const body = ok(await call('/market'));
+  if (!body) return null;
+  const market = cleanMarket(body);
+  return Object.keys(market.prices).length ? market : null;
+}

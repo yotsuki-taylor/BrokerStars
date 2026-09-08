@@ -57,6 +57,9 @@ describe('rolling over', () => {
       bonus: true,
       progress: { 'win-1': 1 },
       taken: ['win-1'],
+      // the day carries the share counter's order count too, and it goes with
+      // the rest of yesterday
+      orders: 2,
     };
     expect(rolled(yesterday, NOON)).toEqual(freshDay(dayOf(NOON)));
   });

@@ -27,6 +27,22 @@ export interface Env {
    * `profile.ts`.
    */
   ADMIN_ID?: string;
+  /**
+   * The salt every share price is seeded with — set it with
+   * `wrangler secret put MARKET_SALT`.
+   *
+   * This one IS a secret, and the only one here besides the bot token. The walk
+   * in `src/market/protocol.ts` is deterministic, so anybody holding the salt
+   * can work out what a company will be worth tomorrow and buy it today. Which
+   * is why the browser is sent prices rather than the means to compute them
+   * (`/market`), and why this never leaves the Worker.
+   *
+   * Without it every deployment would price shares identically, which is
+   * exactly what a published formula would be. Missing is not fatal — the
+   * counter still works, with the same prices a local build draws — but any
+   * deployment people actually play on should set one.
+   */
+  MARKET_SALT?: string;
   DUEL: DurableObjectNamespace;
 }
 

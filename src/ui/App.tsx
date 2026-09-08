@@ -49,8 +49,10 @@ import {
   openProfile,
   refreshProfile,
   refundItem as refundItemOnServer,
+  fetchMarket,
   refundRoomStep,
   submitResult,
+  tradeShares,
   wearOutfit,
 } from './api';
 import { setOf, topsOf, type Profile } from '../profile/protocol';
@@ -66,6 +68,21 @@ import {
   type DayFacts,
 } from '../daily/protocol';
 import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
+import {
+  ORDERS_A_DAY,
+  buyShares,
+  ordersLeft,
+  priceIn,
+  sellShares,
+  type Market,
+} from '../market/protocol';
+import {
+  loadMarket,
+  loadPortfolio,
+  localMarket,
+  saveMarket,
+  savePortfolio,
+} from './market';
 import {
   DuelSocket,
   applySync,
@@ -360,6 +377,14 @@ export default function App() {
   /** the hard currency, and the day it is paid out by — see `src/daily/protocol.ts` */
   const [dollars, setDollars] = useState(loadDollars);
   const [daily, setDaily] = useState(loadDaily);
+  /** the share book, and the prices it is drawn at — see `src/market/protocol.ts` */
+  const [portfolio, setPortfolio] = useState(loadPortfolio);
+  /**
+   * Today's prices. The server's if there is one, and this end's own walk if
+   * there is not — an unsalted market nobody's balance is settled at, which is
+   * still better than a counter that does nothing in `npm run dev`.
+   */
+  const [market, setMarket] = useState<Market>(() => loadMarket() ?? localMarket());
   /** companies the player has met — filed by the match that put them up */
   const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
@@ -431,6 +456,8 @@ export default function App() {
     saveStars(p.coins);
     setDollars(p.dollars);
     saveDollars(p.dollars);
+    setPortfolio(p.portfolio);
+    savePortfolio(p.portfolio);
     // The server has already rolled the day over; this end rolls it again only
     // for a game that was left open past midnight (see the render below).
     setDaily(p.daily);
@@ -488,6 +515,67 @@ export default function App() {
       ),
     );
   }, [reconcile]);
+
+  /**
+   * Today's prices, asked for once on the way in.
+   *
+   * Public reading like the board — no signature, and it works in a plain
+   * browser. What comes back replaces the walk this end computed for itself;
+   * they will disagree, because the server salts its seed and this end cannot
+   * (`src/market/protocol.ts`), and the server's is the one anything is settled
+   * at.
+   *
+   * There is no polling. A price moves once a day, at the same midnight the
+   * bonus comes back, so the answer is good for as long as the app is open —
+   * and the one moment it is not, the day rolls and every screen is redrawn off
+   * a fresh profile anyway.
+   */
+  useEffect(() => {
+    void fetchMarket().then((m) => {
+      if (!m) return;
+      setMarket(m);
+      saveMarket(m);
+    });
+  }, []);
+
+  /**
+   * One order at the share counter, drawn here and settled on the server.
+   *
+   * The same shape as a purchase in the shop: the book and the balance move at
+   * once so the buttons feel like buttons, and whatever the server answers
+   * replaces them. Everything checked here is checked again on the other side
+   * against the price IT works out for today (`profiles.trade`), and the guards
+   * here only stop a double tap.
+   *
+   * The two normally agree to the coin, because the price drawn here came from
+   * the server in the first place (`/market`). They disagree in exactly one
+   * case — that request failed and the fallback walk is on screen — and then
+   * the answer is the truth and the balance snaps to it.
+   */
+  const tradeAtCounter = useCallback(
+    (id: string, shares: number, sell: boolean) => {
+      const today = rolled(daily, Date.now());
+      if (ordersLeft(today) <= 0) return;
+      const price = priceIn(market, id);
+      if (price === null) return;
+
+      const done = sell
+        ? sellShares(portfolio, dollars, id, shares, price, market.day)
+        : buyShares(portfolio, dollars, id, shares, price, market.day);
+      if (!done.ok) return;
+
+      setPortfolio(done.portfolio);
+      savePortfolio(done.portfolio);
+      setDollars(done.dollars);
+      saveDollars(done.dollars);
+      const next = { ...today, orders: Math.min(ORDERS_A_DAY, today.orders + 1) };
+      setDaily(next);
+      saveDaily(next);
+      haptic('heavy');
+      reconcile(tradeShares(id, shares, sell));
+    },
+    [daily, dollars, market, portfolio, reconcile],
+  );
 
   /* ------------------------------------------------- simulation + render loop */
   useEffect(() => {
@@ -1389,6 +1477,13 @@ export default function App() {
         <ArchiveScreen
           seen={seenCompanies}
           profile={profile}
+          counter={{
+            market,
+            portfolio,
+            dollars,
+            daily: rolled(daily, Date.now()),
+            onTrade: tradeAtCounter,
+          }}
           onBack={() => setScreen('menu')}
         />
       </div>

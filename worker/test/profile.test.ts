@@ -12,6 +12,7 @@ import {
   priceOf,
   refundItem,
   refundRoom,
+  trade,
   untouched,
   wear,
   withToday,
@@ -31,6 +32,8 @@ import {
   type DayFacts,
   type Quest,
 } from '../../src/daily/protocol';
+import { ORDERS_A_DAY, askOf, bidOf, priceOn } from '../../src/market/protocol';
+import { companyById } from '../../src/sim/companies';
 import type { MatchFacts } from '../src/awards';
 
 /**
@@ -498,5 +501,111 @@ describe('a match counted against the day', () => {
       held = { ...held, daily: countMatch(held.daily, match({ duel: false }), day.at) };
     }
     expect(claimQuest(held, quest.id, day.at)).toEqual({ ok: false, error: 'not finished' });
+  });
+});
+
+describe('the share counter', () => {
+  const NOON = Date.UTC(2026, 2, 14, 12);
+  const TODAY = dayOf(NOON);
+  const SALT = 'a-real-deployment';
+  const nova = companyById('nova')!;
+  const price = priceOn(nova, TODAY, SALT);
+
+  /** somebody who has met NOVA, has money, and has not traded today */
+  const trader = (over: Partial<Held> = {}): Held =>
+    held({ seen: ['nova'], dollars: 100_000, daily: freshDay(TODAY), ...over });
+
+  it('charges the asking price and files the shares', () => {
+    const out = trade(trader(), 'nova', 2, false, SALT, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.dollars).toBe(100_000 - askOf(price) * 2);
+    expect(out.held.portfolio.nova.shares).toBe(2);
+    // dated by this server's day, so the overnight figure knows the player was
+    // not holding it last night
+    expect(out.held.portfolio.nova.day).toBe(TODAY);
+    expect(out.held.daily.orders).toBe(1);
+  });
+
+  it('pays the bid on the way out', () => {
+    const out = trade(
+      trader({ portfolio: { nova: { shares: 3, cost: 3000, day: TODAY - 5 } }, dollars: 0 }),
+      'nova',
+      3,
+      true,
+      SALT,
+      NOON,
+    );
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.dollars).toBe(bidOf(price) * 3);
+    expect(out.held.portfolio.nova).toBeUndefined();
+  });
+
+  /**
+   * The archive is the shop window. A company nobody has had on a board is one
+   * they cannot buy a piece of, which is the whole of what ties the counter to
+   * the game rather than leaving it beside it.
+   */
+  it('refuses a company this player has never met', () => {
+    expect(trade(trader({ seen: [] }), 'nova', 1, false, SALT, NOON)).toEqual({
+      ok: false,
+      error: 'not in the archive yet',
+    });
+  });
+
+  it('refuses a company the game does not have at all', () => {
+    expect(trade(trader({ seen: ['ghost-corp'] }), 'ghost-corp', 1, false, SALT, NOON).ok).toBe(
+      false,
+    );
+  });
+
+  it('allows three orders a day and no fourth', () => {
+    const spent = trader({ daily: { ...freshDay(TODAY), orders: ORDERS_A_DAY } });
+    expect(trade(spent, 'nova', 1, false, SALT, NOON)).toEqual({
+      ok: false,
+      error: 'no orders left today',
+    });
+  });
+
+  /**
+   * Yesterday's count is not today's. Nothing sweeps it — the day simply stops
+   * matching, exactly as it does for the bonus and the quests.
+   */
+  it('starts the count again the moment the day turns', () => {
+    const yesterday = trader({
+      daily: { ...freshDay(TODAY - 1), orders: ORDERS_A_DAY },
+    });
+    const out = trade(yesterday, 'nova', 1, false, SALT, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.daily.day).toBe(TODAY);
+    expect(out.held.daily.orders).toBe(1);
+  });
+
+  it('refuses what the balance will not cover, and spends no order doing it', () => {
+    const broke = trader({ dollars: 1 });
+    const out = trade(broke, 'nova', 1, false, SALT, NOON);
+    expect(out).toEqual({ ok: false, error: 'not enough dollars' });
+  });
+
+  it('refuses more shares than are held', () => {
+    expect(trade(trader(), 'nova', 1, true, SALT, NOON)).toEqual({
+      ok: false,
+      error: 'not that many shares',
+    });
+  });
+
+  /**
+   * The salt is the only thing standing between a published walk and a player
+   * who can see tomorrow, so a deployment that sets one must not settle trades
+   * at the prices a bundle can compute.
+   */
+  it('settles at the salted price, not the one the client could work out', () => {
+    const salted = trade(trader(), 'nova', 1, false, SALT, NOON);
+    const bare = trade(trader(), 'nova', 1, false, '', NOON);
+    expect(salted.ok && bare.ok).toBe(true);
+    if (!salted.ok || !bare.ok) return;
+    expect(salted.held.dollars).not.toBe(bare.held.dollars);
   });
 });

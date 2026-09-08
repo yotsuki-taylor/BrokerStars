@@ -162,8 +162,26 @@ const EN = {
   'archive.unknown': 'UNKNOWN',
   'archive.listsAt': 'LISTS AT {price}',
   'archive.tabCompanies': 'COMPANIES',
+  'archive.tabPortfolio': 'PORTFOLIO',
   'archive.tabAchievements': 'AWARDS',
   'archive.achievementsSoon': 'The things worth doing that nobody asked you to. Still being decided.',
+
+  /* The share counter. Coins buy hats; dollars buy a piece of the companies
+     you have already played against — see src/market/protocol.ts. */
+  'market.noPrices': 'No prices today. The counter is shut.',
+  'market.youHold': 'YOU HOLD {n}, IN AT {avg}',
+  'market.max': 'MAX',
+  'market.buyFor': 'BUY {price}',
+  'market.sellFor': 'SELL {price}',
+  'market.ordersLeft': '{n} of {of} orders left today',
+  'market.ordersDone': 'That is the last of today’s orders. Three more tomorrow.',
+  'market.bookValue': 'YOUR BOOK',
+  'market.sinceYesterday': 'SINCE YESTERDAY',
+  'market.cash': 'CASH',
+  'market.sharesAt': '{n} at {avg}',
+  'market.boughtToday': 'TRADED TODAY',
+  'market.bookEmpty': 'Nothing bought yet. Open a company you have met and take a piece of it.',
+  'market.pricesRoll': 'One price a day, drawn at midnight. Buy today, come back tomorrow and see what it did.',
 
   /* The leaderboard names itself once and the main menu reads the same key, so
      the button and the screen it opens can never drift apart. */
@@ -414,8 +432,24 @@ const RU: Record<Key, string> = {
   'archive.unknown': 'НЕИЗВЕСТНО',
   'archive.listsAt': 'ЦЕНА ОТ {price}',
   'archive.tabCompanies': 'КОМПАНИИ',
+  'archive.tabPortfolio': 'ПОРТФЕЛЬ',
   'archive.tabAchievements': 'НАГРАДЫ',
   'archive.achievementsSoon': 'То, что стоит сделать, хотя никто не просил. Пока решаем, что именно.',
+
+  'market.noPrices': 'Сегодня без котировок. Стойка закрыта.',
+  'market.youHold': 'У ВАС {n}, СРЕДНЯЯ {avg}',
+  'market.max': 'МАКС',
+  'market.buyFor': 'КУПИТЬ {price}',
+  'market.sellFor': 'ПРОДАТЬ {price}',
+  'market.ordersLeft': 'Сегодня осталось заявок: {n} из {of}',
+  'market.ordersDone': 'Заявки на сегодня кончились. Завтра будет ещё три.',
+  'market.bookValue': 'ВАШ ПОРТФЕЛЬ',
+  'market.sinceYesterday': 'СО ВЧЕРА',
+  'market.cash': 'НАЛИЧНЫЕ',
+  'market.sharesAt': '{n} шт по {avg}',
+  'market.boughtToday': 'СДЕЛКА СЕГОДНЯ',
+  'market.bookEmpty': 'Пока ничего не куплено. Откройте знакомую компанию и возьмите кусок.',
+  'market.pricesRoll': 'Одна цена в день, новая в полночь. Купите сегодня — завтра зайдите и посмотрите, что вышло.',
 
   'rating.title': 'РЕЙТИНГ',
   'rating.header': 'МОНЕТ ЗАРАБОТАНО',

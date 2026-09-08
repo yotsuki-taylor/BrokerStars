@@ -145,7 +145,17 @@ describe('a profile coming back', () => {
         streak: 1,
         seen: [COMPANIES[0].id, 'ghost-corp'],
         dollars: 2000,
-        daily: { day: 20_000, bonus: true, progress: { 'win-1': 1, ghost: 9 }, taken: ['ghost'] },
+        portfolio: {
+          [COMPANIES[0].id]: { shares: 4, cost: 3000, day: 19_990 },
+          'ghost-corp': { shares: 9, cost: 9, day: 19_990 },
+        },
+        daily: {
+          day: 20_000,
+          bonus: true,
+          progress: { 'win-1': 1, ghost: 9 },
+          taken: ['ghost'],
+          orders: 2,
+        },
         bestNetWorth: 31_000,
         topLeague: 1,
       },
@@ -166,9 +176,17 @@ describe('a profile coming back', () => {
       streak: 1,
       seen: [COMPANIES[0].id],
       dollars: 2000,
+      // a share in a company this build does not have goes the same way
+      portfolio: { [COMPANIES[0].id]: { shares: 4, cost: 3000, day: 19_990 } },
       // a quest this build does not have goes the way the award did, out of
       // the progress AND out of what has been cashed in
-      daily: { day: 20_000, bonus: true, progress: { 'win-1': 1 }, taken: [] },
+      daily: {
+        day: 20_000,
+        bonus: true,
+        progress: { 'win-1': 1 },
+        taken: [],
+        orders: 2,
+      },
       bestNetWorth: 31_000,
       topLeague: 1,
     });

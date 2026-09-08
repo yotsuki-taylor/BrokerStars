@@ -2469,8 +2469,17 @@ body {
 .arch-tabs {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* Three now that the share counter has its own tab. КОМПАНИИ and ПОРТФЕЛЬ
+     are the long words in Russian, so the row is sized to fit them at a
+     narrower letter-spacing rather than allowed to wrap to a second line. */
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
+}
+
+.arch-tabs .slot-tab {
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  padding: 0 2px;
 }
 
 /* A tab whose shelf is built and whose contents are not. */
@@ -2980,4 +2989,307 @@ body {
   font-size: 9px;
   letter-spacing: 0.5px;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------------------------------------- the share counter */
+
+/* Under the company on the COMPANIES tab: what a piece of it costs today, what
+   it did overnight, and the two buttons. The grid above it keeps the scroll —
+   this is a fixed strip, so the counter never pushes the roster off screen. */
+.trade {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  background: rgba(8, 34, 70, 0.72);
+  padding: 8px 10px;
+}
+
+.trade-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trade-price {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.trade-price em {
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+
+/* The three colours the whole counter reads in, and the same three the match
+   screen already uses for a position: green up, red down, grey nowhere. */
+.trade-price em.up,
+.folio-move.up,
+.folio-worth em.up {
+  color: var(--up);
+}
+
+.trade-price em.down,
+.folio-move.down,
+.folio-worth em.down {
+  color: var(--down);
+}
+
+.trade-price em.flat,
+.folio-move.flat,
+.folio-worth em.flat {
+  color: var(--neutral);
+}
+
+/* A fortnight of price, stretched to whatever room is left beside the number.
+   `non-scaling-stroke` on the line is what keeps it 2px through that stretch. */
+.spark {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  opacity: 0.9;
+}
+
+.trade-held {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  opacity: 0.7;
+}
+
+.trade-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trade-size > b {
+  min-width: 3ch;
+  text-align: center;
+  font-size: 16px;
+}
+
+.step {
+  border: var(--outline) solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(#1d5ea6, #10427c);
+  color: var(--white);
+  font: inherit;
+  font-size: 15px;
+  width: 34px;
+  height: 30px;
+  cursor: pointer;
+}
+
+.step.wide {
+  width: auto;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+}
+
+.step:disabled {
+  opacity: 0.4;
+}
+
+.trade-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.trade-actions .menu-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 40px;
+  font-size: 13px;
+}
+
+/* Green to buy and red to sell, which is the one place in the game those two
+   colours mean an instruction rather than a direction. They are the same pair
+   the match screen trades on, so the hand already knows where they are. */
+.menu-btn.buy {
+  background: linear-gradient(#3bbd5c, #23823f);
+}
+
+.menu-btn.sell {
+  background: linear-gradient(#d84c4c, #9b2f2f);
+}
+
+.menu-btn.buy:disabled,
+.menu-btn.sell:disabled {
+  filter: grayscale(0.7);
+  opacity: 0.5;
+}
+
+.trade-note {
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  opacity: 0.55;
+  text-align: center;
+}
+
+/* ------------------------------------------------------- the PORTFOLIO tab */
+
+.folio {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.folio-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius);
+  background: rgba(8, 34, 70, 0.72);
+  padding: 10px 12px;
+}
+
+.folio-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.folio-total i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  opacity: 0.55;
+}
+
+.folio-total b {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 22px;
+}
+
+/* The number the whole counter exists to produce, so it is drawn as big as the
+   total it is a change in. */
+.folio-move {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.folio-move b {
+  font-size: 20px;
+}
+
+.folio-move i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  opacity: 0.55;
+}
+
+.folio-cash {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  opacity: 0.7;
+  padding: 0 4px;
+}
+
+.folio-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.folio-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: var(--outline) solid var(--ink);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  background: rgba(8, 34, 70, 0.6);
+  padding: 7px 10px;
+}
+
+.folio-logo {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  /* A LogoMask is a coloured box with the artwork as its mask, so without these
+     it is drawn at the file's own size and cropped to the box. */
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
+
+.folio-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.folio-text b {
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folio-text i {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.folio-worth {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.folio-worth b {
+  font-size: 14px;
+}
+
+.folio-worth em {
+  font-style: normal;
+  font-size: 10px;
+}
+
+/* Why a row added nothing to the overnight number: it was traded today, so the
+   move from yesterday happened without it. */
+.folio-new {
+  font-style: normal;
+  font-size: 8px;
+  letter-spacing: 0.6px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 0.8;
+  white-space: nowrap;
 }

@@ -33,11 +33,22 @@ import {
   EMPTY_DAILY,
   cleanDaily,
   countMatch,
+  dayOf,
   questDone,
   questsToday,
   rolled,
   type Daily,
 } from '../../src/daily/protocol';
+import {
+  ORDERS_A_DAY,
+  buyShares,
+  cleanPortfolio,
+  ordersLeft,
+  priceOn,
+  sellShares,
+  type Portfolio,
+} from '../../src/market/protocol';
+import { companyById } from '../../src/sim/companies';
 import {
   cleanOutfit,
   cleanTops,
@@ -96,7 +107,9 @@ export interface Held {
    * are, because nothing ranks on it: see `src/daily/protocol.ts`.
    */
   dollars: number;
-  /** the bonus and the quests, for the day named inside it */
+  /** shares held, by company — what the dollars are spent on */
+  portfolio: Portfolio;
+  /** the bonus, the quests and the day's orders, for the day named inside it */
   daily: Daily;
 }
 
@@ -112,6 +125,7 @@ export const EMPTY: Held = {
   streak: 0,
   seen: [],
   dollars: 0,
+  portfolio: {},
   daily: EMPTY_DAILY,
 };
 
@@ -128,6 +142,7 @@ export const untouched = (h: Held): boolean =>
   h.wins.every((n) => n === 0) &&
   h.seen.length === 0 &&
   h.dollars === 0 &&
+  Object.keys(h.portfolio).length === 0 &&
   Object.keys(h.awards).length === 0;
 
 /**
@@ -164,6 +179,7 @@ export const view = (h: Held, earned: number, at: Standing): Profile => ({
   streak: h.streak,
   seen: h.seen,
   dollars: h.dollars,
+  portfolio: h.portfolio,
   // Already today's: `change` rolls the day before it hands the row to
   // anything, so nothing that reaches here can answer about yesterday.
   daily: h.daily,
@@ -357,6 +373,67 @@ export function claimQuest(h: Held, id: string, now: number): Bought {
   };
 }
 
+/* -------------------------------------------------------- the share counter */
+
+/**
+ * Shares bought or sold, at the price this server works out for today.
+ *
+ * FOUR THINGS ARE DECIDED HERE AND NOWHERE ELSE, and between them they are the
+ * whole reason the counter is not simply a screen:
+ *
+ *   WHICH DAY IT IS, off this clock. A browser that says it is tomorrow is a
+ *   browser that has seen tomorrow's price.
+ *
+ *   WHAT A SHARE COSTS. `priceOn` is seeded with `MARKET_SALT`, which never
+ *   leaves the Worker — the client is sent prices (`/market`) rather than the
+ *   means to compute them, so the walk stays unpredictable while staying
+ *   perfectly reproducible on this side. Nothing is read out of the body but
+ *   the company, the size, and which way round it is.
+ *
+ *   HOW MANY ORDERS ARE LEFT. Three a day (`ORDERS_A_DAY`), counted on the day
+ *   itself so nothing has to clear it at midnight.
+ *
+ *   WHETHER THE PLAYER HAS MET THE COMPANY. The archive is the shop window: a
+ *   company you have never had on a board is one you cannot buy a piece of.
+ *   That is the same rule the archive tab already draws, and it keeps the
+ *   counter tied to the game rather than sitting beside it.
+ *
+ * A refusal comes back with the profile as it really stands, like every other
+ * refusal here — the client redraws and the buttons tell the truth.
+ */
+export function trade(
+  h: Held,
+  id: string,
+  shares: number,
+  sell: boolean,
+  salt: string,
+  now: number,
+): Bought {
+  const company = companyById(id);
+  if (!company) return { ok: false, error: 'no such company' };
+  if (!h.seen.includes(id)) return { ok: false, error: 'not in the archive yet' };
+
+  const daily = rolled(h.daily, now);
+  if (ordersLeft(daily) <= 0) return { ok: false, error: 'no orders left today' };
+
+  const today = dayOf(now);
+  const price = priceOn(company, today, salt);
+  const done = sell
+    ? sellShares(h.portfolio, h.dollars, id, shares, price, today)
+    : buyShares(h.portfolio, h.dollars, id, shares, price, today);
+  if (!done.ok) return { ok: false, error: done.error };
+
+  return {
+    ok: true,
+    held: {
+      ...h,
+      portfolio: done.portfolio,
+      dollars: done.dollars,
+      daily: { ...daily, orders: Math.min(ORDERS_A_DAY, daily.orders + 1) },
+    },
+  };
+}
+
 /* -------------------------------------------------------------- the ladder */
 
 /**
@@ -423,10 +500,12 @@ export function claimInto(h: Held, earned: number, claim: Claim): Held {
     // The archive is different: which companies a player has met is not
     // recoverable from anything the server kept, so it rides in like the room.
     seen: [...new Set([...h.seen, ...claim.seen])],
-    // Neither of these is claimed, and neither ever will be. Dollars did not
-    // exist before this table did, so there is no save anywhere holding any —
-    // and a currency a client may claim is a currency a console mints.
+    // None of these is claimed, and none ever will be. Dollars did not exist
+    // before this table did, so there is no save anywhere holding any — and a
+    // currency a client may claim is a currency a console mints. A portfolio
+    // bought with such a currency is the same thing one step along.
     dollars: h.dollars,
+    portfolio: h.portfolio,
     daily: h.daily,
   };
 }
@@ -455,6 +534,7 @@ interface StoredRow {
   spent: number;
   granted: number;
   dollars: number;
+  portfolio: string;
   daily: string;
   updated_at: number;
 }
@@ -502,7 +582,7 @@ export async function standingOf(env: Env, id: string): Promise<Standing> {
 export async function read(env: Env, id: string): Promise<Stored | null> {
   const row = await env.DB.prepare(
     `SELECT room, owned, outfit, wins, awards, seen, duel_wins, streak,
-            spent, granted, dollars, daily, updated_at
+            spent, granted, dollars, portfolio, daily, updated_at
        FROM profiles WHERE id = ?1`,
   )
     .bind(id)
@@ -523,6 +603,7 @@ export async function read(env: Env, id: string): Promise<Stored | null> {
       duelWins: Math.max(0, row.duel_wins),
       streak: Math.max(0, row.streak),
       dollars: Math.max(0, row.dollars),
+      portfolio: cleanPortfolio(parse(row.portfolio)),
       // Exactly what is stored, yesterday's day included. `change` rolls it —
       // see `withToday`, and see why it is there and not here.
       daily: cleanDaily(parse(row.daily)),
@@ -558,6 +639,7 @@ export async function write(
   const wins = JSON.stringify(h.wins);
   const awards = JSON.stringify(h.awards);
   const seen = JSON.stringify(h.seen);
+  const portfolio = JSON.stringify(h.portfolio);
   const daily = JSON.stringify(h.daily);
 
   const res =
@@ -567,13 +649,13 @@ export async function write(
         await env.DB.prepare(
           `INSERT INTO profiles (id, room, owned, outfit, wins, awards, seen,
                                  duel_wins, streak, spent, granted,
-                                 dollars, daily, first_seen, updated_at)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)
+                                 dollars, portfolio, daily, first_seen, updated_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15)
            ON CONFLICT (id) DO NOTHING`,
         )
           .bind(
             id, h.room, owned, outfit, wins, awards, seen,
-            h.duelWins, h.streak, h.spent, h.granted, h.dollars, daily, now,
+            h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now,
           )
           .run()
       : await env.DB.prepare(
@@ -589,13 +671,14 @@ export async function write(
                   spent      = ?10,
                   granted    = ?11,
                   dollars    = ?12,
-                  daily      = ?13,
-                  updated_at = MAX(updated_at + 1, ?14)
-            WHERE id = ?1 AND updated_at = ?15`,
+                  portfolio  = ?13,
+                  daily      = ?14,
+                  updated_at = MAX(updated_at + 1, ?15)
+            WHERE id = ?1 AND updated_at = ?16`,
         )
           .bind(
             id, h.room, owned, outfit, wins, awards, seen,
-            h.duelWins, h.streak, h.spent, h.granted, h.dollars, daily, now, version,
+            h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now, version,
           )
           .run();
 

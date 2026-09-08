@@ -1,0 +1,22 @@
+-- The share book behind the archive's PORTFOLIO tab.
+--
+-- Only for a database whose `profiles` was created before the share counter
+-- existed. On a newer one `schema.sql` has already made the column and this
+-- file fails with "duplicate column name", which breaks nothing.
+--
+-- Run it BEFORE `npm run schema`, like the others: see
+-- `migrations/001-results-token.sql` for why that order and not the reverse.
+--
+--   npm run migrate -- ./migrations/005-profiles-portfolio.sql
+--   npm run migrate:local -- ./migrations/005-profiles-portfolio.sql
+--
+-- Nothing is backfilled and nothing needs to be. Everybody starts holding no
+-- shares, which is what everybody holds today, and the empty object is a valid
+-- portfolio rather than a broken one -- unlike `daily`, whose default '{}' is
+-- deliberately not a valid day.
+--
+-- Note what is NOT added: any record of what a share was worth. A price is a
+-- function of the company and the UTC day (src/market/protocol.ts), so there is
+-- no history to store and no midnight job to write one.
+
+ALTER TABLE profiles ADD COLUMN portfolio TEXT NOT NULL DEFAULT '{}';

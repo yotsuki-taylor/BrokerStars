@@ -18,7 +18,9 @@
  * Note what a dollar balance is NOT: it is not the coin total the board ranks
  * on (`players.stars`, a column that kept its old name), which must never go
  * down, so there is no earned/spent/granted split here. One number, and the
- * counter that will eventually spend it takes from it.
+ * counter that spends it takes from it — that counter is now
+ * `src/market/protocol.ts`, and the day below carries its order count for the
+ * same reason it carries everything else: it is the thing that rolls over.
  *
  * WHAT A DAY IS. `Math.floor(now / 86400000)` — the UTC day, counted off the
  * epoch by both sides. Not a local day, deliberately: a player who flies east
@@ -252,6 +254,16 @@ export interface Daily {
   progress: Record<string, number>;
   /** quests whose reward has already been handed over today */
   taken: string[];
+  /**
+   * Orders placed at the share counter today — buys and sells alike, capped by
+   * `ORDERS_A_DAY` in `src/market/protocol.ts`.
+   *
+   * It lives on the day rather than beside the portfolio for one reason: this
+   * is the object that already rolls over at midnight, and a counter kept
+   * anywhere else would need something to clear it. Nothing clears this. The
+   * day stops matching and it is gone with the rest.
+   */
+  orders: number;
 }
 
 /** A day nobody has played: earlier than any real one, so it rolls at once. */
@@ -262,6 +274,7 @@ export const freshDay = (day: number): Daily => ({
   bonus: false,
   progress: {},
   taken: [],
+  orders: 0,
 });
 
 export const EMPTY_DAILY: Daily = freshDay(NO_DAY);
@@ -411,5 +424,8 @@ export function cleanDaily(raw: unknown): Daily {
     bonus: src.bonus === true,
     progress,
     taken,
+    // A row written before the share counter existed has none, which reads as
+    // a day on which nobody has traded yet — the friendly way round.
+    orders: count(src.orders),
   };
 }
