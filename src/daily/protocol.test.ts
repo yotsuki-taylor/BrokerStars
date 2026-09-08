@@ -141,8 +141,8 @@ describe('a day off the wire', () => {
 });
 
 describe('what a day pays', () => {
-  it('is a round thousand, and quests pay coins rather than dollars', () => {
-    expect(DAILY_BONUS).toBe(1000);
+  it('is a round five hundred, and quests pay coins rather than dollars', () => {
+    expect(DAILY_BONUS).toBe(500);
     for (const q of QUESTS) expect(q.coins).toBeGreaterThan(0);
   });
 

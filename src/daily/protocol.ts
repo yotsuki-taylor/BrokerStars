@@ -33,8 +33,16 @@
 
 import { Rng, hashSeed } from '../sim/rng';
 
-/** What one day's bonus is worth. The whole of the hard currency, for now. */
-export const DAILY_BONUS = 1000;
+/**
+ * What one day's bonus is worth, and the whole of where dollars come from.
+ *
+ * It sets the pace of the share counter on its own: at 500 a day, against
+ * companies listing between 200 and 2600, a new player buys one share on their
+ * first evening and builds a book worth a few thousand over a fortnight. Turn
+ * this and you turn how fast the market becomes a second income — it is the
+ * one number that does that, so there is nothing else to keep in step.
+ */
+export const DAILY_BONUS = 500;
 
 export const MS_PER_DAY = 86_400_000;
 
