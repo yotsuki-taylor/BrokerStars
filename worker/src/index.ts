@@ -33,11 +33,13 @@
 
 import { dayOf } from '../../src/daily/protocol';
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
+import { cleanCode } from '../../src/friends/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
 import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
-import { answerUpdate } from './bot';
+import { answerUpdate, duelPush } from './bot';
+import * as friends from './friends';
 import * as profiles from './profile';
 import {
   REWARDS,
@@ -48,7 +50,14 @@ import {
   type Outcome,
   type Row,
 } from './results';
-import { botUsername, type Caller, sameSecret, verifyInitData, webhookSecret } from './telegram';
+import {
+  botUsername,
+  sendMessage,
+  type Caller,
+  sameSecret,
+  verifyInitData,
+  webhookSecret,
+} from './telegram';
 
 export { Duel } from './duel';
 export { verifyInitData } from './telegram';
@@ -512,7 +521,7 @@ const duelStub = (env: Env, code: string) => env.DUEL.get(env.DUEL.idFromName(`d
 async function newDuel(request: Request, env: Env) {
   if (!env.BOT_TOKEN) return bad(503, 'no bot token configured');
 
-  let body: { initData?: unknown; outfit?: unknown; league?: unknown };
+  let body: { initData?: unknown; outfit?: unknown; league?: unknown; invite?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -548,9 +557,87 @@ async function newDuel(request: Request, env: Env) {
   const bot = await botUsername(env.BOT_TOKEN);
   const link = bot ? `https://t.me/${bot}?start=duel_${code}` : null;
 
+  // Called somebody out by name from the friends list? Then the invitation is
+  // pushed into their Telegram rather than handed over by the player, and
+  // `sent` says whether it landed — a friend who has blocked the bot cannot be
+  // written to, and the screen falls back to the link it already has.
+  //
+  // Being on the list is the permission: the bot can message anybody who ever
+  // started it, so without this check the route would be a way to have it
+  // message a stranger.
+  const invite = String(body.invite ?? '').slice(0, 32);
+  let sent = false;
+  if (invite && env.WEBAPP_URL && (await friends.areFriends(env, caller.id, invite))) {
+    sent = await sendMessage(env.BOT_TOKEN, invite, duelPush(env.WEBAPP_URL, code, caller.name));
+  }
+
   // A ladder position the guest has not climbed is not a payout — see
   // `topLeague`. Telling the host now is friendlier than at the whistle.
-  return json({ ok: true, code, link, expiresAt, yourLeague: await topLeague(env, caller.id) });
+  return json({
+    ok: true,
+    code,
+    link,
+    expiresAt,
+    sent,
+    yourLeague: await topLeague(env, caller.id),
+  });
+}
+
+/* --------------------------------------------------------------- friends */
+
+/**
+ * The friends menu, both halves of it: the caller's own invitation link, and
+ * the list of everybody who has ever tapped one of theirs or had one tapped.
+ *
+ * Signed like the profile routes and for the same reason — a list of who
+ * somebody knows is not the leaderboard, and there is nobody it is public
+ * reading for. The code is minted here the first time it is asked for, so
+ * nothing has to happen when a player is created.
+ */
+async function myFriends(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller } = asked;
+  return json(await friendList(env, caller));
+}
+
+/**
+ * Adding one. The body carries a code and nothing else that is believed: who
+ * it belongs to, whether it is the caller's own, and whether either side is
+ * full are all worked out on this side (`friends.befriend`).
+ *
+ * A refusal answers 200 with the list in it, exactly like a refused purchase
+ * does — the cure for a client whose picture of the world is out of date is
+ * the up to date one rather than an error code. The screen shows the sentence
+ * and the list underneath is already right.
+ */
+async function addFriend(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  const code = cleanCode(body.code);
+  const error = code ? await friends.befriend(env, caller, code) : 'nosuch';
+  return json({ ...(await friendList(env, caller)), ok: !error, error });
+}
+
+/** The whole answer, every time: the client's job is to draw what comes back. */
+async function friendList(env: Env, caller: Caller) {
+  const [code, list, bot] = await Promise.all([
+    friends.codeFor(env, caller),
+    friends.list(env, caller.id),
+    // The link goes through the bot rather than straight at the game, for the
+    // reason a duel's does: the friend it lands on may never have opened the
+    // mini app, and `?start=` is the one door Telegram opens for somebody who
+    // has not.
+    env.BOT_TOKEN ? botUsername(env.BOT_TOKEN) : null,
+  ]);
+  return {
+    ok: true,
+    code,
+    link: bot ? `https://t.me/${bot}?start=friend_${code}` : null,
+    friends: list,
+  };
 }
 
 /* -------------------------------------------------------------- the bot */
@@ -636,6 +723,8 @@ export default {
       if (url.pathname === '/profile/daily') return daily(request, env);
       if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
+      if (url.pathname === '/friends') return myFriends(request, env);
+      if (url.pathname === '/friends/add') return addFriend(request, env);
     }
 
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);

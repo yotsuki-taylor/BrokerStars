@@ -2640,8 +2640,12 @@ body {
   gap: 4px;
 }
 
-/* rank, name, matches, coins — the name is the only part allowed to grow */
-.rating-line {
+/* rank, name, matches, coins — the name is the only part allowed to grow.
+   The friends menu draws the same row out of the same columns: it is the same
+   table cut down to the people whose names mean something, and two rules that
+   have to be kept looking identical would be two rules that stop. */
+.rating-line,
+.friend-line {
   display: grid;
   grid-template-columns: 26px 1fr auto auto;
   align-items: center;
@@ -2691,6 +2695,130 @@ body {
   letter-spacing: 3px;
 }
 
+/* ---------- friends ---------- */
+
+/* The list takes what the screen has left after the header and the two buttons
+   at the bottom, and scrolls inside it — those buttons are the only things on
+   this screen that do anything, and they must not be scrolled away from. */
+.friend-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.friend-actions {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+}
+
+.friend-actions .menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.friend-note {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.friend-note.good {
+  color: var(--up);
+}
+
+.friend-note.bad {
+  color: var(--down);
+}
+
+/* A row is a button now, and a button that has to keep looking like a row:
+   the grid, the border and the padding are all inherited from `.rating-line`
+   above, so only what a <button> brings with it needs undoing. */
+.friend-line {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.friend-line:active {
+  transform: translateY(1px);
+  filter: brightness(1.15);
+}
+
+/* Everything that is not the menu. Transparent rather than dimmed: the list
+   underneath is the context for the two words on the menu, and dimming it
+   would be a modal announcing itself for a choice this small. */
+.friend-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+/* Fixed, and placed from the row's own rectangle (`openPopup`): the list
+   scrolls, and a menu parented to a scrolling box is cut off at its edge. */
+.friend-pop {
+  position: fixed;
+  z-index: 41;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 6px;
+  min-width: 148px;
+  padding: 7px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 12px;
+  background: linear-gradient(#123a68, #0b2748);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  animation: pop-in 0.09s ease-out;
+}
+
+/* Not enough room underneath, so it hangs off the top of the row instead. */
+.friend-pop.above {
+  transform: translate(-50%, -100%);
+}
+
+.friend-pop .menu-btn {
+  padding: 9px 14px;
+  font-size: 13px;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friend-pop {
+    animation: none;
+  }
+}
+
+/* ---------- visiting a friend ---------- */
+
+/* Their room, drawn out of the menu's own pieces — see VisitScreen. The card
+   across the bottom sits where the renovation card sits on the player's own
+   menu and says the one thing a guest can learn from it. */
+.visit-card {
+  justify-content: space-between;
+}
+
+.visit-room {
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
 /* ---------- the day: the bonus, the quests, and the way in to them ---------- */
 
 /* The dollar counter, beside the coins and deliberately not matching them.
@@ -2717,10 +2845,13 @@ body {
 /* Absolute, and standing AFTER `.menu > *:not(.room)` on purpose: that rule
    puts every child of the menu back into the flow, the two selectors weigh
    exactly the same, and this one only wins by being later in the file. */
-.menu > .daily-btn {
+/* The rail down the left edge of the room: round buttons for the things that
+   are collected or looked at rather than places to go, which is what the four
+   in the column at the bottom are. Two of them today, and the class carries
+   everything but where each one sits. */
+.menu > .rail-btn {
   position: absolute;
   z-index: 2;
-  top: 22%;
   left: 0;
   width: 56px;
   height: 56px;
@@ -2738,12 +2869,22 @@ body {
   transition: transform 0.06s;
 }
 
-.menu > .daily-btn:active {
+.menu > .rail-btn:active {
   transform: translateY(2px);
 }
 
-.menu > .daily-btn > svg {
+.menu > .rail-btn > svg {
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4));
+}
+
+.menu > .daily-btn {
+  top: 22%;
+}
+
+/* One button's height and a gap below the daily bonus, so the two read as a
+   rail rather than as two buttons that happen to be near each other. */
+.menu > .friends-btn {
+  top: calc(22% + 68px);
 }
 
 /* Something behind it. Gold rather than grey, and breathing rather than

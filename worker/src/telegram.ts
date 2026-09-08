@@ -100,6 +100,38 @@ export async function webhookSecret(botToken: string): Promise<string> {
 export const sameSecret = sameSignature;
 
 /**
+ * Say something to somebody, out of the blue.
+ *
+ * Every other message this bot sends is the answer to a webhook, which costs
+ * nothing and needs no token — see `bot.ts`. This one is not an answer to
+ * anything: it is a duel invitation being pushed into a friend's Telegram
+ * while they are doing something else, so it has to be a real call to the API.
+ *
+ * A private chat's id IS the user's id, which is why a friend's row is all the
+ * address this needs. False rather than throwing on every way it can fail, and
+ * they are ordinary: somebody who has never started the bot, or has blocked
+ * it, cannot be written to, and Telegram says so with a 403. The caller shows
+ * the link instead, which is what it would have done anyway.
+ */
+export async function sendMessage(
+  token: string,
+  chatId: string,
+  message: Record<string, unknown>,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, ...message }),
+    });
+    const body = (await res.json()) as { ok?: boolean };
+    return body?.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The bot's @name, asked of Telegram once and kept for the life of the isolate.
  *
  * A duel invitation is a `t.me/<bot>?start=...` link, and the name in it is

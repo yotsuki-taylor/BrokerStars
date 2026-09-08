@@ -31,6 +31,7 @@ import ArchiveScreen from './ArchiveScreen';
 import DailyScreen from './DailyScreen';
 import DuelScreen, { type DuelPhase } from './DuelScreen';
 import DevPanel from './DevPanel';
+import FriendsScreen from './FriendsScreen';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
 import RatingScreen from './RatingScreen';
@@ -96,6 +97,7 @@ import {
   type Link,
 } from './duel';
 import { apiBase } from './api';
+import { friendCodeFromLaunch } from './friends';
 import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
@@ -176,6 +178,12 @@ interface DuelUi {
   rivalGone: boolean;
   /** the league the server actually paid at, once it has said */
   payLeague: number | null;
+  /**
+   * Called out by name from the friends list: who, and whether the bot managed
+   * to put the invitation in front of them. Null when nobody was named, which
+   * is DUEL on the menu and every duel before this existed.
+   */
+  invited: { name: string; sent: boolean } | null;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -364,6 +372,7 @@ export default function App() {
     | 'archive'
     | 'rating'
     | 'daily'
+    | 'friends'
     | 'leagues'
     | 'board'
     | 'duel'
@@ -1014,6 +1023,7 @@ export default function App() {
         conn: 'connecting',
         rivalGone: false,
         payLeague: null,
+        invited: null,
         ...extra,
       });
       setScreen('duel');
@@ -1040,38 +1050,50 @@ export default function App() {
       conn: 'lost',
       rivalGone: false,
       payLeague: null,
+      invited: null,
     });
     setScreen('duel');
   }, []);
 
-  const startDuel = useCallback(async () => {
-    // Two things a duel cannot do without, and they fail differently: a build
-    // with no server behind it, and a game opened outside Telegram, where
-    // there is no signature and so no way to say who is playing.
-    if (!apiBase()) return duelRefusal('noserver');
-    if (!duelsAvailable()) return duelRefusal('badsig');
+  /**
+   * Open a duel. With a friend it is the same duel with one difference: the
+   * server has the bot deliver the invitation to them by name, so nobody has
+   * to carry a link anywhere. The link is minted either way and the screen
+   * still shows it — a message that did not land must not end the duel.
+   */
+  const startDuel = useCallback(
+    async (friend?: { id: string; name: string }) => {
+      // Two things a duel cannot do without, and they fail differently: a build
+      // with no server behind it, and a game opened outside Telegram, where
+      // there is no signature and so no way to say who is playing.
+      if (!apiBase()) return duelRefusal('noserver');
+      if (!duelsAvailable()) return duelRefusal('badsig');
 
-    setDuel({
-      phase: 'opening',
-      code: null,
-      link: null,
-      expiresAt: null,
-      league: leagueRef.current,
-      rival: null,
-      error: null,
-      conn: 'connecting',
-      rivalGone: false,
-      payLeague: null,
-    });
-    setScreen('duel');
-    const invite = await createInvite(leagueRef.current, outfitRef.current);
-    if (!invite) return duelRefusal('net');
-    connect(invite.code, 'waiting', {
-      code: invite.code,
-      link: invite.link,
-      expiresAt: invite.expiresAt,
-    });
-  }, [connect, duelRefusal]);
+      setDuel({
+        phase: 'opening',
+        code: null,
+        link: null,
+        expiresAt: null,
+        league: leagueRef.current,
+        rival: null,
+        error: null,
+        conn: 'connecting',
+        rivalGone: false,
+        payLeague: null,
+        invited: null,
+      });
+      setScreen('duel');
+      const invite = await createInvite(leagueRef.current, outfitRef.current, friend?.id);
+      if (!invite) return duelRefusal('net');
+      connect(invite.code, 'waiting', {
+        code: invite.code,
+        link: invite.link,
+        expiresAt: invite.expiresAt,
+        invited: friend ? { name: friend.name, sent: invite.sent } : null,
+      });
+    },
+    [connect, duelRefusal],
+  );
 
   /** Out of the duel and back to a perfectly ordinary match against a bot. */
   const leaveDuel = useCallback(() => {
@@ -1091,6 +1113,24 @@ export default function App() {
     const code = duelCodeFromLaunch();
     if (code) connect(code, 'joining', { code });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * The other kind of invitation, and it opens a screen rather than a match:
+   * the friends menu adds whoever the code belongs to as it appears, so the
+   * player watches the name land in the list instead of being told about
+   * something that happened out of sight.
+   *
+   * Read once, here, rather than in the screen — the address bar is wiped on
+   * the way past (see `friendCodeFromLaunch`) and a screen that mounts twice
+   * would find nothing the second time.
+   */
+  const [friendCode, setFriendCode] = useState<string | null>(null);
+  useEffect(() => {
+    const code = friendCodeFromLaunch();
+    if (!code) return;
+    setFriendCode(code);
+    setScreen('friends');
   }, []);
 
   // the socket must not outlive the page that was watching it
@@ -1462,6 +1502,7 @@ export default function App() {
           expiresAt={duel.expiresAt}
           leagueName={leagueName(LEAGUES[duel.league] ?? LEAGUES[0])}
           rivalName={duel.rival?.name ?? null}
+          invited={duel.invited}
           error={duel.error}
           onSend={() => duel.link && shareInvite(duel.link, t('duel.inviteText'))}
           onCopy={() => (duel.link ? copyLink(duel.link) : Promise.resolve(false))}
@@ -1494,6 +1535,27 @@ export default function App() {
     return (
       <div className="app">
         <RatingScreen onBack={() => setScreen('menu')} />
+      </div>
+    );
+  }
+
+  if (screen === 'friends') {
+    return (
+      <div className="app">
+        <FriendsScreen
+          joining={friendCode}
+          onDuel={(friend) => {
+            setFriendCode(null);
+            void startDuel(friend);
+          }}
+          onBack={() => {
+            // The invitation is spent the moment it has been shown its answer:
+            // coming back to this screen later is a list, not the same piece of
+            // news over again.
+            setFriendCode(null);
+            setScreen('menu');
+          }}
+        />
       </div>
     );
   }
@@ -1550,12 +1612,13 @@ export default function App() {
           onToggleFree={toggleFree}
           onOpenDev={() => setDevOpen(true)}
           onPlay={() => setScreen('leagues')}
-          onDuel={startDuel}
+          onDuel={() => void startDuel()}
           onShop={() => setScreen('shop')}
           onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
           onRating={() => setScreen('rating')}
           onDaily={() => setScreen('daily')}
+          onFriends={() => setScreen('friends')}
           onSettings={() => setSettingsOpen(true)}
         />
         {pauseOpen && !st.finished && (

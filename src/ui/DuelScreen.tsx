@@ -21,6 +21,7 @@ export default function DuelScreen({
   expiresAt,
   leagueName,
   rivalName,
+  invited,
   error,
   onSend,
   onCopy,
@@ -33,6 +34,12 @@ export default function DuelScreen({
   leagueName: string;
   /** set the moment the other one is on the socket, before the match exists */
   rivalName: string | null;
+  /**
+   * Called out by name from the friends list, and whether the bot managed to
+   * put the invitation in front of them. Null for a duel opened from the menu,
+   * which is one nobody has been named for yet.
+   */
+  invited: { name: string; sent: boolean } | null;
   error: DuelError | 'net' | null;
   onSend: () => void;
   onCopy: () => Promise<boolean>;
@@ -97,7 +104,17 @@ export default function DuelScreen({
         {t('duel.expires', { mm, ss })}
       </div>
 
-      <p>{t('duel.how')}</p>
+      {/* Who it went to, when it went to somebody by name. A message that did
+          not land says so rather than being quietly dropped: the link below is
+          then the only way this duel happens, and the player has to know that
+          it is on them to send it. */}
+      {invited ? (
+        <div className={`duel-note${invited.sent ? '' : ' bad'}`}>
+          {t(invited.sent ? 'duel.invited' : 'duel.notInvited', { name: invited.name })}
+        </div>
+      ) : (
+        <p>{t('duel.how')}</p>
+      )}
 
       {/* The code, so a link that will not open is still something a friend can
           be read down a phone. It is the whole of the invitation's secrecy, and

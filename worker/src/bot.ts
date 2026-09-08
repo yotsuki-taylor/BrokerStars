@@ -1,10 +1,11 @@
 /**
  * The bot, such as it is.
  *
- * It has exactly two jobs: open the game, and turn a duel invitation into a
- * button that opens the game *on that duel*. Both are one message with one
- * `web_app` button, which is why this is forty lines in the Worker that was
- * already here rather than a process somebody has to keep alive.
+ * It has three jobs: open the game, turn a duel invitation into a button that
+ * opens the game *on that duel*, and turn a friend invitation into one that
+ * opens it on that friendship. All of them are one message with one `web_app`
+ * button, which is why this is a short file in the Worker that was already
+ * here rather than a process somebody has to keep alive.
  *
  * Every reply below is returned as the **response to the webhook** rather than
  * sent with a second call to the Bot API. Telegram reads a method call out of
@@ -17,9 +18,17 @@
  */
 
 import { normalizeCode } from '../../src/duel/protocol';
+import { cleanCode } from '../../src/friends/protocol';
 
 /** A `/start duel_<code>` deep link, which is what an invitation is. */
 const DUEL_START = /^\/start\s+duel_(\S+)$/;
+
+/**
+ * A `/start friend_<code>` deep link. Unlike a duel's, the code in it stands
+ * for a person rather than for a match, so the same link can be sent to a
+ * whole group chat and does not run out — see `src/friends/protocol.ts`.
+ */
+const FRIEND_START = /^\/start\s+friend_(\S+)$/;
 
 const HELP =
   'Broker Stars — a two-minute trading duel.\n\n' +
@@ -31,6 +40,12 @@ const HELP =
   'on each other.\n\n' +
   'Tap PLAY to start.';
 
+const BEFRIENDED =
+  'Somebody wants you on their list.\n\n' +
+  'Tap below and the two of you are friends in Broker Stars — you will see ' +
+  'each other on the friends menu, and where you each stand. This link does ' +
+  'not run out, so there is no hurry.';
+
 const INVITED =
   'Somebody wants eighty seconds of your time.\n\n' +
   'Tap below and you are in the same match they are — same three companies, ' +
@@ -38,19 +53,19 @@ const INVITED =
   'it was sent.';
 
 /**
- * The button that opens the mini app, with a duel on it or without.
+ * The button that opens the mini app: plainly, on a duel, or on a friendship.
  *
  * The code goes in the query and not the fragment on purpose: Telegram appends
  * its own `#tgWebAppData=…` to the hash, and anything of ours there is in its
  * way.
  */
-function playButton(webappUrl: string, code?: string) {
+function playButton(webappUrl: string, on?: { duel?: string; friend?: string }) {
   const url = new URL(webappUrl);
-  if (code) url.searchParams.set('d', code);
-  return {
-    text: code ? '⚔️ ACCEPT THE DUEL' : '🎮 PLAY',
-    web_app: { url: url.toString() },
-  };
+  if (on?.duel) url.searchParams.set('d', on.duel);
+  if (on?.friend) url.searchParams.set('f', on.friend);
+  if (on?.duel) return { text: '⚔️ ACCEPT THE DUEL', web_app: { url: url.toString() } };
+  if (on?.friend) return { text: '🤝 ADD THEM BACK', web_app: { url: url.toString() } };
+  return { text: '🎮 PLAY', web_app: { url: url.toString() } };
 }
 
 const reply = (chatId: number | string, text: string, button: unknown) => ({
@@ -59,6 +74,27 @@ const reply = (chatId: number | string, text: string, button: unknown) => ({
   text,
   reply_markup: { inline_keyboard: [[button]] },
 });
+
+/**
+ * A duel invitation pushed at one named friend, rather than a link somebody
+ * has to hand over themselves.
+ *
+ * The only message this bot sends that is not the answer to a webhook — see
+ * `sendMessage` in `telegram.ts` for what that costs and how it fails. It says
+ * who by name, because a message that arrives on its own has to explain itself:
+ * an anonymous "somebody wants eighty seconds of your time" is what a link
+ * forwarded by a friend looks like, and this did not come from a friend's own
+ * hands.
+ */
+export function duelPush(webappUrl: string, code: string, from: string) {
+  return {
+    text:
+      `${from} has called you out.\n\n` +
+      'Tap below and you are in the same match they are — same three companies, ' +
+      'same chart, same tick. The invitation is only good for 15 minutes.',
+    reply_markup: { inline_keyboard: [[playButton(webappUrl, { duel: code })]] },
+  };
+}
 
 /**
  * What to answer one update with, or null for the many kinds there is nothing
@@ -81,7 +117,16 @@ export function answerUpdate(update: unknown, webappUrl: string): unknown | null
     // A link with a code we would refuse anyway gets the ordinary button: the
     // friend still ends up in the game, which is better than a dead end.
     return code
-      ? reply(chatId, INVITED, playButton(webappUrl, code))
+      ? reply(chatId, INVITED, playButton(webappUrl, { duel: code }))
+      : reply(chatId, HELP, playButton(webappUrl));
+  }
+
+  // Same shape, and checked before /start for the same reason.
+  const befriended = FRIEND_START.exec(text);
+  if (befriended) {
+    const code = cleanCode(befriended[1]);
+    return code
+      ? reply(chatId, BEFRIENDED, playButton(webappUrl, { friend: code }))
       : reply(chatId, HELP, playButton(webappUrl));
   }
 

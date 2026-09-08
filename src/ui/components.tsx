@@ -322,6 +322,34 @@ export function Trophy({ size = 18 }: { size?: number }) {
   );
 }
 
+/**
+ * FRIENDS. Two of them, the near one whole and the far one only half drawn —
+ * which is what makes a pair of heads read as a crowd at 22 pixels instead of
+ * as one head with a lump beside it.
+ */
+export function People({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <circle cx="9.4" cy="8.2" r="3.6" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path
+        d="M3.2 19.6a6.2 6.2 0 0112.4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      {/* the one behind, cut off by the frame rather than by the one in front */}
+      <path
+        d="M16.4 5.1a3.3 3.3 0 010 6.3M18.4 19.6a5.7 5.7 0 00-2.6-4.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------- trader card */
 
 export function TraderCard({

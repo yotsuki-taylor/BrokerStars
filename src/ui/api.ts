@@ -19,6 +19,7 @@
  */
 
 import { cleanMarket, type Market } from '../market/protocol';
+import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
 import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
@@ -394,6 +395,43 @@ export const tradeShares = (
   shares: number,
   sell: boolean,
 ): Promise<Profile | null> => profileCall('/profile/trade', { company, shares, sell });
+
+/* ------------------------------------------------------------- the friends */
+
+/**
+ * The friends menu: the caller's own invitation link, and everybody on their
+ * list. Signed, like the profile — a list of who somebody knows is not the
+ * leaderboard, and there is nobody it is public reading for.
+ *
+ * Null when there is no server or the game was opened outside Telegram, which
+ * is the same bargain everything else here strikes; the screen says so in a
+ * sentence rather than spinning.
+ */
+export const fetchFriends = async (): Promise<FriendList | null> =>
+  cleanList(ok(await post('/friends', {})));
+
+/** What became of an attempt to add somebody, and the list as it stands after it. */
+export interface Added {
+  error: FriendError | null;
+  list: FriendList | null;
+}
+
+/**
+ * Add whoever a code belongs to.
+ *
+ * A refusal comes back as 200 with the list in it — the server's habit
+ * everywhere — so `error` and `list` are both worth reading: the sentence goes
+ * on the screen and the list underneath is already right. `null` for both is
+ * the network having nothing to say.
+ */
+export async function addFriend(code: string): Promise<Added> {
+  const body = ok(await post('/friends/add', { code })) as
+    | { error?: unknown }
+    | null;
+  if (!body) return { error: null, list: null };
+  const error = typeof body.error === 'string' ? (body.error as FriendError) : null;
+  return { error, list: cleanList(body) };
+}
 
 /* -------------------------------------------------------------- the market */
 

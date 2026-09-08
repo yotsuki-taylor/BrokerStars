@@ -10,6 +10,7 @@ import {
   Dollar,
   Gear,
   Coin,
+  People,
   Tie,
   Trophy,
   money,
@@ -38,6 +39,7 @@ export default function Menu({
   onArchive,
   onRating,
   onDaily,
+  onFriends,
   onSettings,
 }: {
   coins: number;
@@ -60,6 +62,7 @@ export default function Menu({
   onArchive: () => void;
   onRating: () => void;
   onDaily: () => void;
+  onFriends: () => void;
   onSettings: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
@@ -102,11 +105,20 @@ export default function Menu({
           is something behind it, which is the only reason a button that leads
           nowhere new belongs on the main screen at all. */}
       <button
-        className={`daily-btn${nudge ? ' nudge' : ''}`}
+        className={`rail-btn daily-btn${nudge ? ' nudge' : ''}`}
         onClick={onDaily}
         aria-label={t('menu.daily')}
       >
         <Briefcase size={30} />
+      </button>
+
+      {/* Under it, on the same rail and for the same reason: a list of people
+          is a thing to look at, not one of the four places to go. It never
+          lights up — nothing arrives on it that will be gone tomorrow, so a
+          second button competing for the corner of the eye would be buying
+          attention it has no news to spend. */}
+      <button className="rail-btn friends-btn" onClick={onFriends} aria-label={t('friends.title')}>
+        <People size={28} />
       </button>
 
       <div className="hero">

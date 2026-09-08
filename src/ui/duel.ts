@@ -34,12 +34,31 @@ export interface Invite {
   /** the t.me link to send, or null when the server could not name its bot */
   link: string | null;
   expiresAt: number;
+  /**
+   * The invitation was pushed into a named friend's Telegram by the bot — see
+   * `invite` below. False whenever nobody was named, and also when somebody
+   * was and could not be written to, which is an ordinary thing to happen: the
+   * screen falls back to the link, as it would have done anyway.
+   */
+  sent: boolean;
   /** the highest league the server will pay this player at */
   yourLeague: number;
 }
 
-/** Open one. Null when there is no server, no signature, or it said no. */
-export async function createInvite(league: number, outfit: Outfit): Promise<Invite | null> {
+/**
+ * Open one. Null when there is no server, no signature, or it said no.
+ *
+ * `invite` is a friend's id, and it is the whole difference between DUEL on
+ * the menu and DUEL on a friend's row: with it the server has the bot deliver
+ * the invitation to that one person, instead of the player carrying the link
+ * to somebody themselves. The link is minted either way and the screen still
+ * shows it — a message that did not land must not be the end of the duel.
+ */
+export async function createInvite(
+  league: number,
+  outfit: Outfit,
+  invite?: string,
+): Promise<Invite | null> {
   const base = apiBase();
   const signed = initData();
   if (!base || !signed) return null;
@@ -47,7 +66,7 @@ export async function createInvite(league: number, outfit: Outfit): Promise<Invi
     const res = await fetch(`${base}/duel/new`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ initData: signed, league, outfit }),
+      body: JSON.stringify({ initData: signed, league, outfit, invite }),
     });
     if (!res.ok) return null;
     const body = (await res.json()) as Invite & { ok?: boolean };

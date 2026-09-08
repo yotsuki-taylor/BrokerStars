@@ -113,3 +113,37 @@ CREATE TABLE IF NOT EXISTS profiles (
   first_seen INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- Friends: a code that stands for one player, and a list of pairs.
+--
+-- `friend_codes` is one row per player and the code never changes. It is not
+-- an invitation the way a duel code is -- it does not expire and is not used
+-- up, so the same link can go to a whole group chat. `src/friends/protocol.ts`
+-- says what that buys and what it costs.
+--
+-- `name` on both tables is the one bit of denormalisation in this database and
+-- it earns its keep: `players` above only gets a row when somebody FINISHES a
+-- match, so a friend who has been invited but has not played yet would have no
+-- name to show. The live name wins whenever there is one; this is the fallback.
+CREATE TABLE IF NOT EXISTS friend_codes (
+  code       TEXT PRIMARY KEY,
+  -- one code per player, and the UNIQUE is what makes that true
+  player_id  TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+-- One row per DIRECTION of a friendship, so reading a list is one indexed
+-- query with no OR in it and no pair to put in a canonical order. Both rows
+-- are written in one batch (worker/src/friends.ts): a friendship only one of
+-- the two can see would be worse than none.
+CREATE TABLE IF NOT EXISTS friends (
+  player_id  TEXT NOT NULL,
+  friend_id  TEXT NOT NULL,
+  -- their name when the two met; see the note above
+  name       TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (player_id, friend_id)
+);
+
+CREATE INDEX IF NOT EXISTS friends_by_player ON friends (player_id, created_at DESC);

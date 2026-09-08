@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerUpdate } from '../src/bot';
+import { answerUpdate, duelPush } from '../src/bot';
 
 /**
  * The bot is two messages and a button, and it used to be a script somebody
@@ -45,6 +45,36 @@ describe('what the bot answers', () => {
     expect(answerUpdate({}, APP)).toBeNull();
     expect(answerUpdate(null, APP)).toBeNull();
     expect(answerUpdate('/play', APP)).toBeNull();
+  });
+
+  it('sends a friend invitation straight to the friends menu', () => {
+    const answer: any = answerUpdate(msg('/start friend_bcdfgh2345'), APP);
+    expect(answer.method).toBe('sendMessage');
+    expect(buttonUrl(answer)).toBe(`${APP}?f=bcdfgh2345`);
+  });
+
+  it('does not confuse the two kinds of invitation', () => {
+    // one code stands for a match and the other for a person, and a button
+    // carrying both would open the game on a duel that is not there
+    const duel = new URL(buttonUrl(answerUpdate(msg('/start duel_bcdfgh2345'), APP)));
+    expect(duel.searchParams.get('f')).toBeNull();
+    const friend = new URL(buttonUrl(answerUpdate(msg('/start friend_bcdfgh2345'), APP)));
+    expect(friend.searchParams.get('d')).toBeNull();
+  });
+
+  it('still opens the game when the friend code is nonsense', () => {
+    const answer: any = answerUpdate(msg('/start friend_' + 'a'.repeat(80)), APP);
+    expect(buttonUrl(answer)).toBe(APP);
+  });
+
+  it('names the caller in an invitation it pushes at one friend', () => {
+    // A message that arrives on its own has to explain itself: anonymous is
+    // what a forwarded link looks like, and this did not come from a friend.
+    const push: any = duelPush(APP, 'bcdfgh2345', 'ANNA');
+    expect(push.text).toContain('ANNA');
+    expect(push.reply_markup.inline_keyboard[0][0].web_app.url).toBe(`${APP}?d=bcdfgh2345`);
+    // no `method` and no `chat_id`: this one is sent, not answered with
+    expect(push).not.toHaveProperty('method');
   });
 
   it('keeps whatever the mini app url already carried', () => {
