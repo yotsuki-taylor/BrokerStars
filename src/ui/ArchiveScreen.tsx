@@ -186,12 +186,25 @@ function TradeRow({
         </button>
       </div>
 
+      {/* The verb, the currency, the number — the same three parts in the same
+          order as the shop's own buy button, so a price on a button is read the
+          same way wherever it appears. The mark matters more here than it does
+          there: this is the one screen where the two currencies sit side by
+          side, and a bare number could be either. */}
       <div className="trade-actions">
-        <button className="menu-btn buy" disabled={!canBuy} onClick={() => onTrade(company.id, size, false)}>
-          {t('market.buyFor', { price: money(ask * size) })}
+        <button
+          className="menu-btn buy"
+          disabled={!canBuy}
+          onClick={() => onTrade(company.id, size, false)}
+        >
+          {t('market.buy')} <Dollar size={14} /> {money(ask * size)}
         </button>
-        <button className="menu-btn sell" disabled={!canSell} onClick={() => onTrade(company.id, size, true)}>
-          {t('market.sellFor', { price: money(bid * size) })}
+        <button
+          className="menu-btn sell"
+          disabled={!canSell}
+          onClick={() => onTrade(company.id, size, true)}
+        >
+          {t('market.sell')} <Dollar size={14} /> {money(bid * size)}
         </button>
       </div>
 
@@ -503,6 +516,17 @@ export default function ArchiveScreen({
         <span className="spacer" />
         {/* Both tabs count the same way and in the same corner. In the tab
             itself the number ends up under the scrollbar. */}
+        {/* The balance rides on both tabs the counter lives on, and on the
+            COMPANIES one it matters most: that is where the buying happens, and
+            a BUY button greyed out for want of dollars should not send anybody
+            back to the main menu to find out how many they have. It goes on the
+            inside, the way the menu's own pair is ordered. */}
+        {tab !== 'achievements' && (
+          <div className="dollar-count">
+            <Dollar size={18} />
+            <b>{money(counter.dollars)}</b>
+          </div>
+        )}
         {tab === 'companies' && (
           <div className="arch-count">
             <b>{seen.size}</b>/{COMPANIES.length}
@@ -511,12 +535,6 @@ export default function ArchiveScreen({
         {tab === 'achievements' && (
           <div className="arch-count">
             <b>{Object.keys(profile?.awards ?? {}).length}</b>/{AWARDS.length}
-          </div>
-        )}
-        {tab === 'portfolio' && (
-          <div className="dollar-count">
-            <Dollar size={18} />
-            <b>{money(counter.dollars)}</b>
           </div>
         )}
       </header>

@@ -3107,6 +3107,19 @@ body {
   min-width: 0;
   height: 40px;
   font-size: 13px;
+  /* The dollar mark sits between the verb and the number, the way the shop's
+     coin does. Tighter letter-spacing and a small gap buy back the width the
+     icon costs, so a five-figure total still fits on a 390px screen. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  letter-spacing: 0.3px;
+  padding: 0 6px;
+}
+
+.trade-actions .menu-btn svg {
+  flex: 0 0 auto;
 }
 
 /* Green to buy and red to sell, which is the one place in the game those two
