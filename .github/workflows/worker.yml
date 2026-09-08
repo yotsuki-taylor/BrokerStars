@@ -1,0 +1,112 @@
+name: worker
+
+# The Worker used to be deployed by hand while the client deployed itself on
+# push, and the gap between the two is where the bugs lived: a bundle that knew
+# about /market talking to a Worker that did not, a screen drawing a 500 bonus
+# against a server still paying 1000. Both halves ship from the same commit now.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one that is already running — a Worker
+# killed mid-upload is the state nobody wants to reason about. Queued runs wait.
+concurrency:
+  group: worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      # NOT filtered by path, deliberately. The Worker imports sixteen modules
+      # out of src/ — the protocols, the awards catalogue, the company roster,
+      # the wardrobe, the room — and those pull in more again. Any list of paths
+      # here would be a list somebody has to remember to extend, and the day it
+      # is forgotten is the day the server is a commit behind the client with
+      # nothing to say so. A wasted thirty-second job is the cheaper mistake.
+      - run: npm ci
+        working-directory: worker
+
+      # Tests and typecheck before anything is uploaded. A broken Worker is not
+      # a broken build — `read` in profile.ts selects every column it needs, so
+      # one bad query answers 500 to /profile, /profile/buy and /profile/daily
+      # for every player who already has a row.
+      - run: npm test
+        working-directory: worker
+
+      - run: npx tsc --noEmit
+        working-directory: worker
+
+      # A missing token otherwise surfaces as wrangler's own auth error, which
+      # reads like something is wrong with the account rather than with this
+      # repository's settings. Failing here says where to go instead.
+      #
+      # It fails rather than skips on purpose: a deploy that quietly does
+      # nothing is how the server ends up behind the client, which is the thing
+      # this whole workflow exists to prevent. Red means not deployed, and that
+      # is the truth worth telling.
+      - name: check the token is set
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not set. Add it under" \
+                 "Settings -> Secrets and variables -> Actions, using a token" \
+                 "from Cloudflare's 'Edit Cloudflare Workers' template." \
+                 "See worker/README.md."
+            exit 1
+          fi
+
+      - name: deploy
+        working-directory: worker
+        env:
+          # Scoped token from the "Edit Cloudflare Workers" template. It is the
+          # only thing here that has to be a secret — wrangler.toml carries the
+          # database id and the webapp url in the open, because those name the
+          # deployment rather than protect it.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Only needed when the token can see more than one account, and then
+          # wrangler cannot guess which. Harmless when unset.
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+
+      # Deployed is not the same as working. Both of these are public reads that
+      # carry nobody's identity, and `curl -f` fails the job on any non-2xx —
+      # so a Worker that uploaded and then cannot answer is a red run rather
+      # than a green one and a broken game.
+      - name: smoke test
+        if: vars.API_URL != ''
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          set -euo pipefail
+          base="${API_URL%/}"
+          echo "checking $base/health"
+          curl -fsS "$base/health"
+          echo
+          # /market is the newest route and the one a stale Worker 404s on, so
+          # it is the check that actually proves this commit is the live one.
+          # Written to a file rather than piped: `head` closing the pipe early
+          # kills curl with SIGPIPE, and under `pipefail` that reads as a
+          # failed deploy when nothing failed at all.
+          echo "checking $base/market"
+          curl -fsS "$base/market" -o market.json
+          head -c 200 market.json
+          echo
+
+# WHAT THIS DOES NOT DO: run migrations. `migrations/` holds ALTER TABLE, which
+# has no idempotent form — a second run fails with "duplicate column name" and
+# would wedge this job red for ever. Adding a column stays a deliberate act,
+# run by hand before the deploy that needs it (worker/README.md says how).
