@@ -34,6 +34,7 @@
 import { dayOf } from '../../src/daily/protocol';
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
+import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate } from './bot';
@@ -393,6 +394,36 @@ async function refund(request: Request, env: Env) {
   );
 }
 
+/**
+ * The dollar board: who is richest at the share counter.
+ *
+ * It ranks cash PLUS shares at today's prices, not the balance — see
+ * `board.ts` for why a table of bare balances would rank people for refusing
+ * to play. The sort key is therefore not something SQL can produce: a
+ * portfolio is JSON and a price is a four-hundred-day fold, so the rows are
+ * read and valued here.
+ *
+ * The join to `players` is what supplies the name — `profiles` has no such
+ * column — which means a player who has taken bonuses but never finished a
+ * match does not appear. That is the schema talking rather than a rule: there
+ * is nothing to call them yet.
+ */
+async function dollarTop(env: Env, limit: number, me: string | null) {
+  const { results } = await env.DB.prepare(
+    `SELECT p.id, pl.name, p.dollars, p.portfolio
+       FROM profiles p
+       JOIN players pl ON pl.id = p.id
+      WHERE p.dollars > 0 OR p.portfolio <> '{}'
+      ORDER BY p.updated_at DESC
+      LIMIT ?1`,
+  )
+    .bind(SCAN_LIMIT)
+    .all<Holder>();
+
+  const prices = priceTable(dayOf(Date.now()), env.MARKET_SALT ?? '');
+  return json(rankByWorth(results ?? [], prices, limit, me));
+}
+
 /* ----------------------------------------------------------- the market */
 
 /**
@@ -590,6 +621,13 @@ export default {
     // `market` above for why sending them out is not the same as publishing
     // the walk that made them.
     if (url.pathname === '/market' && request.method === 'GET') return market(env);
+
+    // The same public reading the coin board is, and highlighted the same way:
+    // naming yourself decides which row is yours and claims nothing.
+    if (url.pathname === '/top/dollars' && request.method === 'GET') {
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 25) || 25));
+      return dollarTop(env, limit, url.searchParams.get('me'));
+    }
 
     if (request.method === 'POST') {
       if (url.pathname === '/profile') return openProfile(request, env);

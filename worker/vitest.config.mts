@@ -15,6 +15,10 @@ import { defineConfig } from 'vitest/config';
  * package with its own lockfile and its own tsconfig, and it has no business
  * loading the client's build setup: it never renders anything, and the modules
  * it borrows out of `src/` are plain TypeScript with no JSX in them.
+ *
+ * `.mts` rather than `.ts` because this package has no `"type": "module"` —
+ * the root one does, but a config is resolved against the package it sits in,
+ * and ESM loaded as CommonJS is a warning today and an error in a future Vite.
  */
 export default defineConfig({
   test: {

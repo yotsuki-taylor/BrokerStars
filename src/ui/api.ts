@@ -120,6 +120,29 @@ async function post(path: string, body: Record<string, unknown>): Promise<Answer
   });
 }
 
+/**
+ * One row of the dollar board — the share counter's own table.
+ *
+ * `worth` is what it ranks on: cash plus shares at today's prices, not the
+ * balance. A table of balances would rank people for refusing to buy anything,
+ * which is a strange thing for a stock market to reward — see
+ * `worker/src/board.ts`.
+ */
+export interface WorthRow {
+  rank: number;
+  id: string;
+  name: string;
+  cash: number;
+  shares: number;
+  worth: number;
+  you: boolean;
+}
+
+export interface WorthBoard {
+  top: WorthRow[];
+  me: WorthRow | null;
+}
+
 /** The board, or null when there is none to be had. Never throws. */
 export async function fetchBoard(limit = 25): Promise<Board | null> {
   if (!BASE) return null;
@@ -127,6 +150,20 @@ export async function fetchBoard(limit = 25): Promise<Board | null> {
   const body = ok(
     await call(`/top?limit=${limit}${me ? `&me=${encodeURIComponent(me)}` : ''}`),
   ) as Board | null;
+  return body && Array.isArray(body.top) ? body : null;
+}
+
+/**
+ * The dollar board. Public reading like the coin one, and null when there is
+ * no server behind this build — the meta net worth of other players is the one
+ * thing the game cannot work out for itself.
+ */
+export async function fetchWorthBoard(limit = 25): Promise<WorthBoard | null> {
+  if (!BASE) return null;
+  const me = myId();
+  const body = ok(
+    await call(`/top/dollars?limit=${limit}${me ? `&me=${encodeURIComponent(me)}` : ''}`),
+  ) as WorthBoard | null;
   return body && Array.isArray(body.top) ? body : null;
 }
 

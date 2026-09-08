@@ -3306,3 +3306,9 @@ body {
   opacity: 0.8;
   white-space: nowrap;
 }
+
+/* Two tabs rather than the archive's three, so the words get room to breathe
+   at the size the rest of the tab row uses. */
+.rating-tabs {
+  grid-template-columns: repeat(2, 1fr);
+}

@@ -186,7 +186,14 @@ const EN = {
   /* The leaderboard names itself once and the main menu reads the same key, so
      the button and the screen it opens can never drift apart. */
   'rating.title': 'RATING',
+  'rating.tabCoins': 'COINS',
+  'rating.tabDollars': 'DOLLARS',
   'rating.header': 'COINS EARNED',
+  /* Not "dollars held": the board ranks cash plus shares at today's price, so
+     buying something cannot cost anybody their place. See worker/src/board.ts. */
+  'rating.headerDollars': 'WORTH AT THE COUNTER',
+  'rating.inShares': '{n} in shares',
+  'rating.allCash': 'all in cash',
   'rating.matches': 'MATCHES',
   'rating.loading': 'LOADING',
   'rating.offline': 'The board is not answering. Your coins are safe — they are kept on this device too.',
@@ -452,7 +459,12 @@ const RU: Record<Key, string> = {
   'market.pricesRoll': 'Одна цена в день, новая в полночь. Купите сегодня — завтра зайдите и посмотрите, что вышло.',
 
   'rating.title': 'РЕЙТИНГ',
+  'rating.tabCoins': 'МОНЕТЫ',
+  'rating.tabDollars': 'ДОЛЛАРЫ',
   'rating.header': 'МОНЕТ ЗАРАБОТАНО',
+  'rating.headerDollars': 'КАПИТАЛ НА СТОЙКЕ',
+  'rating.inShares': '{n} в акциях',
+  'rating.allCash': 'всё в наличных',
   'rating.matches': 'МАТЧЕЙ',
   'rating.loading': 'ЗАГРУЖАЕМ',
   'rating.offline': 'Таблица не отвечает. Монеты не потеряны — они хранятся и на этом устройстве.',
