@@ -41,6 +41,9 @@ export default function VisitScreen({ friend, onBack }: { friend: Friend; onBack
         <Character outfit={friend.outfit} />
       </div>
 
+      {/* The near half of the room, over the character: he sits AT the desk. */}
+      <Room done={friend.room} front />
+
       {/* Where the renovation card sits on the player's own menu, and it says
           the same thing about this room: how far along it is. A finished one
           says so instead of counting, exactly as the owner's does. */}

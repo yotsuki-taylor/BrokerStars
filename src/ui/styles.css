@@ -861,6 +861,19 @@ body {
   z-index: 1;
 }
 
+/* The near half of the scene -- the desk and the machine on it. It carries
+   `.room` as well, so it inherits the geometry above and is skipped by the
+   rule right before this one; all it adds is the level.
+
+   Level 1 and not 2, which is what puts it exactly where it has to be. It is
+   rendered straight after `.hero`, so at the same level it paints OVER the
+   character, while the admin bar, the renovation card and the buttons come
+   later in the markup still and paint over IT. A desk in front of the trader
+   is the point; a desk in front of PLAY is a dead button. */
+.room-front {
+  z-index: 1;
+}
+
 .menu-top {
   flex: 0 0 auto;
   height: 38px;

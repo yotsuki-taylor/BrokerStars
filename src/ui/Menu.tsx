@@ -125,6 +125,9 @@ export default function Menu({
         <Character outfit={outfit} />
       </div>
 
+      {/* The near half of the room, over the character: he sits AT the desk. */}
+      <Room done={confirming ? roomDone + 1 : roomDone} front />
+
       {admin && (
         <div className="admin-bar">
           <span className="admin-tag">DEV</span>

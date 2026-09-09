@@ -732,13 +732,12 @@ const RU_DATA: Record<string, string> = {
 
   /* ---- the room ---- */
   'room.bg': 'СТЕНЫ И ПОЛ',
-  'room.bed': 'КРОВАТЬ',
-  'room.door': 'ДВЕРЬ',
   'room.window': 'ОКНО',
   'room.table': 'СТОЛ',
-  'room.shelf': 'ПОЛКА',
-  'room.rug': 'КОВЁР',
-  'room.picture': 'КАРТИНА',
+  'room.comp': 'КОМПЬЮТЕР',
+  'room.shelf': 'ШКАФ',
+  'room.picture_1': 'ПЛАКАТ',
+  'room.picture_2': 'ВТОРОЙ ПЛАКАТ',
 
   /* ---- the wardrobe: what each slot is for ---- */
   'slot.hat.label': 'ГОЛОВА',

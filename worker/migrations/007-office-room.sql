@@ -1,0 +1,32 @@
+-- The bedroom became an office.
+--
+-- No column changes: `profiles.room` was and still is a COUNT of finished
+-- renovation steps, and that count is exactly what carries across. Five steps
+-- of the old bedroom become five steps of the new office; only the sprites
+-- behind the number changed (src/ui/renovation.ts).
+--
+-- The one thing that does not fit is the top. The bedroom had eight steps and
+-- the office has seven, so a row holding 8 is holding a number the game can no
+-- longer mean, and this file brings it down to 7 -- a finished bedroom becomes
+-- a finished office.
+--
+--   npm run migrate -- ./migrations/007-office-room.sql
+--   npm run migrate:local -- ./migrations/007-office-room.sql
+--
+-- Running it is OPTIONAL, and running it twice costs nothing. `read` in
+-- worker/src/profile.ts already clamps the column to ROOM_DONE on the way out
+-- and the next write of that row puts the clamped value back, so a database
+-- that never sees this file heals itself the first time each player touches
+-- their profile. It is here so the column is true before that happens, and so
+-- anything that reads the table without going through the Worker -- a backup,
+-- a hand-written query -- does not find an eight in it.
+--
+-- Nobody is charged and nobody is refunded. `spent` is a stored number rather
+-- than one recomputed from the price table, and the office's seven prices come
+-- to the same 1000 coins the bedroom's eight did, so a save halfway through
+-- the renovation keeps both its purchases and its balance. Somebody who was
+-- one step short of finishing the bedroom is rounded UP into a finished
+-- office: that hands out one step free, which is the right direction to round
+-- when the room a player bought no longer exists.
+
+UPDATE profiles SET room = 7 WHERE room > 7;
