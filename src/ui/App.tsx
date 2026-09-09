@@ -37,6 +37,7 @@ import Menu from './Menu';
 import RatingScreen from './RatingScreen';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
+import TutorialOverlay from './TutorialOverlay';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
@@ -113,6 +114,7 @@ import {
 } from './leagues';
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
+import { markTutorialSeen, tutorialSeen } from './tutorial';
 import {
   PRICES,
   highestOwned,
@@ -272,16 +274,22 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * What the corner of the menu opens: help, and the language the game is in.
- * The language names are never translated — a player who has landed in the
- * wrong one needs to recognise their own, not read ours.
+ * What the corner of the menu opens: help, the tour, and the language the game
+ * is in. The language names are never translated — a player who has landed in
+ * the wrong one needs to recognise their own, not read ours.
+ *
+ * `onTutorial` is optional because the corner is on two screens. The tour
+ * lights up buttons that only exist on the menu, so the match's own copy of
+ * this overlay is handed nothing and simply does not offer it.
  */
 function SettingsOverlay({
   onHelp,
+  onTutorial,
   onPickLang,
   onClose,
 }: {
   onHelp: () => void;
+  onTutorial?: () => void;
   onPickLang: (l: Lang) => void;
   onClose: () => void;
 }) {
@@ -306,6 +314,11 @@ function SettingsOverlay({
           <button className="big-btn ghost" onClick={onHelp}>
             {t('settings.help')}
           </button>
+          {onTutorial && (
+            <button className="big-btn ghost" onClick={onTutorial}>
+              {t('settings.tutorial')}
+            </button>
+          )}
           <button className="big-btn ghost" onClick={() => setLangOpen(true)}>
             {t('settings.language')}
           </button>
@@ -363,6 +376,7 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [floats, setFloats] = useState<Record<number, FloatPnl[]>>({});
   const [newsFlash, setNewsFlash] = useState<string | null>(null);
   const [screen, setScreen] = useState<
@@ -442,7 +456,13 @@ export default function App() {
   ui.current.showTruth = showTruth;
   ui.current.peekTicks = perks.ui.truthTicks;
   ui.current.paused =
-    devOpen || helpOpen || pauseOpen || settingsOpen || countdown !== null || screen !== 'match';
+    devOpen ||
+    helpOpen ||
+    pauseOpen ||
+    settingsOpen ||
+    tourOpen ||
+    countdown !== null ||
+    screen !== 'match';
 
   /* ------------------------------------------------------------ the profile */
 
@@ -805,6 +825,25 @@ export default function App() {
     const t = window.setTimeout(() => setCountdown(countdown > 1 ? countdown - 1 : null), 800);
     return () => clearTimeout(t);
   }, [countdown]);
+
+  /**
+   * The tour, the first time this device sees the menu.
+   *
+   * It waits for the menu rather than firing on mount: the game can open
+   * straight into a duel somebody was invited to, and a tour of buttons that
+   * are not on the screen would be pointing at nothing. The ref is what keeps
+   * it to once — `tutorialSeen` is already false again on the next render if
+   * the store is not writable, and nobody wants the tour back every time they
+   * step out of the shop.
+   */
+  const tourChecked = useRef(false);
+  useEffect(() => {
+    if (tourChecked.current || screen !== 'menu') return;
+    tourChecked.current = true;
+    if (tutorialSeen()) return;
+    markTutorialSeen();
+    setTourOpen(true);
+  }, [screen]);
 
   /* ----------------------------------------------------------------- dev panel */
   useEffect(() => {
@@ -1655,6 +1694,10 @@ export default function App() {
             setSettingsOpen(false);
             setHelpOpen(true);
           }}
+          onTutorial={() => {
+            setSettingsOpen(false);
+            setTourOpen(true);
+          }}
           onPickLang={(l) => {
             setLang(l);
             // module state, so every screen reads the new language on the next
@@ -1665,6 +1708,7 @@ export default function App() {
         />
       )}
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
+      {tourOpen && <TutorialOverlay onClose={() => setTourOpen(false)} />}
         {devOpen && (
           <DevPanel
             cfg={cfg}

@@ -86,15 +86,20 @@ export default function Menu({
           have been in that corner since the first build, and moving them to
           make room for the newcomer would cost more than it bought. */}
       <header className="menu-top">
-        <button className="icon-btn accent" onClick={onSettings} aria-label="settings">
+        <button
+          className="icon-btn accent"
+          data-tut="settings"
+          onClick={onSettings}
+          aria-label="settings"
+        >
           <Gear size={22} />
         </button>
         <span className="spacer" />
-        <div className="dollar-count">
+        <div className="dollar-count" data-tut="dollars">
           <Dollar size={18} />
           <b>{money(dollars)}</b>
         </div>
-        <div className="coin-count">
+        <div className="coin-count" data-tut="coins">
           <Coin size={20} />
           <b>{coins}</b>
         </div>
@@ -106,6 +111,7 @@ export default function Menu({
           nowhere new belongs on the main screen at all. */}
       <button
         className={`rail-btn daily-btn${nudge ? ' nudge' : ''}`}
+        data-tut="daily"
         onClick={onDaily}
         aria-label={t('menu.daily')}
       >
@@ -117,7 +123,12 @@ export default function Menu({
           lights up — nothing arrives on it that will be gone tomorrow, so a
           second button competing for the corner of the eye would be buying
           attention it has no news to spend. */}
-      <button className="rail-btn friends-btn" onClick={onFriends} aria-label={t('friends.title')}>
+      <button
+        className="rail-btn friends-btn"
+        data-tut="friends"
+        onClick={onFriends}
+        aria-label={t('friends.title')}
+      >
         <People size={28} />
       </button>
 
@@ -144,7 +155,7 @@ export default function Menu({
       )}
 
       {step ? (
-        <div className={`reno${confirming ? ' confirming' : ''}`}>
+        <div className={`reno${confirming ? ' confirming' : ''}`} data-tut="room">
           <div className="reno-text">
             <span className="reno-kicker">
               {confirming
@@ -191,7 +202,7 @@ export default function Menu({
           )}
         </div>
       ) : (
-        <div className="reno done">
+        <div className="reno done" data-tut="room">
           <b>{t('menu.roomComplete')}</b>
         </div>
       )}
@@ -201,19 +212,19 @@ export default function Menu({
             line up down the column while the words stay centred in what is
             left of the button. */}
         <div className="menu-left">
-          <button className="menu-btn" onClick={onShop}>
+          <button className="menu-btn" data-tut="shop" onClick={onShop}>
             <Cart />
             <span>{t('menu.shop')}</span>
           </button>
-          <button className="menu-btn" onClick={onEquip}>
+          <button className="menu-btn" data-tut="equip" onClick={onEquip}>
             <Tie />
             <span>{t('menu.equip')}</span>
           </button>
-          <button className="menu-btn" onClick={onArchive}>
+          <button className="menu-btn" data-tut="archive" onClick={onArchive}>
             <Cards />
             <span>{t('menu.archive')}</span>
           </button>
-          <button className="menu-btn" onClick={onRating}>
+          <button className="menu-btn" data-tut="rating" onClick={onRating}>
             <Trophy />
             <span>{t('rating.title')}</span>
           </button>
@@ -223,10 +234,10 @@ export default function Menu({
             friend at the other end of it, and it should not be competing with
             the one that needs nobody. */}
         <div className="menu-right">
-          <button className="menu-btn play" onClick={onPlay}>
+          <button className="menu-btn play" data-tut="play" onClick={onPlay}>
             {t('menu.play')}
           </button>
-          <button className="menu-btn duel" onClick={onDuel}>
+          <button className="menu-btn duel" data-tut="duel" onClick={onDuel}>
             {t('menu.duel')}
           </button>
         </div>
