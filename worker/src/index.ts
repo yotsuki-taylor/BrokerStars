@@ -38,7 +38,8 @@ import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
 import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
-import { answerUpdate, duelPush } from './bot';
+import { answerUpdate, chatShout, duelPush } from './bot';
+import { chatAvailable, markShout, waitLeft } from './chat';
 import * as friends from './friends';
 import * as profiles from './profile';
 import {
@@ -573,14 +574,74 @@ async function newDuel(request: Request, env: Env) {
 
   // A ladder position the guest has not climbed is not a payout — see
   // `topLeague`. Telling the host now is friendlier than at the whistle.
+  //
+  // `chat` is whether this deployment has a group to call the duel out in. The
+  // screen asks for it here rather than at its own route because it is asking
+  // whether to draw a button, and this is the answer it is already waiting on.
   return json({
     ok: true,
     code,
     link,
     expiresAt,
     sent,
+    chat: chatAvailable(env),
     yourLeague: await topLeague(env, caller.id),
   });
+}
+
+/**
+ * Call this duel out in the game's group chat.
+ *
+ * The button behind it is for the player who has nobody: no friends on the
+ * list, nobody to hand a link to, and a fifteen-minute invitation going stale
+ * in their hand. The bot says their name in the chat and puts the seat up for
+ * whoever taps first.
+ *
+ * Signed, because it makes the bot speak in a room full of people and the one
+ * thing that must not be possible is doing it as somebody else. Rate limited
+ * for the same reason, in `chat.ts` — and the cooldown is charged only once
+ * Telegram has said the message landed, so a chat that is unreachable never
+ * costs the player their turn.
+ *
+ * The code is not checked against the duel it names. It is sixty bits minted a
+ * moment ago and known to one phone, so a wrong one is a player shouting a
+ * dead link into a chat under their own name, once every ten minutes — which
+ * is a thing nobody wants to do rather than a thing to defend against.
+ */
+async function shoutDuel(request: Request, env: Env) {
+  if (!env.BOT_TOKEN) return bad(503, 'no bot token configured');
+  if (!chatAvailable(env)) return json({ ok: false, reason: 'nochat' });
+
+  let body: { initData?: unknown; code?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return bad(400, 'not json');
+  }
+
+  const initData = typeof body.initData === 'string' ? body.initData : '';
+  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  if (!caller) return bad(401, 'bad signature');
+
+  const code = normalizeCode(String(body.code ?? ''));
+  if (!code) return bad(400, 'no such duel');
+
+  const now = Date.now();
+  const wait = await waitLeft(env, caller.id, now);
+  if (wait > 0) return json({ ok: false, reason: 'wait', wait });
+
+  const bot = await botUsername(env.BOT_TOKEN);
+  if (!bot) return json({ ok: false, reason: 'nolink' });
+
+  const sent = await sendMessage(
+    env.BOT_TOKEN,
+    String(env.CHAT_ID),
+    chatShout(bot, code, caller.name),
+  );
+  if (!sent) return json({ ok: false, reason: 'failed' });
+
+  await markShout(env, caller.id, now);
+  return json({ ok: true });
 }
 
 /* --------------------------------------------------------------- friends */
@@ -670,7 +731,10 @@ async function telegramUpdate(request: Request, env: Env) {
     return new Response('ok');
   }
 
-  const answer = answerUpdate(update, env.WEBAPP_URL);
+  // The name is needed only for a group, where the buttons have to be links
+  // rather than mini-app launches — see `answerUpdate`. Cached for the life of
+  // the isolate, so this is one call on the first update and none after it.
+  const answer = answerUpdate(update, env.WEBAPP_URL, await botUsername(env.BOT_TOKEN));
   return answer
     ? new Response(JSON.stringify(answer), {
         headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -692,6 +756,7 @@ export default {
         signedWrites: Boolean(env.BOT_TOKEN),
         duels: Boolean(env.DUEL),
         bot: Boolean(env.BOT_TOKEN && env.WEBAPP_URL),
+        chat: chatAvailable(env),
       });
     }
 
@@ -728,6 +793,8 @@ export default {
     }
 
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);
+
+    if (url.pathname === '/duel/shout' && request.method === 'POST') return shoutDuel(request, env);
 
     if (url.pathname === '/tg' && request.method === 'POST') return telegramUpdate(request, env);
 

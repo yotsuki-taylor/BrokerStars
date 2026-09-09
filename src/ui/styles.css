@@ -3574,3 +3574,41 @@ body {
   color: #f4f9ff;
   font-size: 13px;
 }
+
+/* ---------- the group chat ---------- */
+
+/* Under the friends list and quieter than the two buttons above it: somebody
+   who has friends should be reading their list, not an advert for a chat. */
+.friend-chat {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.friend-chat p {
+  margin: 0 0 8px;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.45;
+  opacity: 0.8;
+}
+
+.friend-chat .menu-btn {
+  width: 100%;
+  min-height: 42px;
+  font-size: 15px;
+}
+
+/* Telegram's own blue, because the button leaves the game for Telegram and
+   should look like it does. The other two on the duel screen are the game's
+   colours and go to the game's own places. */
+.menu-btn.shout {
+  background: linear-gradient(#3aa7e8, #1f7fc0);
+}
+
+.menu-btn.shout:disabled {
+  opacity: 0.65;
+  cursor: default;
+}

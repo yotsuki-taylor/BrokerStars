@@ -51,3 +51,28 @@ export function friendCodeFromLaunch(): string | null {
  * not about duels.
  */
 export { shareInvite, copyLink } from './duel';
+
+/**
+ * The game's own group chat.
+ *
+ * The friends menu is the one screen that can be empty through no fault of the
+ * player's: they have nobody, and the only thing on offer is a link to send to
+ * somebody they do not have. So underneath it there is a room full of people
+ * in the same position — that is the whole of what this constant is for.
+ *
+ * A plain link and not a secret: it is an invitation, it is meant to be handed
+ * out, and it is in the bundle where anybody can read it. Changing the chat is
+ * changing this line.
+ */
+export const CHAT_LINK = 'https://t.me/+9R4CBPEDUwg0MTQy';
+
+/**
+ * Open it. Through Telegram's own opener when there is one, so the chat comes
+ * up inside the app the player is already in rather than in a browser tab that
+ * asks them to open Telegram.
+ */
+export function openChat(): void {
+  const tg = (window as any).Telegram?.WebApp;
+  if (tg?.openTelegramLink) tg.openTelegramLink(CHAT_LINK);
+  else window.open(CHAT_LINK, '_blank', 'noopener');
+}

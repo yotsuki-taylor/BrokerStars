@@ -21,9 +21,19 @@ enabled = true
 # unlike the client's own copy of it (src/ui/admin.ts, which says as much) this
 # one is actually checked. Leave it out and nobody gets the dev prices, which
 # is the right answer for a deployment that is not yours.
+#
+# CHAT_ID is the game's group chat -- the one the friends menu sends people who
+# have nobody to play with. With it set, the duel screen grows a button that
+# has the bot call the duel out in there (worker/src/chat.ts); without it that
+# button never appears and the route answers "not configured", which is the
+# right behaviour for anybody else's deployment. Not a secret: posting into a
+# chat needs the bot's token and this is not it. To find the id, add the bot to
+# the group and say `/chat` in it -- the bot answers with the number, which
+# goes below with the minus sign it comes with.
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
 ADMIN_ID = "165233146"
+# CHAT_ID = "-1001234567890"
 
 [[d1_databases]]
 binding = "DB"

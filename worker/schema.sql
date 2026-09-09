@@ -147,3 +147,13 @@ CREATE TABLE IF NOT EXISTS friends (
 );
 
 CREATE INDEX IF NOT EXISTS friends_by_player ON friends (player_id, created_at DESC);
+
+-- When the bot last called a duel out in the group chat on this player's
+-- behalf. One row per player, written only after Telegram says the message
+-- landed, and read only to work out whether they may ask again yet
+-- (worker/src/chat.ts). Deliberately not a column on a profile: what somebody
+-- has done to a room full of other people is not part of what they own.
+CREATE TABLE IF NOT EXISTS chat_shouts (
+  player_id TEXT PRIMARY KEY,
+  last_at   INTEGER NOT NULL
+);

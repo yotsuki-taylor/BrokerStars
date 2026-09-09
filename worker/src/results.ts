@@ -43,6 +43,16 @@ export interface Env {
    * deployment people actually play on should set one.
    */
   MARKET_SALT?: string;
+  /**
+   * The game's group chat, where a player with nobody to duel can have the bot
+   * call one out. Public, and in `wrangler.toml` beside `WEBAPP_URL` for the
+   * same reason that is: it names a room, it does not open it -- posting into
+   * it needs the token. Missing is not fatal and is the ordinary case for
+   * anybody else's deployment: the route says so and the button never appears
+   * in the game. See `chat.ts`, and ask the bot `/chat` in the group to be
+   * told the id.
+   */
+  CHAT_ID?: string;
   DUEL: DurableObjectNamespace;
 }
 

@@ -95,6 +95,7 @@ import {
   duelCodeFromLaunch,
   duelsAvailable,
   shareInvite,
+  shoutInvite,
   type Link,
 } from './duel';
 import { apiBase } from './api';
@@ -186,6 +187,12 @@ interface DuelUi {
    * is DUEL on the menu and every duel before this existed.
    */
   invited: { name: string; sent: boolean } | null;
+  /**
+   * This deployment has a group chat the bot can call the duel out in, so the
+   * screen may offer that as well as the link. The server decides — see
+   * `worker/src/chat.ts` — and says so when the invitation is minted.
+   */
+  chat: boolean;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -1063,6 +1070,7 @@ export default function App() {
         rivalGone: false,
         payLeague: null,
         invited: null,
+        chat: false,
         ...extra,
       });
       setScreen('duel');
@@ -1090,6 +1098,7 @@ export default function App() {
       rivalGone: false,
       payLeague: null,
       invited: null,
+      chat: false,
     });
     setScreen('duel');
   }, []);
@@ -1120,6 +1129,7 @@ export default function App() {
         rivalGone: false,
         payLeague: null,
         invited: null,
+        chat: false,
       });
       setScreen('duel');
       const invite = await createInvite(leagueRef.current, outfitRef.current, friend?.id);
@@ -1129,6 +1139,7 @@ export default function App() {
         link: invite.link,
         expiresAt: invite.expiresAt,
         invited: friend ? { name: friend.name, sent: invite.sent } : null,
+        chat: Boolean(invite.chat),
       });
     },
     [connect, duelRefusal],
@@ -1545,6 +1556,11 @@ export default function App() {
           error={duel.error}
           onSend={() => duel.link && shareInvite(duel.link, t('duel.inviteText'))}
           onCopy={() => (duel.link ? copyLink(duel.link) : Promise.resolve(false))}
+          // Only when the server said there is a chat to shout into: the button
+          // is drawn from whether this prop is here at all.
+          onShout={
+            duel.chat && duel.code ? () => shoutInvite(duel.code as string) : undefined
+          }
           onBack={leaveDuel}
         />
       </div>

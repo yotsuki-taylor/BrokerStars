@@ -202,6 +202,12 @@ const EN = {
     'Send the link to a friend. It opens the bot, and the button there drops them straight into this match. Fifteen minutes and the invitation is dead — open another one, it costs nothing.',
   'duel.send': 'SEND TO A FRIEND',
   'duel.copy': 'COPY THE LINK',
+  /* The third way off the duel screen, for the player who has nobody to send
+     a link to: the bot says it in the game's own chat instead. */
+  'duel.shout': 'CALL IT OUT IN THE CHAT',
+  'duel.shouted': 'THE CHAT HAS BEEN TOLD',
+  'duel.shoutWait': 'The chat heard from you a few minutes ago. Send the link yourself, or ask again shortly.',
+  'duel.shoutFailed': 'Could not reach the chat. The link above still works.',
   'duel.copied': 'COPIED',
   'duel.invited': 'INVITATION SENT TO {name}',
   'duel.notInvited': '{name} COULD NOT BE MESSAGED — SEND THEM THE LINK YOURSELF',
@@ -280,6 +286,10 @@ const EN = {
   'friends.err.nolink': 'THE SERVER COULD NOT NAME ITS BOT, SO THERE IS NO LINK TO SEND.',
   'friends.visit': 'VISIT',
   'friends.roomAt': 'ROOM · {n}/{of}',
+  /* Under the list, and the answer to the one thing this screen cannot fix on
+     its own: a player with nobody has nobody to send their link to. */
+  'friends.chatPitch': 'Nobody to play against? The game has a chat. People there are looking for a duel too — and a link sent in it comes back with a friend.',
+  'friends.chatJoin': 'JOIN THE CHAT',
 
   'shop.tryingOn': 'TRYING ON',
   'shop.worn': 'WORN',
@@ -555,6 +565,11 @@ const RU: Record<Key, string> = {
   'duel.how':
     'Отправь ссылку другу. Она открывает бота, а кнопка там заводит его прямо в этот матч. Через пятнадцать минут приглашение мертво — откроешь новое, это ничего не стоит.',
   'duel.send': 'ОТПРАВИТЬ ДРУГУ',
+  'duel.shout': 'ПОЗВАТЬ В ЧАТЕ',
+  'duel.shouted': 'ОТПРАВЛЕНО В ЧАТ',
+  'duel.shoutWait':
+    'Ты звал в чат пару минут назад. Отправь ссылку сам или попробуй чуть позже.',
+  'duel.shoutFailed': 'Не получилось написать в чат. Ссылка выше по-прежнему работает.',
   'duel.copy': 'СКОПИРОВАТЬ ССЫЛКУ',
   'duel.copied': 'СКОПИРОВАНО',
   'duel.invited': 'ПРИГЛАШЕНИЕ УШЛО К {name}',
@@ -626,6 +641,9 @@ const RU: Record<Key, string> = {
   'friends.err.full': 'У КОГО-ТО ИЗ ВАС ДРУЗЕЙ СТОЛЬКО, СКОЛЬКО ВМЕЩАЕТ СПИСОК.',
   'friends.err.nolink': 'СЕРВЕР НЕ СМОГ НАЗВАТЬ СВОЕГО БОТА, ТАК ЧТО ССЫЛКИ НЕТ.',
   'friends.visit': 'ПОСЕТИТЬ',
+  'friends.chatPitch':
+    'Не с кем играть? У игры есть чат. Там такие же ищут соперника — а ссылка, отправленная туда, возвращается с другом.',
+  'friends.chatJoin': 'ВСТУПИТЬ В ЧАТ',
   'friends.roomAt': 'КОМНАТА · {n}/{of}',
 
   'shop.tryingOn': 'ПРИМЕРКА',

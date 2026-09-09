@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Coin, Lock, People } from './components';
 import { addFriend, fetchFriends } from './api';
-import { copyLink, friendsAvailable, shareInvite } from './friends';
+import { copyLink, friendsAvailable, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
 import type { Friend, FriendError, FriendList } from '../friends/protocol';
@@ -18,6 +18,13 @@ import type { Friend, FriendError, FriendList } from '../friends/protocol';
  * standing one — it does not expire and is not used up, so it can go to a group
  * chat and be tapped by four people (`src/friends/protocol.ts` says why that is
  * the right trade for this and the wrong one for a duel).
+ *
+ * Under all of it, the chat. This screen is the one place in the game that can
+ * be empty through nobody's fault — a player with no friends is offered a link
+ * and nobody to send it to — so the last thing on it is a room full of people
+ * in exactly that position. It is a plain link out of the game and not a
+ * feature: no list to load, nothing to go wrong, and it is there whether the
+ * list came back or not.
  *
  * A row is a button, and what it opens is two: VISIT, which is their room, and
  * DUEL, which calls them out by name. The little menu is anchored to the row
@@ -43,6 +50,26 @@ interface Popup {
  * the screen.
  */
 const POPUP_H = 132;
+
+/**
+ * The way out of an empty screen: the game's own chat.
+ *
+ * Drawn under the list and under the notice that stands in for one, because
+ * those are the two screens a player with nobody actually sees — a list that
+ * came back empty and a list that did not come back at all. It is a link and
+ * nothing else, so unlike everything above it there is no state in which it
+ * has nothing to offer.
+ */
+function ChatCall() {
+  return (
+    <div className="friend-chat">
+      <p>{t('friends.chatPitch')}</p>
+      <button className="menu-btn" onClick={openChat}>
+        {t('friends.chatJoin')}
+      </button>
+    </div>
+  );
+}
 
 /** Nothing to show, and which nothing it is. Never a spinner that never stops. */
 function Notice({ line }: { line: string }) {
@@ -175,6 +202,7 @@ export default function FriendsScreen({
       <div className="archive">
         <Head onBack={onBack} />
         <Notice line={friendsAvailable() ? t('friends.offline') : t('friends.noServer')} />
+        <ChatCall />
       </div>
     );
   }
@@ -230,6 +258,10 @@ export default function FriendsScreen({
       </div>
 
       {!list?.link && <div className="friend-note bad">{t('friends.err.nolink')}</div>}
+
+      {/* Last, and quieter than the two buttons above it: somebody who has
+          friends should be sending them a link, not reading an advert. */}
+      <ChatCall />
 
       {/* The scrim is the dismissal: one tap anywhere that is not the menu
           lands on it and closes. It also stops the tap reaching whatever was

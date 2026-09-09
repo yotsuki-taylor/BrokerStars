@@ -43,6 +43,12 @@ export interface Invite {
   sent: boolean;
   /** the highest league the server will pay this player at */
   yourLeague: number;
+  /**
+   * This deployment has a group chat the bot can call the duel out in, so the
+   * screen may offer it. False for anybody else's server and for a build with
+   * no `CHAT_ID` set — see `worker/src/chat.ts`.
+   */
+  chat: boolean;
 }
 
 /**
@@ -110,6 +116,40 @@ export function shareInvite(link: string, text: string): void {
   const tg = (window as any).Telegram?.WebApp;
   if (tg?.openTelegramLink) tg.openTelegramLink(url);
   else window.open(url, '_blank', 'noopener');
+}
+
+/** How a shout into the group chat ended. */
+export type Shout = 'ok' | 'wait' | 'failed';
+
+/**
+ * Have the bot call this duel out in the game's group chat.
+ *
+ * For the player with nobody: no friends on the list and nobody to hand the
+ * link to. The message is the server's to send and the rate limit is the
+ * server's to enforce (`worker/src/chat.ts`) — this end knows only whether it
+ * went, so that the button can say so.
+ *
+ * `wait` is not a failure and is worth its own answer: it means the chat heard
+ * from this player minutes ago, and a screen that said "could not send" to
+ * that would be lying about a rule the player is allowed to know.
+ */
+export async function shoutInvite(code: string): Promise<Shout> {
+  const base = apiBase();
+  const signed = initData();
+  if (!base || !signed) return 'failed';
+  try {
+    const res = await fetch(`${base}/duel/shout`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ initData: signed, code }),
+    });
+    if (!res.ok) return 'failed';
+    const body = (await res.json()) as { ok?: boolean; reason?: string };
+    if (body.ok) return 'ok';
+    return body.reason === 'wait' ? 'wait' : 'failed';
+  } catch {
+    return 'failed';
+  }
 }
 
 /** Best effort, and the caller shows the link either way. */

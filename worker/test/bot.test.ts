@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerUpdate, duelPush } from '../src/bot';
+import { answerUpdate, chatShout, duelPush } from '../src/bot';
 
 /**
  * The bot is two messages and a button, and it used to be a script somebody
@@ -8,7 +8,12 @@ import { answerUpdate, duelPush } from '../src/bot';
  */
 
 const APP = 'https://example.github.io/BrokerStars/';
+const BOT = 'BrokerStarsBot';
 const msg = (text: string) => ({ message: { chat: { id: 42 }, text } });
+/** The same update from the group the game sends people to. */
+const groupMsg = (text: string) => ({
+  message: { chat: { id: -1001, type: 'supergroup' }, text },
+});
 
 /** The url on the one button of a reply. */
 const buttonUrl = (answer: any): string =>
@@ -83,5 +88,55 @@ describe('what the bot answers', () => {
     const url = new URL(buttonUrl(answer));
     expect(url.searchParams.get('v')).toBe('2');
     expect(url.searchParams.get('d')).toBe('bcdfgh2345');
+  });
+});
+
+/**
+ * The bot is in a group now, and Telegram allows a `web_app` button only in a
+ * private chat -- it refuses the whole message anywhere else. So every reply
+ * into a group has to be a link, and these are what stops that quietly turning
+ * back into a mini-app button that nobody in the chat can see.
+ */
+describe('what the bot answers in a group', () => {
+  const button = (answer: any) => answer.reply_markup.inline_keyboard[0][0];
+
+  it('sends a link rather than a mini app button', () => {
+    for (const text of ['/start', '/play', '/help']) {
+      const answer: any = answerUpdate(groupMsg(text), APP, BOT);
+      expect(button(answer), text).not.toHaveProperty('web_app');
+      expect(button(answer).url, text).toBe(`https://t.me/${BOT}`);
+    }
+  });
+
+  it('carries the duel through the bot on the way', () => {
+    const answer: any = answerUpdate(groupMsg('/start duel_bcdfgh2345'), APP, BOT);
+    expect(button(answer).url).toBe(`https://t.me/${BOT}?start=duel_bcdfgh2345`);
+  });
+
+  it('says the words with no button at all rather than one that is refused', () => {
+    // No name to build a link out of -- the token could not be asked. Words
+    // beat a message Telegram throws away.
+    const answer: any = answerUpdate(groupMsg('/help'), APP, null);
+    expect(answer.text).toBeTruthy();
+    expect(answer).not.toHaveProperty('reply_markup');
+  });
+
+  it('tells the group its own id, and only the group', () => {
+    const inGroup: any = answerUpdate(groupMsg('/chat'), APP, BOT);
+    expect(inGroup.text).toContain('-1001');
+    // In a private chat the number would be the asker's own id, which answers
+    // a question nobody asked.
+    const alone: any = answerUpdate(msg('/chat'), APP, BOT);
+    expect(alone.text).not.toContain('42');
+  });
+
+  it('calls a duel out under the name of whoever asked for it', () => {
+    const shout: any = chatShout(BOT, 'bcdfgh2345', 'ANNA');
+    expect(shout.text).toContain('ANNA');
+    expect(shout.reply_markup.inline_keyboard[0][0].url).toBe(
+      `https://t.me/${BOT}?start=duel_bcdfgh2345`,
+    );
+    // sent with the API, not answered with: no method and no chat_id
+    expect(shout).not.toHaveProperty('method');
   });
 });

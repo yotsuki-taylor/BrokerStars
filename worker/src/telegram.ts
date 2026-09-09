@@ -103,15 +103,18 @@ export const sameSecret = sameSignature;
  * Say something to somebody, out of the blue.
  *
  * Every other message this bot sends is the answer to a webhook, which costs
- * nothing and needs no token — see `bot.ts`. This one is not an answer to
- * anything: it is a duel invitation being pushed into a friend's Telegram
- * while they are doing something else, so it has to be a real call to the API.
+ * nothing and needs no token — see `bot.ts`. The two that come through here are
+ * not answers to anything: a duel invitation pushed into a friend's Telegram
+ * while they are doing something else, and a duel called out in the game's
+ * group chat. Both have to be real calls to the API.
  *
  * A private chat's id IS the user's id, which is why a friend's row is all the
- * address this needs. False rather than throwing on every way it can fail, and
- * they are ordinary: somebody who has never started the bot, or has blocked
- * it, cannot be written to, and Telegram says so with a 403. The caller shows
- * the link instead, which is what it would have done anyway.
+ * address this needs; a group's is the number the group was given, which is
+ * `CHAT_ID`. False rather than throwing on every way it can fail, and they are
+ * ordinary: somebody who has never started the bot, or has blocked it, cannot
+ * be written to, and Telegram says so with a 403 — as does a group the bot has
+ * been thrown out of. The caller shows the link instead, which is what it would
+ * have done anyway.
  */
 export async function sendMessage(
   token: string,

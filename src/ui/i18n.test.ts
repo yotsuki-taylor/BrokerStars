@@ -265,4 +265,10 @@ const KEYS = [
   'tut.rating.body',
   'tut.settings.title',
   'tut.settings.body',
+  'duel.shout',
+  'duel.shouted',
+  'duel.shoutWait',
+  'duel.shoutFailed',
+  'friends.chatPitch',
+  'friends.chatJoin',
 ] as const satisfies readonly Key[];
