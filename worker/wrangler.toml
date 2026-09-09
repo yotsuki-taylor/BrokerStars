@@ -33,7 +33,7 @@ enabled = true
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
 ADMIN_ID = "165233146"
-# CHAT_ID = "-1001234567890"
+CHAT_ID = "-1004363436099"
 
 [[d1_databases]]
 binding = "DB"
