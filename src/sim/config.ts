@@ -24,7 +24,33 @@ export interface BotConfig {
   reactionMs: [number, number];
   /** chance it sits out a move it noticed */
   ignoreChance: number;
-  sizeFraction: number;
+  /**
+   * Fraction of the cash on hand one order commits. 'random' and 'hold' only:
+   * a momentum bot sizes off the two shares below instead, and leaving this
+   * here for it would just be a number that looked as if it did something.
+   */
+  sizeFraction?: number;
+  /**
+   * Momentum only, and the two knobs that decide how much of itself the bot
+   * actually puts at risk. Both are shares of NET WORTH, not of cash on hand:
+   * the trading API sizes orders off cash, and sizing decisions off it too is
+   * what used to leave the bot playing out a match on a tenth of its money,
+   * with a balance that barely moved.
+   *
+   * `targetInvested` is what it wants working in the market — at 0.95 it treats
+   * idle cash as a mistake and sweeps it into whatever is climbing, and what is
+   * left over (0.05) is the float it keeps back to react with.
+   */
+  targetInvested: number;
+  /**
+   * Momentum only. Most of its net worth any one company may take, which is
+   * the only thing making the bot hold more than one. It is a variance knob as
+   * much as a risk one: at 0.55 a rung can put the whole account into two
+   * companies and mirror duels stop being close (43 % inside 15 % of each
+   * other, against a design floor of 50 %); at 0.45 the same rung has to hold
+   * all three and closeness comes back to 58 %.
+   */
+  maxStockShare: number;
   /** how many ticks back it compares the price against */
   lookbackTicks: number;
   /**
@@ -94,64 +120,79 @@ export const CONFIG = {
   ] as PhaseConfig[],
   bot: {
     /**
-     * Five rungs, one per league. `holdTicks` is the main lever (see README):
-     * a bot that sits on a position past the move it caught hands the profit
-     * back to mean reversion, so the ladder tightens it from 26 down to 8.
+     * Five rungs, one per league. `holdTicks` is still the main lever (see
+     * README): a bot that sits on a position past the move it caught hands the
+     * profit back to mean reversion.
      *
-     * `triggerSigmas` is the second lever, and the one that decides how long
-     * the bot sits out at the start: it is a gate on how rare a move has to be
-     * before the bot believes it, and that wait is measured in seconds, not in
-     * quarters. It does not shrink when the match does — see the rookie note in
-     * the README.
+     * `ignoreChance` — how many of the moves it spots the bot lets go by —
+     * carries more of the ladder than it used to, and now moves with it rather
+     * than against it: 0.78 down to 0.45. Every rung plays its whole account,
+     * so the money is no longer what separates them.
+     *
+     * `holdTicks` used to run 26 down to 8. Same lever, same direction, longer
+     * scale: 40 down to 18. A position is three times the size it was, and
+     * slippage is charged on the square of an order, so a rung that flips its
+     * whole book every four seconds now pays for the privilege — the old
+     * numbers made the bottom of the ladder cheaper to run than the top.
+     *
+     * `triggerSigmas` is the gate on how rare a move has to be before the bot
+     * believes it. It no longer decides when the bot first appears on the board
+     * — the sweep in bot.ts puts its money to work in the first seconds either
+     * way — but it still decides how much of what happens it acts on.
      */
     rookie: {
       reactionMs: [2200, 4000] as [number, number],
       ignoreChance: 0.78,
-      sizeFraction: 0.1,
       lookbackTicks: 11,
       triggerSigmas: 2.0,
-      holdTicks: 26,
+      holdTicks: 40,
       panicChance: 0.35,
+      targetInvested: 0.85,
+      maxStockShare: 0.55,
       mode: 'momentum' as const,
     },
     easy: {
       reactionMs: [1200, 2400] as [number, number],
-      ignoreChance: 0.55,
-      sizeFraction: 0.15,
+      ignoreChance: 0.68,
       lookbackTicks: 8,
       triggerSigmas: 1.8,
-      holdTicks: 18,
+      holdTicks: 32,
       panicChance: 0.2,
+      targetInvested: 0.9,
+      maxStockShare: 0.5,
       mode: 'momentum' as const,
     },
     medium: {
       reactionMs: [600, 1400] as [number, number],
-      ignoreChance: 0.3,
-      sizeFraction: 0.25,
+      ignoreChance: 0.6,
       lookbackTicks: 5,
       triggerSigmas: 1.15,
-      holdTicks: 11,
+      holdTicks: 26,
       panicChance: 0.1,
+      targetInvested: 0.95,
+      maxStockShare: 0.45,
       mode: 'momentum' as const,
     },
     hard: {
       reactionMs: [300, 800] as [number, number],
-      ignoreChance: 0.1,
-      sizeFraction: 0.35,
+      ignoreChance: 0.52,
       lookbackTicks: 4,
       triggerSigmas: 1.0,
-      holdTicks: 9,
+      holdTicks: 22,
       panicChance: 0.05,
+      targetInvested: 0.95,
+      maxStockShare: 0.45,
       mode: 'momentum' as const,
     },
     elite: {
       reactionMs: [150, 450] as [number, number],
-      ignoreChance: 0.03,
-      sizeFraction: 0.4,
+      ignoreChance: 0.45,
       lookbackTicks: 3,
       triggerSigmas: 0.85,
-      holdTicks: 8,
+      holdTicks: 18,
       panicChance: 0.02,
+      targetInvested: 1.0,
+      maxStockShare: 0.4,
       mode: 'momentum' as const,
     },
     /** control group for balance runs */
@@ -163,6 +204,8 @@ export const CONFIG = {
       triggerSigmas: 1.15,
       holdTicks: 11,
       panicChance: 0.05,
+      targetInvested: 0,
+      maxStockShare: 1,
       mode: 'random' as const,
     },
     /** buy at the open and never touch it again */
@@ -174,6 +217,8 @@ export const CONFIG = {
       triggerSigmas: 1.3,
       holdTicks: 0,
       panicChance: 0,
+      targetInvested: 0,
+      maxStockShare: 1,
       mode: 'hold' as const,
     },
   } as Record<string, BotConfig>,

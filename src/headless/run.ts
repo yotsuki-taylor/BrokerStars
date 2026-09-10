@@ -4,7 +4,8 @@
  *   npm run sim -- --runs=500 --acceptance
  */
 import { CONFIG, cloneConfig } from '../sim/config';
-import { createMatch, runToEnd } from '../sim/match';
+import { createMatch, runToEnd, step } from '../sim/match';
+import { grossExposure } from '../sim/trading';
 
 interface Args {
   seed: number;
@@ -39,6 +40,12 @@ interface Result {
   nwA: number[];
   nwB: number[];
   tradesA: number;
+  /** mean share of A's net worth that was actually in the market, per tick */
+  investedA: number[];
+  /** how far A's cash roamed over a match, as a share of what it started with */
+  cashSwingA: number[];
+  /** share of ticks A sat completely flat */
+  flatA: number[];
 }
 
 function duel(a: string, b: string, seed0: number, runs: number, off: string[]): Result {
@@ -55,6 +62,9 @@ function duel(a: string, b: string, seed0: number, runs: number, off: string[]):
     nwA: [],
     nwB: [],
     tradesA: 0,
+    investedA: [],
+    cashSwingA: [],
+    flatA: [],
   };
   for (let i = 0; i < runs; i++) {
     const st = createMatch(seed0 + i, cfg, {
@@ -63,7 +73,27 @@ function duel(a: string, b: string, seed0: number, runs: number, off: string[]):
         { name: 'B', kind: 'bot', preset: b },
       ],
     });
-    runToEnd(st);
+    const a0 = st.traders[0];
+    const start = cfg.match.startingCash;
+    let invested = 0;
+    let flat = 0;
+    let ticks = 0;
+    let cashLo = a0.cash;
+    let cashHi = a0.cash;
+    while (!st.finished) {
+      step(st);
+      // sampled before the closing liquidation, which flattens everyone anyway
+      if (st.finished) break;
+      ticks++;
+      const gross = grossExposure(st, a0);
+      invested += gross / Math.max(1, a0.netWorth);
+      if (gross === 0) flat++;
+      cashLo = Math.min(cashLo, a0.cash);
+      cashHi = Math.max(cashHi, a0.cash);
+    }
+    r.investedA.push(ticks ? invested / ticks : 0);
+    r.flatA.push(ticks ? flat / ticks : 0);
+    r.cashSwingA.push((cashHi - cashLo) / start);
     const [ta, tb] = st.traders;
     if (ta.netWorth > tb.netWorth) r.winsA++;
     const hi = Math.max(ta.netWorth, tb.netWorth);
@@ -94,6 +124,8 @@ function report(label: string, r: Result): void {
   console.log(`  close (<15% gap) ${pct(r.closeMatches, r.runs)}`);
   console.log(`  bankruptcies     A ${pct(r.bankruptA, r.runs)}   B ${pct(r.bankruptB, r.runs)}`);
   console.log(`  trades / match A ${(r.tradesA / r.runs).toFixed(1)}`);
+  console.log(`  A in the market   ${pct(mean(r.investedA), 1)} of net worth, flat ${pct(mean(r.flatA), 1)} of ticks`);
+  console.log(`  A cash swing     ${pct(mean(r.cashSwingA), 1)} of starting cash`);
 }
 
 function determinismCheck(seed: number): void {

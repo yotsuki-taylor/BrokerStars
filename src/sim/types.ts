@@ -32,9 +32,11 @@ export interface TraderState {
   netWorthHistory: number[];
   trades: Trade[];
   /** bot scratch space: queued reactions */
-  pending: { atTick: number; stock: number; dir: -1 | 1; fraction: number }[];
+  pending: { atTick: number; stock: number; dir: -1 | 1 }[];
   /** bot scratch space: tick at which it plans to take the position off, per stock */
   exitAt: number[];
+  /** bot scratch space: tick until which its idle cash leaves a company alone */
+  coolUntil: number[];
   /** the terms this trader trades on; bots get NO_PERKS */
   perks: TraderPerks;
   /** what is left of the per-match allowances the perks grant */

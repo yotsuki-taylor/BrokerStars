@@ -79,6 +79,7 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
     trades: [],
     pending: [],
     exitAt: config.stocks.map(() => -1),
+    coolUntil: config.stocks.map(() => 0),
     perks: spec.perks ? perksOrDefault(spec.perks) : NO_PERKS,
     stopsLeft: spec.perks?.stopLossUses ?? 0,
     undosLeft: spec.perks?.undos ?? 0,
