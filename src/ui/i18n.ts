@@ -32,22 +32,43 @@ export const LANG_NAME: Record<Lang, string> = { en: 'ENGLISH', ru: 'РУССК�
 
 const KEY = 'brokerstars.lang';
 
+/**
+ * What a player who has never chosen gets. Russian: that is who is playing,
+ * and a first screen in the wrong language is a worse greeting than a switch
+ * nobody has to find. English is one tap away in settings, and once tapped it
+ * is what the storage below remembers.
+ */
+const DEFAULT_LANG: Lang = 'ru';
+
 /** Private browsing and locked-down webviews throw on access, so never assume. */
 function loadLang(): Lang {
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw === 'ru' || raw === 'en' ? raw : 'en';
+    return raw === 'ru' || raw === 'en' ? raw : DEFAULT_LANG;
   } catch {
-    return 'en';
+    return DEFAULT_LANG;
   }
 }
 
+/**
+ * Keep <html lang> honest. The page ships as `en` and the language is chosen
+ * after it loads, so without this a browser looking at Russian text is told it
+ * is English — and offers to translate a page that is already in the reader's
+ * language. Guarded because the balance runner and the tests import this file
+ * with no document around.
+ */
+function markDocument(l: Lang): void {
+  if (typeof document !== 'undefined') document.documentElement.lang = l;
+}
+
 let current: Lang = loadLang();
+markDocument(current);
 
 export const lang = (): Lang => current;
 
 export function setLang(next: Lang): void {
   current = next;
+  markDocument(next);
   try {
     window.localStorage.setItem(KEY, next);
   } catch {
