@@ -101,6 +101,15 @@ body {
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
 
+/* The glyph is drawn in currentColor, and a <button> does not inherit the
+   body's colour — it starts on the browser's own black. That was invisible
+   while every icon button in the game was yellow; on the blue one it is the
+   only black mark on the screen. The accent variant keeps the browser default,
+   which is what it has always rendered. */
+.icon-btn:not(.accent) {
+  color: var(--white);
+}
+
 .icon-btn.accent {
   background: linear-gradient(#ffc02e, #f08322);
 }

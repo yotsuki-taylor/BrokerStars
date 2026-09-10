@@ -87,7 +87,7 @@ export default function Menu({
           make room for the newcomer would cost more than it bought. */}
       <header className="menu-top">
         <button
-          className="icon-btn accent"
+          className="icon-btn"
           data-tut="settings"
           onClick={onSettings}
           aria-label="settings"
