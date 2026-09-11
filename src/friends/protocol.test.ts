@@ -79,7 +79,26 @@ describe('the whole answer', () => {
     expect(list).toEqual({
       code: 'bcdfgh2345',
       link: null,
+      webLink: null,
       friends: [{ id: '7', name: 'PLAYER', coins: 0, matches: 0, room: 0, outfit: {} }],
     });
+  });
+
+  it('keeps both links when the server sends both', () => {
+    const list = cleanList({
+      code: 'BCDFGH2345',
+      link: 'https://t.me/bot?start=friend_bcdfgh2345',
+      webLink: 'https://example.test/game/?f=bcdfgh2345',
+      friends: [],
+    });
+    expect(list?.link).toBe('https://t.me/bot?start=friend_bcdfgh2345');
+    expect(list?.webLink).toBe('https://example.test/game/?f=bcdfgh2345');
+  });
+
+  it('reads a server that has not been redeployed yet as having no web link', () => {
+    // the field simply is not in the answer, which must not become the string
+    // "undefined" on a button somebody is about to send to a friend
+    const list = cleanList({ code: 'BCDFGH2345', link: null, friends: [] });
+    expect(list?.webLink).toBeNull();
   });
 });

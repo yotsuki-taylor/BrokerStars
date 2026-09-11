@@ -42,6 +42,10 @@ export const inTelegram = (): boolean => Boolean(webApp());
  */
 const CHROME = '#0B4FA8';
 
+/** Telegram's share sheet, as an address. Used by the web host too. */
+export const shareSheet = (text: string, url: string): string =>
+  `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+
 export const TELEGRAM: Platform = {
   id: 'telegram',
 
@@ -92,5 +96,17 @@ export const TELEGRAM: Platform = {
     // browser tab that asks them to open Telegram.
     if (tg?.openTelegramLink) tg.openTelegramLink(url);
     else (globalThis as any).window?.open(url, '_blank', 'noopener');
+  },
+
+  share(text: string, url: string): void {
+    // Telegram's own share sheet IS the contact picker: it opens the chat list,
+    // and the message lands in whichever chat is tapped. Nothing to invent.
+    TELEGRAM.openLink(shareSheet(text, url));
+  },
+
+  onLink(): () => void {
+    // A mini app is opened BY a link, never handed one while it runs; the
+    // launch parameter has already said everything there is to say.
+    return () => {};
   },
 };

@@ -34,6 +34,8 @@ export interface Invite {
   code: string;
   /** the t.me link to send, or null when the server could not name its bot */
   link: string | null;
+  /** the same invitation as a plain web address — see `linkToShare` below */
+  webLink: string | null;
   expiresAt: number;
   /**
    * The invitation was pushed into a named friend's Telegram by the bot — see
@@ -104,21 +106,50 @@ export function duelCodeFromLaunch(): string | null {
     /* an address bar we cannot read is one with no duel in it */
   }
   if (code) return code;
-  const start = platform().launchParam();
-  return start.startsWith('duel_') ? normalizeCode(start.slice(5)) : null;
+  return duelCodeIn(platform().launchParam());
 }
 
 /**
- * Hand the link to a friend. Telegram's own share sheet is the contact picker:
- * it opens the chat list, and the message lands in whichever one is tapped.
+ * A duel code out of a launch parameter, or null when the parameter is about
+ * something else. Split out from the reader above because the parameter has a
+ * second way in now: on Android a link tapped while the game is already open
+ * arrives as an event rather than as a launch (`platform().onLink`), and both
+ * doors hand over the same string.
+ */
+export const duelCodeIn = (param: string): string | null =>
+  param.startsWith('duel_') ? normalizeCode(param.slice(5)) : null;
+
+/**
+ * Which of the two links to hand somebody, and the only place that decides.
  *
- * The sheet is a t.me address, so it is still the right thing to open from a
- * host that is not Telegram — a browser tab lands on the same picker. A host
- * with a contact picker of its own is the reason to revisit this.
+ * The server mints both (worker/src/index.ts) because they are good at
+ * different things, and the difference is about the RECIPIENT rather than about
+ * us. The `t.me/<bot>?start=…` one opens for anybody with Telegram, including
+ * somebody who has never started the mini app — no other link does that, and
+ * inside Telegram everyone you can reach has Telegram. The web one is an
+ * ordinary address: it is tappable in any chat app, it lands on the game's own
+ * page, and a recipient with nothing installed simply plays there.
+ *
+ * So: in Telegram, the bot link; anywhere else, the web link. An Android player
+ * sending a t.me address to somebody without Telegram is sending a dead end,
+ * and that is what this exists to stop.
+ *
+ * Either may be null — a deployment with no bot, or one that does not know
+ * where the game is served from — so each falls back to the other rather than
+ * leaving the player with nothing to send.
+ */
+export function linkToShare(bot: string | null, web: string | null): string | null {
+  return platform().id === 'telegram' ? (bot ?? web) : (web ?? bot);
+}
+
+/**
+ * Hand the link to a friend, through whatever passes for a contact list where
+ * the game is running: Telegram's own share sheet inside Telegram, the system
+ * one on Android, a browser tab pointed at Telegram's sheet in a plain page.
+ * Which is which is `src/platform/`'s business, not this module's.
  */
 export function shareInvite(link: string, text: string): void {
-  const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
-  platform().openLink(url);
+  platform().share(text, link);
 }
 
 /** How a shout into the group chat ended. */

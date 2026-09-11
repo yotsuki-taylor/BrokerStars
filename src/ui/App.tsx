@@ -91,8 +91,10 @@ import {
   applyTick,
   buildMirror,
   copyLink,
+  linkToShare,
   createInvite,
   duelCodeFromLaunch,
+  duelCodeIn,
   duelsAvailable,
   shareInvite,
   shoutInvite,
@@ -100,7 +102,7 @@ import {
 } from './duel';
 import { apiBase, deleteAccount } from './api';
 import { platform, type Account } from '../platform';
-import { friendCodeFromLaunch } from './friends';
+import { friendCodeFromLaunch, friendCodeIn } from './friends';
 import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
@@ -174,6 +176,8 @@ interface DuelUi {
   phase: DuelPhase | 'match';
   code: string | null;
   link: string | null;
+  /** the same invitation as a plain web address; `linkToShare` picks between them */
+  webLink: string | null;
   expiresAt: number | null;
   league: number;
   rival: DuelProfile | null;
@@ -1213,6 +1217,7 @@ export default function App() {
         phase,
         code,
         link: null,
+        webLink: null,
         expiresAt: null,
         league: leagueRef.current,
         rival: null,
@@ -1241,6 +1246,7 @@ export default function App() {
       phase: 'error',
       code: null,
       link: null,
+      webLink: null,
       expiresAt: null,
       league: leagueRef.current,
       rival: null,
@@ -1272,6 +1278,7 @@ export default function App() {
         phase: 'opening',
         code: null,
         link: null,
+        webLink: null,
         expiresAt: null,
         league: leagueRef.current,
         rival: null,
@@ -1288,6 +1295,7 @@ export default function App() {
       connect(invite.code, 'waiting', {
         code: invite.code,
         link: invite.link,
+        webLink: invite.webLink,
         expiresAt: invite.expiresAt,
         invited: friend ? { name: friend.name, sent: invite.sent } : null,
         chat: Boolean(invite.chat),
@@ -1333,6 +1341,35 @@ export default function App() {
     setFriendCode(code);
     setScreen('friends');
   }, []);
+
+  /**
+   * The same two invitations, arriving at a game that is already running.
+   *
+   * Both effects above read once, before the first frame, which is the whole
+   * story in a browser and in a mini app: a link there IS a page load. On
+   * Android it is not. The app stays resident, the link wakes it, and nothing
+   * reloads — so without this a friend's invitation would open the game and
+   * then sit there doing nothing, which looks exactly like a broken link.
+   *
+   * Joining takes the player out of whatever they were doing, and that is the
+   * right reading of a tap on an invitation: they asked to be somewhere else.
+   */
+  useEffect(
+    () =>
+      platform().onLink((param) => {
+        const duelCode = duelCodeIn(param);
+        if (duelCode) {
+          connect(duelCode, 'joining', { code: duelCode });
+          return;
+        }
+        const friend = friendCodeIn(param);
+        if (friend) {
+          setFriendCode(friend);
+          setScreen('friends');
+        }
+      }),
+    [connect],
+  );
 
   // the socket must not outlive the page that was watching it
   useEffect(() => closeDuel, [closeDuel]);
@@ -1705,8 +1742,14 @@ export default function App() {
           rivalName={duel.rival?.name ?? null}
           invited={duel.invited}
           error={duel.error}
-          onSend={() => duel.link && shareInvite(duel.link, t('duel.inviteText'))}
-          onCopy={() => (duel.link ? copyLink(duel.link) : Promise.resolve(false))}
+          onSend={() => {
+            const send = linkToShare(duel.link, duel.webLink);
+            if (send) shareInvite(send, t('duel.inviteText'));
+          }}
+          onCopy={() => {
+            const send = linkToShare(duel.link, duel.webLink);
+            return send ? copyLink(send) : Promise.resolve(false);
+          }}
           // Only when the server said there is a chat to shout into: the button
           // is drawn from whether this prop is here at all.
           onShout={

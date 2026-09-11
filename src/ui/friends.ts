@@ -37,21 +37,24 @@ export function friendCodeFromLaunch(): string | null {
     /* an address bar we cannot read is one with no invitation in it */
   }
   if (code) return code;
-  const start = platform().launchParam();
-  return start.startsWith('friend_') ? cleanCode(start.slice(7)) : null;
+  return friendCodeIn(platform().launchParam());
 }
+
+/** The same, out of a parameter somebody already has. See `duelCodeIn`. */
+export const friendCodeIn = (param: string): string | null =>
+  param.startsWith('friend_') ? cleanCode(param.slice(7)) : null;
 
 /**
  * Handing a link to somebody, and the clipboard behind it.
  *
- * Both live in `./duel.ts` because that is where the first link in this game
- * needed them, and neither has anything to do with duelling: `shareInvite`
- * opens Telegram's own share sheet, which is the contact picker this feature
- * would otherwise have to invent. Re-exported rather than copied, and rather
- * than having every caller reach into the duel module for something that is
- * not about duels.
+ * All three live in `./duel.ts` because that is where the first link in this
+ * game needed them, and none has anything to do with duelling: `shareInvite`
+ * opens whatever the host uses for a contact list, and `linkToShare` picks
+ * which of the two links the server minted is the right one to send from here.
+ * Re-exported rather than copied, and rather than having every caller reach
+ * into the duel module for something that is not about duels.
  */
-export { shareInvite, copyLink } from './duel';
+export { shareInvite, copyLink, linkToShare } from './duel';
 
 /**
  * The game's own group chat.

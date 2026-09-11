@@ -75,6 +75,17 @@ export interface FriendList {
   code: string;
   /** the t.me link to send, or null when the server could not name its bot */
   link: string | null;
+  /**
+   * The same invitation as an ordinary web address, or null when the server
+   * does not know where the game is served from.
+   *
+   * Both exist because they are good at different things. Inside Telegram the
+   * bot link is the better door — it opens for somebody who has never started
+   * the mini app. Anywhere else it is the wrong one entirely: a phone with the
+   * Android app and no Telegram cannot follow it. See `linkToShare` in
+   * src/ui/duel.ts, which is the one place that chooses.
+   */
+  webLink: string | null;
   friends: Friend[];
 }
 
@@ -113,5 +124,8 @@ export function cleanList(raw: unknown): FriendList | null {
   const code = cleanCode(r?.code);
   if (!code) return null;
   const link = typeof r?.link === 'string' && r.link ? r.link.slice(0, 200) : null;
-  return { code, link, friends: cleanFriends(r?.friends) };
+  // A server that has not been redeployed yet sends no `webLink` at all, which
+  // is null here and leaves the bot link as the only one there ever was.
+  const webLink = typeof r?.webLink === 'string' && r.webLink ? r.webLink.slice(0, 200) : null;
+  return { code, link, webLink, friends: cleanFriends(r?.friends) };
 }

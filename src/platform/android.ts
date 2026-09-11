@@ -242,4 +242,46 @@ export const ANDROID: Platform = {
     // routed out to the browser rather than replacing the game.
     (globalThis as any).window?.open(url, '_blank', 'noopener');
   },
+
+  /**
+   * The system share sheet, which is every app on the phone rather than one.
+   *
+   * Nothing is done about a failure and nothing should be: the sheet closing
+   * because the player changed their mind reaches this as a rejection, and it
+   * is indistinguishable from one that failed. Neither is worth an error the
+   * player has to dismiss — the link is still on the screen behind it.
+   */
+  share(text: string, url: string): void {
+    void (async () => {
+      try {
+        const { Share } = await import('@capacitor/share');
+        await Share.share({ text, url, dialogTitle: text });
+      } catch {
+        /* dismissed, or no sheet to open */
+      }
+    })();
+  },
+
+  onLink(listener: (param: string) => void): () => void {
+    let stop: (() => void) | null = null;
+    let dropped = false;
+    void (async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        const handle = await App.addListener('appUrlOpen', ({ url }) => {
+          const param = paramFromUrl(String(url ?? ''));
+          if (param) listener(param);
+        });
+        // unsubscribed before the listener finished attaching: attach and go
+        if (dropped) await handle.remove();
+        else stop = () => void handle.remove();
+      } catch {
+        /* no native App plugin means no links to hear about */
+      }
+    })();
+    return () => {
+      dropped = true;
+      stop?.();
+    };
+  },
 };

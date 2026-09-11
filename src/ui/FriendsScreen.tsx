@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Coin, Lock, People } from './components';
 import { addFriend, fetchFriends } from './api';
-import { copyLink, friendsAvailable, openChat, shareInvite } from './friends';
+import { copyLink, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
 import type { Friend, FriendError, FriendList } from '../friends/protocol';
@@ -175,9 +175,12 @@ export default function FriendsScreen({
     setPopup({ friend, x: at.left + at.width / 2, y: above ? at.top - 6 : at.bottom + 6, above });
   };
 
+  /** Whichever of the server's two links is the right one to send from here. */
+  const invite = list ? linkToShare(list.link, list.webLink) : null;
+
   const copy = async () => {
-    if (!list?.link) return;
-    setCopied(await copyLink(list.link));
+    if (!invite) return;
+    setCopied(await copyLink(invite));
     window.setTimeout(() => setCopied(false), 1600);
   };
 
@@ -243,10 +246,10 @@ export default function FriendsScreen({
       {/* Under the list, where the player is already looking once they have
           read it — and the only thing on this screen that does anything. */}
       <div className="friend-actions">
-        <button className="big-btn" onClick={() => list?.link && shareInvite(list.link, t('friends.inviteText'))} disabled={!list?.link}>
+        <button className="big-btn" onClick={() => invite && shareInvite(invite, t('friends.inviteText'))} disabled={!invite}>
           {t('friends.add')}
         </button>
-        <button className="menu-btn" onClick={copy} disabled={!list?.link}>
+        <button className="menu-btn" onClick={copy} disabled={!invite}>
           {copied ? (
             <>
               <Check size={16} /> {t('duel.copied')}

@@ -16,6 +16,7 @@
  */
 
 import type { Platform } from './index';
+import { shareSheet } from './telegram';
 
 export const WEB: Platform = {
   id: 'web',
@@ -46,5 +47,18 @@ export const WEB: Platform = {
 
   openLink(url: string): void {
     (globalThis as any).window?.open(url, '_blank', 'noopener');
+  },
+
+  share(text: string, url: string): void {
+    // A browser tab has no contact list of its own, so it borrows Telegram's:
+    // the same sheet a mini app opens, in a tab rather than in the app. Which
+    // is what this has always done, from back when it was the fallback branch
+    // of an `if` in ui/duel.ts.
+    WEB.openLink(shareSheet(text, url));
+  },
+
+  onLink(): () => void {
+    // A link handed to a browser is a page load, and a page load is a launch.
+    return () => {};
   },
 };

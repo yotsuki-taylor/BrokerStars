@@ -76,6 +76,27 @@ export interface Platform {
   openLink(url: string): void;
 
   /**
+   * Hand a link to somebody. Whose contact list opens is the host's business:
+   * Telegram's own share sheet inside Telegram, the system one on Android.
+   */
+  share(text: string, url: string): void;
+
+  /**
+   * An invitation arriving at a game that is already running, rather than one
+   * the game was started by. Returns the way to stop listening.
+   *
+   * Only Android has this: a link tapped there wakes the app that is already
+   * open, and `launchParam()` — read once before the first render — never hears
+   * about it. In a browser or a mini app the equivalent is a page load, which
+   * the launch parameter already covers, so their implementations subscribe to
+   * nothing and say so by handing back a no-op.
+   *
+   * The string is shaped exactly like `launchParam()`: `duel_<code>` or
+   * `friend_<code>`, so one reader serves both doors.
+   */
+  onLink(listener: (param: string) => void): () => void;
+
+  /**
    * Signing in, where signing in is a thing the player does.
    *
    * Absent on every host that already knows who is playing before the game

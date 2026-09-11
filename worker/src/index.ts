@@ -614,6 +614,37 @@ function mintCode(): string {
   return out;
 }
 
+/**
+ * The invitation as an ordinary web address.
+ *
+ * The other link — `t.me/<bot>?start=…` — is the right one to hand somebody
+ * inside Telegram and the wrong one everywhere else: a phone with the Android
+ * app and no Telegram on it cannot open it at all. This is the one that works
+ * for anybody. It lands on the game's own page, which reads `?d=` and `?f=`
+ * exactly as it always has (src/ui/duel.ts, src/ui/friends.ts), so a recipient
+ * with no app plays in the browser rather than being told to go and install
+ * something.
+ *
+ * Deliberately not `brokerstars://`. A custom scheme opens the app and nothing
+ * else: paste one into a chat and most apps will not even make it tappable,
+ * and a recipient without the app gets a dead link with no explanation. The
+ * scheme is for waking the app once something else has decided to hand over —
+ * not for sending to people.
+ *
+ * Null when this deployment does not know where the game is served from, which
+ * is the same condition that already leaves the bot unable to build a button.
+ */
+export function webInvite(env: Env, key: 'd' | 'f', code: string): string | null {
+  if (!env.WEBAPP_URL) return null;
+  // The fragment goes and the query stays. A `#` and everything after it never
+  // reaches a server or a query string, so a code appended past one would make
+  // a link that looks right and does nothing; a query, on the other hand, is
+  // somebody's deliberate configuration and is not ours to drop.
+  const base = env.WEBAPP_URL.replace(/#.*$/, '');
+  const join = !base.includes('?') ? '?' : base.endsWith('?') || base.endsWith('&') ? '' : '&';
+  return `${base}${join}${key}=${encodeURIComponent(code)}`;
+}
+
 const duelStub = (env: Env, code: string) => env.DUEL.get(env.DUEL.idFromName(`duel:${code}`));
 
 async function newDuel(request: Request, env: Env) {
@@ -688,6 +719,7 @@ async function newDuel(request: Request, env: Env) {
     ok: true,
     code,
     link,
+    webLink: webInvite(env, 'd', code),
     expiresAt,
     sent,
     chat: chatAvailable(env),
@@ -803,6 +835,7 @@ async function friendList(env: Env, caller: Caller) {
     ok: true,
     code,
     link: bot ? `https://t.me/${bot}?start=friend_${code}` : null,
+    webLink: webInvite(env, 'f', code),
     friends: list,
   };
 }
