@@ -30,7 +30,13 @@ export const LANGS: Lang[] = ['en', 'ru'];
 /** What each language calls itself. Never translated — that is the point. */
 export const LANG_NAME: Record<Lang, string> = { en: 'ENGLISH', ru: 'РУССКИЙ' };
 
-const KEY = 'brokerstars.lang';
+/**
+ * Where the chosen language lives. Exported because it is the one thing a
+ * deleted account does NOT take with it: language is a setting of the device,
+ * not of the player, and `wipe` in ui/store.ts is told to leave it alone.
+ */
+export const LANG_KEY = 'brokerstars.lang';
+const KEY = LANG_KEY;
 
 /**
  * What a player who has never chosen gets. Russian: that is who is playing,
@@ -110,7 +116,28 @@ const EN = {
   'settings.help': 'HOW TO PLAY',
   'settings.tutorial': 'WATCH THE TUTORIAL',
   'settings.language': 'LANGUAGE',
+  'settings.account': 'ACCOUNT',
   'settings.close': 'CLOSE',
+
+  // The Android build only. A mini app never asks any of this: Telegram has
+  // already said who is playing by the time the game draws.
+  'account.title': 'ACCOUNT',
+  'account.out': 'NOT SIGNED IN',
+  'account.why':
+    'The game plays without one. Signing in is what keeps the board, duels, friends and your office when you change phone.',
+  'account.signIn': 'SIGN IN WITH GOOGLE',
+  'account.signOut': 'SIGN OUT',
+  'account.working': 'ONE MOMENT…',
+  'account.failed': 'That did not work. Try again in a moment.',
+  'account.noserver': 'This build has no server to sign in to.',
+  'account.refused': 'Google said no to that account.',
+  'account.delete': 'DELETE ACCOUNT',
+  'account.deleteAsk': 'DELETE EVERYTHING?',
+  'account.deleteWhat':
+    'Your office, your wardrobe, your coins, your shares, your friends and your place on the board. This cannot be undone and nothing is kept.',
+  'account.deleteGo': 'YES, DELETE IT',
+  'account.keep': 'KEEP IT',
+  'account.deleteDone': 'Gone. The game starts over from here.',
 
   'help.title': 'HOW TO PLAY',
   'help.match':
@@ -476,7 +503,26 @@ const RU: Record<Key, string> = {
   'settings.help': 'СПРАВКА',
   'settings.tutorial': 'ПОСМОТРЕТЬ ТУТОРИАЛ',
   'settings.language': 'ЯЗЫК',
+  'settings.account': 'АККАУНТ',
   'settings.close': 'ЗАКРЫТЬ',
+
+  'account.title': 'АККАУНТ',
+  'account.out': 'ВХОД НЕ ВЫПОЛНЕН',
+  'account.why':
+    'Играть можно и так. Вход нужен, чтобы рейтинг, дуэли, друзья и кабинет остались при смене телефона.',
+  'account.signIn': 'ВОЙТИ ЧЕРЕЗ GOOGLE',
+  'account.signOut': 'ВЫЙТИ',
+  'account.working': 'СЕКУНДУ…',
+  'account.failed': 'Не получилось. Попробуй ещё раз чуть позже.',
+  'account.noserver': 'В этой сборке некуда входить — сервер не настроен.',
+  'account.refused': 'Google не пропустил этот аккаунт.',
+  'account.delete': 'УДАЛИТЬ АККАУНТ',
+  'account.deleteAsk': 'УДАЛИТЬ ВСЁ?',
+  'account.deleteWhat':
+    'Кабинет, гардероб, монеты, акции, друзья и место в таблице. Отменить это нельзя, и ничего не сохранится.',
+  'account.deleteGo': 'ДА, УДАЛИТЬ',
+  'account.keep': 'ОСТАВИТЬ',
+  'account.deleteDone': 'Готово. Игра начинается заново.',
 
   'help.title': 'КАК ИГРАТЬ',
   'help.match':

@@ -98,12 +98,13 @@ import {
   shoutInvite,
   type Link,
 } from './duel';
-import { apiBase } from './api';
-import { platform } from '../platform';
+import { apiBase, deleteAccount } from './api';
+import { platform, type Account } from '../platform';
 import { friendCodeFromLaunch } from './friends';
 import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
-import { LANGS, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
+import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
+import { wipe } from './store';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -287,6 +288,137 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
  * lights up buttons that only exist on the menu, so the match's own copy of
  * this overlay is handed nothing and simply does not offer it.
  */
+/**
+ * Signing in, signing out, and the one door that only goes one way.
+ *
+ * Drawn only where `platform().account` exists, which today means the Android
+ * build and nowhere else — a mini app was opened by somebody Telegram had
+ * already signed for, and there is nothing here for them to do.
+ *
+ * Nothing on this panel is required to play. The copy says so, because a sign-in
+ * wall on a single-player game is a lie about what the game needs: matches,
+ * coins, the office and the wardrobe all work signed out, and what an account
+ * buys is the part a server has to keep.
+ */
+function AccountPanel({
+  account,
+  onOwnFooter,
+}: {
+  account: Account;
+  /**
+   * Told when this panel has taken over the overlay's bottom button.
+   *
+   * Confirming a deletion and finishing one both need a way out that is not
+   * "one step up" — cancel, and a reload — and two buttons a step apart both
+   * saying BACK is a screen asking the player to guess. So the panel draws its
+   * own and the overlay draws none.
+   */
+  onOwnFooter: (own: boolean) => void;
+}) {
+  const [signed, setSigned] = useState(() => account.signedIn());
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    onOwnFooter(asking || gone);
+    // leaving the panel hands the footer back, whatever state it was left in
+    return () => onOwnFooter(false);
+  }, [asking, gone, onOwnFooter]);
+
+  async function doSignIn() {
+    setBusy(true);
+    setNote(null);
+    const err = await account.signIn();
+    setBusy(false);
+    // Backing out of the account picker is a decision, not a failure, and a
+    // screen that apologises for it is a screen arguing with the player.
+    if (err === 'cancelled') return;
+    if (err) {
+      setNote(t(err === 'refused' || err === 'noserver' ? `account.${err}` : 'account.failed'));
+      return;
+    }
+    setSigned(true);
+  }
+
+  async function doDelete() {
+    setBusy(true);
+    setNote(null);
+    const done = await deleteAccount();
+    setBusy(false);
+    // Only when the server says it did it. Forgetting them here while the row
+    // lived on would leave an account nobody can reach and nobody can delete.
+    if (!done) {
+      setNote(t('account.failed'));
+      return;
+    }
+    account.signOut();
+    wipe([LANG_KEY]);
+    setGone(true);
+  }
+
+  if (gone) {
+    return (
+      <div className="settings-list">
+        <p className="settings-note">{t('account.deleteDone')}</p>
+        {/* A reload rather than a state reset: every screen in this game reads
+            its own corner of the store at mount, and starting over is exactly
+            what reopening the app does. */}
+        <button className="big-btn" onClick={() => window.location.reload()}>
+          {t('settings.close')}
+        </button>
+      </div>
+    );
+  }
+
+  if (asking) {
+    return (
+      <div className="settings-list">
+        <p className="settings-note">{t('account.deleteWhat')}</p>
+        <button className="big-btn" disabled={busy} onClick={doDelete}>
+          {busy ? t('account.working') : t('account.deleteGo')}
+        </button>
+        <button className="big-btn ghost" disabled={busy} onClick={() => setAsking(false)}>
+          {t('account.keep')}
+        </button>
+        {note && <p className="settings-note">{note}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="settings-list">
+      <p className="settings-note">{signed ? platform().userName() : t('account.out')}</p>
+      {signed ? (
+        <>
+          <button
+            className="big-btn ghost"
+            disabled={busy}
+            onClick={() => {
+              account.signOut();
+              setSigned(false);
+            }}
+          >
+            {t('account.signOut')}
+          </button>
+          <button className="big-btn ghost" disabled={busy} onClick={() => setAsking(true)}>
+            {t('account.delete')}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="settings-note">{t('account.why')}</p>
+          <button className="big-btn" disabled={busy} onClick={doSignIn}>
+            {busy ? t('account.working') : t('account.signIn')}
+          </button>
+        </>
+      )}
+      {note && <p className="settings-note">{note}</p>}
+    </div>
+  );
+}
+
 function SettingsOverlay({
   onHelp,
   onTutorial,
@@ -298,11 +430,19 @@ function SettingsOverlay({
   onPickLang: (l: Lang) => void;
   onClose: () => void;
 }) {
-  const [langOpen, setLangOpen] = useState(false);
+  const [view, setView] = useState<'menu' | 'lang' | 'account'>('menu');
+  const [ownFooter, setOwnFooter] = useState(false);
+  const account = platform().account;
+  const title =
+    view === 'lang'
+      ? t('settings.language')
+      : view === 'account'
+        ? t('account.title')
+        : t('settings.title');
   return (
     <div className="overlay settings">
-      <h2>{langOpen ? t('settings.language') : t('settings.title')}</h2>
-      {langOpen ? (
+      <h2>{title}</h2>
+      {view === 'lang' ? (
         <div className="settings-list">
           {LANGS.map((l) => (
             <button
@@ -314,6 +454,8 @@ function SettingsOverlay({
             </button>
           ))}
         </div>
+      ) : view === 'account' && account ? (
+        <AccountPanel account={account} onOwnFooter={setOwnFooter} />
       ) : (
         <div className="settings-list">
           <button className="big-btn ghost" onClick={onHelp}>
@@ -324,17 +466,28 @@ function SettingsOverlay({
               {t('settings.tutorial')}
             </button>
           )}
-          <button className="big-btn ghost" onClick={() => setLangOpen(true)}>
+          <button className="big-btn ghost" onClick={() => setView('lang')}>
             {t('settings.language')}
           </button>
+          {/* Only where signing in is a thing that happens in the game. */}
+          {account && (
+            <button className="big-btn ghost" onClick={() => setView('account')}>
+              {t('settings.account')}
+            </button>
+          )}
         </div>
       )}
       {/* One step up, whatever that is from here. Picking a language used to
           leave CLOSE as the only way out of it, so getting back to the settings
-          list meant leaving the settings and opening them again. */}
-      <button className="big-btn" onClick={() => (langOpen ? setLangOpen(false) : onClose())}>
-        {langOpen ? t('common.back') : t('settings.close')}
-      </button>
+          list meant leaving the settings and opening them again.
+
+          Gone entirely while the account panel is asking something: see
+          `onOwnFooter`. */}
+      {!ownFooter && (
+        <button className="big-btn" onClick={() => (view === 'menu' ? onClose() : setView('menu'))}>
+          {view === 'menu' ? t('settings.close') : t('common.back')}
+        </button>
+      )}
     </div>
   );
 }

@@ -43,3 +43,38 @@ export function write(key: string, value: string): void {
     /* storage unavailable — this much simply does not survive the session */
   }
 }
+
+/** Every key this game owns starts with this. Nothing else is ours to remove. */
+const PREFIX = 'brokerstars.';
+
+/**
+ * Forget everything the game has kept on this device.
+ *
+ * One caller, and it is the serious one: deleting an account. The server empties
+ * its own tables (`/profile/delete`), and this is the other half — a player told
+ * that everything is gone should not reopen the app and find their office still
+ * furnished. It also stops the leftovers being handed back as a `claim` the next
+ * time somebody signs in on this phone, which would quietly restore what was
+ * just deleted.
+ *
+ * `keep` is for the settings that belong to the device rather than to the
+ * account. The chosen language is the only one today: flipping somebody back to
+ * a language they did not pick is not part of what they asked to delete.
+ *
+ * Keys are collected before any are removed. Removing while walking `key(i)`
+ * reindexes the store underneath the loop and leaves half of them behind.
+ */
+export function wipe(keep: string[] = []): void {
+  try {
+    const s = store() as (KeyValueStore & Storage) | null;
+    if (!s || typeof s.key !== 'function') return;
+    const doomed: string[] = [];
+    for (let i = 0; i < s.length; i++) {
+      const key = s.key(i);
+      if (key && key.startsWith(PREFIX) && !keep.includes(key)) doomed.push(key);
+    }
+    for (const key of doomed) s.removeItem(key);
+  } catch {
+    /* a store we cannot walk is a store we cannot clear; the server half stands */
+  }
+}

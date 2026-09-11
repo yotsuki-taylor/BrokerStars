@@ -74,6 +74,28 @@ export interface Platform {
 
   /** Send the player somewhere else: an invitation, the group chat. */
   openLink(url: string): void;
+
+  /**
+   * Signing in, where signing in is a thing the player does.
+   *
+   * Absent on every host that already knows who is playing before the game
+   * draws — a mini app is opened by somebody Telegram signed for — and absent
+   * where nobody can sign in at all. So its presence is exactly the question
+   * the settings screen asks before drawing an ACCOUNT button, which is why it
+   * is an optional object rather than three optional methods.
+   */
+  readonly account?: Account;
+}
+
+/** Why a sign-in did not end in a session. */
+export type SignInError = 'cancelled' | 'noserver' | 'refused' | 'failed';
+
+export interface Account {
+  signedIn(): boolean;
+  /** Null on success. The caller draws the reason; none of them is fatal. */
+  signIn(): Promise<SignInError | null>;
+  /** This device forgets the session. The account itself is untouched. */
+  signOut(): void;
 }
 
 /**

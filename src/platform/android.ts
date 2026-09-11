@@ -23,7 +23,7 @@
  * friends, and a profile that survives a new phone.
  */
 
-import type { Platform } from './index';
+import type { Account, Platform, SignInError } from './index';
 
 /** Where the Worker is. Read the same way ui/api.ts reads it, and deliberately
  * not imported from there: that module imports this one through `./index`, and
@@ -101,8 +101,6 @@ export function signOut(): void {
 }
 
 /* ---------------------------------------------------------------- signing in */
-
-export type SignInError = 'cancelled' | 'noserver' | 'refused' | 'failed';
 
 /**
  * Sign in with Google and come back with a session.
@@ -187,8 +185,12 @@ function paramFromUrl(url: string): string {
   }
 }
 
+/** The three questions the settings screen asks, and nothing else. */
+const ACCOUNT: Account = { signedIn, signIn, signOut };
+
 export const ANDROID: Platform = {
   id: 'android',
+  account: ACCOUNT,
 
   /**
    * Read the session off the disk and the intent off the launcher, before the

@@ -2485,6 +2485,25 @@ body {
   width: 100%;
 }
 
+/* A line of prose between the buttons: who is signed in, what an account is
+   for, and what deleting one takes with it. Quieter than a button and quieter
+   than the heading, because none of it is a thing to tap. */
+.overlay.settings .settings-note {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* The one that is not prose: the name of whoever is signed in, which reads as
+   a label for the two buttons under it. */
+.overlay.settings .settings-list > .settings-note:first-child {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 1;
+}
+
 /* ---------- archive tabs ---------- */
 
 /* Same tab as the shop wears, two across instead of five. */

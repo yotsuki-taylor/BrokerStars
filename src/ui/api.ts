@@ -109,9 +109,13 @@ const ok = (a: Answer | null): unknown => (a && a.status === 200 ? a.body : null
 
 /**
  * Is there anywhere to send a signed thing at all? False for a build with no
- * `VITE_API_URL` and for the game opened outside Telegram — in both cases the
+ * `VITE_API_URL`, and false while the host has no token to sign with — a plain
+ * browser tab always, an Android app until somebody signs in. In both cases the
  * answer is not "try again later" but "not in this life", so nothing is queued
  * for a retry that could never happen.
+ *
+ * On Android that changes mid-session: signing in gives the host a token where
+ * there was none, and everything below starts working without a reload.
  */
 const canSign = (): boolean => BASE !== '' && initData() !== '';
 
@@ -456,4 +460,28 @@ export async function fetchMarket(): Promise<Market | null> {
   if (!body) return null;
   const market = cleanMarket(body);
   return Object.keys(market.prices).length ? market : null;
+}
+
+/* ------------------------------------------------------------ the exit door */
+
+/**
+ * Erase this player from the server, everywhere, for good.
+ *
+ * Google Play requires it of anything that signs people in, and requiring it is
+ * right: an account somebody can open and not close is not theirs. The Worker
+ * empties every table keyed on them in one batch (`/profile/delete`) — board
+ * row, matches, profile, friend code, both directions of every friendship.
+ *
+ * The word is sent rather than a flag, and the server checks it. A route that
+ * empties an account should not be reachable by a request that arrived by
+ * accident.
+ *
+ * True only when the server said it did it. False covers every other case, and
+ * the caller must not clear anything local on a false — a game that forgot the
+ * player locally while the server kept them would leave an account nobody can
+ * reach and nobody can delete.
+ */
+export async function deleteAccount(): Promise<boolean> {
+  const answer = await post('/profile/delete', { confirm: 'delete' });
+  return answer?.status === 200;
 }
