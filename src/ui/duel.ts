@@ -143,6 +143,37 @@ export function linkToShare(bot: string | null, web: string | null): string | nu
 }
 
 /**
+ * The address that wakes the installed Android app on a duel.
+ *
+ * The other half of `paramFromUrl` in `src/platform/android.ts`, which turns it
+ * back into the `duel_<code>` string a Telegram launch carries. A scheme of our
+ * own rather than an https App Link, for the reason written out there.
+ */
+export const appLink = (code: string): string => `brokerstars://duel/${code}`;
+
+/**
+ * Is this page worth offering the app to?
+ *
+ * Nobody can ask a phone what it has installed — no browser and no chat may,
+ * and that is deliberate. So the page does not ask. It offers, on the only
+ * devices where the offer could mean anything, and the player answers by
+ * tapping or not tapping.
+ *
+ * WHY IT IS A SCREEN AND NOT A LINK ON THE WAY PAST. The invitation could be
+ * taken here and handed over afterwards, and that would be worse: sitting down
+ * starts the match, and the seat is held by the id that took it. The app would
+ * arrive a second later as somebody else and be told the duel had started. So
+ * the choice is made before anybody sits, which costs an Android player one tap
+ * and costs everybody else nothing.
+ *
+ * Not offered inside the app itself, where there is nothing to hand over to.
+ */
+export function canHandOver(): boolean {
+  if (platform().id === 'android') return false;
+  return /Android/i.test(String((globalThis as any).navigator?.userAgent ?? ''));
+}
+
+/**
  * Hand the link to a friend, through whatever passes for a contact list where
  * the game is running: Telegram's own share sheet inside Telegram, the system
  * one on Android, a browser tab pointed at Telegram's sheet in a plain page.

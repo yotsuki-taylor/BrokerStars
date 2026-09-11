@@ -1048,6 +1048,33 @@ body {
   flex: 1 1 auto;
 }
 
+/* The choice a browser on an Android phone is given: the app, or this page.
+   Three controls in a row rather than one pinned to the bottom, so `margin-top:
+   auto` is handed to the stack instead of to each of them. */
+.duel-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.duel-choice .big-btn {
+  margin-top: 0;
+}
+
+/* The one big button in the game that is a link and not a button: handing a
+   duel to the installed app is a navigation, and a real anchor is the tap an
+   Android browser passes to the system. A <button> centres its own label; an
+   <a> has to be told. */
+a.big-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
 .duel-clock {
   text-align: center;
   font-size: 26px;

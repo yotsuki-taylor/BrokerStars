@@ -98,7 +98,9 @@ import {
   DuelSocket,
   applySync,
   applyTick,
+  appLink,
   buildMirror,
+  canHandOver,
   copyText,
   linkToShare,
   createInvite,
@@ -1638,10 +1640,37 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closeDuel, restart]);
 
-  /** Opened on somebody's invitation: straight into it, whatever screen was next. */
+  /**
+   * Opened on somebody's invitation: straight into it, whatever screen was next.
+   *
+   * Except on an Android phone outside the app, where the same invitation may
+   * belong in an app this page cannot see. There it asks first — and asks
+   * BEFORE connecting, because connecting takes the seat and the seat cannot be
+   * handed on (`canHandOver` says why at length).
+   */
   useEffect(() => {
     const code = duelCodeFromLaunch();
-    if (code) connect(code, 'joining', { code });
+    if (!code) return;
+    if (canHandOver()) {
+      setDuel({
+        phase: 'handover',
+        code,
+        link: null,
+        webLink: null,
+        expiresAt: null,
+        league: leagueRef.current,
+        rival: null,
+        error: null,
+        conn: 'connecting',
+        rivalGone: false,
+        payLeague: null,
+        invited: null,
+        chat: false,
+      });
+      setScreen('duel');
+      return;
+    }
+    connect(code, 'joining', { code });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2113,6 +2142,10 @@ export default function App() {
           rivalName={duel.rival?.name ?? null}
           invited={duel.invited}
           error={duel.error}
+          appHref={duel.phase === 'handover' && duel.code ? appLink(duel.code) : null}
+          onPlayHere={() => {
+            if (duel.code) connect(duel.code, 'joining', { code: duel.code });
+          }}
           onSend={() => {
             const send = linkToShare(duel.link, duel.webLink);
             if (send) shareInvite(send, t('duel.inviteText'));

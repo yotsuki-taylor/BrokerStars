@@ -320,6 +320,13 @@ const EN = {
   'duel.title': 'DUEL A FRIEND',
   'duel.opening': 'OPENING A DUEL…',
   'duel.joining': 'JOINING THE DUEL…',
+
+  // Asked of a browser on an Android phone, where this invitation may belong in
+  // an app instead. Nothing can look, so the question is put to the player.
+  'duel.handover':
+    'You are on Android. If you have Broker Stars installed, the duel is better played there — your account and your wardrobe are in it.',
+  'duel.inApp': 'OPEN IN THE APP',
+  'duel.here': 'PLAY HERE',
   'duel.waiting': 'WAITING FOR THEM TO ACCEPT',
   'duel.rivalIn': '{name} IS IN',
   'duel.board': 'BOARD · {name}',
@@ -748,6 +755,11 @@ const RU: Record<Key, string> = {
   'duel.title': 'ДУЭЛЬ С ДРУГОМ',
   'duel.opening': 'ОТКРЫВАЕМ ДУЭЛЬ…',
   'duel.joining': 'ПОДКЛЮЧАЕМСЯ К ДУЭЛИ…',
+
+  'duel.handover':
+    'У тебя Андроид. Если Broker Stars установлен, дуэль лучше играть там — твой аккаунт и гардероб в нём.',
+  'duel.inApp': 'ОТКРЫТЬ В ПРИЛОЖЕНИИ',
+  'duel.here': 'ИГРАТЬ ЗДЕСЬ',
   'duel.waiting': 'ЖДЁМ, ПОКА ОН ПРИМЕТ',
   'duel.rivalIn': '{name} НА МЕСТЕ',
   'duel.board': 'ДОСКА · {name}',

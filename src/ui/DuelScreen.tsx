@@ -4,7 +4,7 @@ import { t } from './i18n';
 import type { DuelError } from '../duel/protocol';
 import type { Shout } from './duel';
 
-export type DuelPhase = 'opening' | 'waiting' | 'joining' | 'error';
+export type DuelPhase = 'opening' | 'waiting' | 'joining' | 'handover' | 'error';
 
 /**
  * Everything that happens before the versus screen: minting an invitation,
@@ -31,6 +31,8 @@ export default function DuelScreen({
   rivalName,
   invited,
   error,
+  appHref = null,
+  onPlayHere,
   onSend,
   onCopy,
   onShout,
@@ -50,6 +52,13 @@ export default function DuelScreen({
    */
   invited: { name: string; sent: boolean } | null;
   error: DuelError | 'net' | null;
+  /**
+   * Take the invitation into the installed app instead. Null when there is no
+   * app this page could hand it to — see `canHandOver`.
+   */
+  appHref?: string | null;
+  /** Ignore the app and play the duel in this page, as a guest. */
+  onPlayHere?: () => void;
   onSend: () => void;
   onCopy: () => Promise<boolean>;
   /**
@@ -104,6 +113,37 @@ export default function DuelScreen({
         <button className="big-btn" onClick={onBack}>
           {t('common.back')}
         </button>
+      </div>
+    );
+  }
+
+  /**
+   * Somebody opened an invitation in a browser on an Android phone, where the
+   * game might also be an app. Which of the two it should be played in is not
+   * something this page can find out, so it asks — once, before the seat is
+   * taken, because taking it is what cannot be undone.
+   *
+   * An anchor rather than a button: a tap on a real link is the request an
+   * Android browser passes to the system, and a browser with nothing to pass it
+   * to simply stays here, where PLAY HERE still works.
+   */
+  if (phase === 'handover' && appHref) {
+    return (
+      <div className="overlay duel">
+        <h2>{t('duel.title')}</h2>
+        <p>{t('duel.handover')}</p>
+        <div className="spacer" />
+        <div className="duel-choice">
+          <a className="big-btn" href={appHref}>
+            {t('duel.inApp')}
+          </a>
+          <button className="menu-btn" onClick={onPlayHere}>
+            {t('duel.here')}
+          </button>
+          <button className="big-btn ghost" onClick={onBack}>
+            {t('common.cancel')}
+          </button>
+        </div>
       </div>
     );
   }
