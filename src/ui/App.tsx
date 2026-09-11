@@ -119,6 +119,7 @@ import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protoco
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { wipe } from './store';
+import { advance, progressOf, startLine, type Line } from './line';
 import { ensureGuest, guestName } from './guest';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
@@ -151,32 +152,6 @@ import {
 } from './wardrobe';
 
 const HUMAN = 0;
-
-/**
- * The clock a duel's chart runs on, in ticks. See the game loop for why it
- * needs one of its own.
- *
- * `LAG` is how far behind the arriving ticks the line deliberately runs: a
- * reserve of about 220ms that a late tick is spent out of instead of the line
- * stopping. `GAIN` and `EASE` are the correction — how hard a frame reads the
- * error into the line's *speed*, and how quickly the speed itself may change.
- * Correcting the speed rather than the position is the whole trick: a line
- * moving 10% fast for half a second is invisible, and a line teleported 10%
- * forward is not.
- *
- * The bounds on the speed are what stop a catch-up from becoming a lurch.
- *
- * Simulated against half-second ticks arriving ±200ms out, which is a bad
- * mobile connection: the line never stops, and the worst single frame is 1.4x
- * the normal step. Reading the clock straight off the last arrival — which is
- * what this did at first — stalls a twelfth of the time and has single frames
- * ten times the normal step in it. That was the hitching.
- */
-const RENDER_LAG = 0.45;
-const RENDER_GAIN = 1.0;
-const RENDER_EASE = 0.1;
-const RENDER_SPEED_MIN = 0.7;
-const RENDER_SPEED_MAX = 1.4;
 
 /**
  * What the game is in the middle of, when it is in the middle of a duel.
@@ -891,8 +866,8 @@ export default function App() {
    */
   const lastTick = useRef<DuelTick | null>(null);
   /** where the chart line has got to, in ticks, and how fast — see the game loop */
-  const renderPos = useRef(0);
-  const renderSpeed = useRef(1);
+  /** The duel chart's own clock — see `ui/line.ts`. */
+  const line = useRef<Line>(startLine());
   const [award, setAward] = useState<Award | null>(null);
   /** name of the league this match's win opened, shown once on the result screen */
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
@@ -1122,41 +1097,24 @@ export default function App() {
         // is not on offer either: the market goes on whether or not this phone
         // is looking at it.
         //
-        // Reading the clock straight off the last arrival — which is what this
-        // did at first — draws every wobble in the network. A tick 90ms late
-        // pins the line against the newest price it has and holds it there for
-        // 90ms; the next one arriving early throws it forward instead. That is
-        // several visible hitches a second on a connection that is working
-        // perfectly well, and it is what "everything was freezing" was.
-        //
-        // So the line keeps a clock of its own. It advances by itself, a tick
-        // per tickMs, and the arrivals only bend its *speed* — never its
-        // position — towards where they say it ought to be. It aims to sit
-        // RENDER_LAG behind them, and that reserve is what a late tick is
-        // spent out of. Nothing anybody taps is delayed by this: the tap goes
-        // up the socket at once and the numbers move the moment the answer
-        // lands. Only the line is held back, by about a fifth of a second.
+        // How the sliding works, and why it is not simply "draw the newest tick
+        // that arrived", is `ui/line.ts`. What matters here is the one thing it
+        // hands back: `progress` is where the right-hand edge has got to, and it
+        // is regularly NEGATIVE — the edge sits about a tick behind the newest
+        // price and sometimes further. Whatever reads it has to cope with that;
+        // `headOf` in `ui/chart.ts` did not, and that was the chart jumping.
         const tickMs = st.cfg.match.tickMs;
         if (st.finished) {
-          renderPos.current = st.tick;
+          line.current = { pos: st.tick, speed: 1 };
           progressRef.current = 1;
         } else {
-          const target = st.tick - 1 + (now - lastTickAt.current) / tickMs - RENDER_LAG;
-          const want = Math.min(
-            RENDER_SPEED_MAX,
-            Math.max(RENDER_SPEED_MIN, 1 + (target - renderPos.current) * RENDER_GAIN),
-          );
-          renderSpeed.current += (want - renderSpeed.current) * RENDER_EASE;
-          // Never past the newest price we were sent — that would be drawing a
-          // market we have not been told about. Behind it is fine: the chart
-          // reads `progress` as where the right-hand edge has got to, and a
-          // negative one simply keeps the latest point out of frame a moment
-          // longer.
-          renderPos.current = Math.min(
-            st.tick,
-            renderPos.current + (dt / tickMs) * renderSpeed.current,
-          );
-          progressRef.current = renderPos.current - (st.tick - 1);
+          line.current = advance(line.current, {
+            tick: st.tick,
+            sinceTick: now - lastTickAt.current,
+            dt,
+            tickMs,
+          });
+          progressRef.current = progressOf(line.current, st.tick);
         }
       } else if (!st.finished && !ui.current.paused) {
         acc += dt * ui.current.speed;
@@ -1444,8 +1402,7 @@ export default function App() {
         case 'setup': {
           stateRef.current = buildMirror(msg);
           lastTick.current = null;
-          renderPos.current = 0;
-          renderSpeed.current = 1;
+          line.current = startLine();
           progressRef.current = 0;
           lastTickAt.current = performance.now();
           // The payout arrives as a message; nothing local is allowed to bank
@@ -2016,6 +1973,14 @@ export default function App() {
     if (!import.meta.env.DEV) return;
     (window as any).bs = {
       state: () => stateRef.current,
+      // where the duel chart's right-hand edge is, which is the thing that has
+      // been wrong twice now -- see ui/line.ts and `headOf` in ui/chart.ts
+      line: () => ({
+        tick: stateRef.current.tick,
+        pos: line.current.pos,
+        speed: line.current.speed,
+        progress: progressRef.current,
+      }),
       step: (n = 1) => {
         for (let i = 0; i < n; i++) step(stateRef.current);
         rerender();
