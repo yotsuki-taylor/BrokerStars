@@ -334,10 +334,17 @@ const EN = {
   'friends.add': 'ADD A FRIEND',
   'friends.added': 'YOU TWO ARE FRIENDS NOW',
   'friends.inviteText': 'Be my friend in Broker Stars — eighty seconds, three companies, and a table with both our names on it.',
-  'friends.err.nosuch': 'THAT LINK DOES NOT BELONG TO ANYBODY.',
-  'friends.err.yourself': 'THAT IS YOUR OWN LINK. SEND IT TO SOMEBODY ELSE.',
+  'friends.err.nosuch': 'THAT CODE DOES NOT BELONG TO ANYBODY.',
+  'friends.err.yourself': 'THAT IS YOUR OWN CODE. GIVE IT TO SOMEBODY ELSE.',
   'friends.err.full': 'ONE OF YOU HAS AS MANY FRIENDS AS THE LIST HOLDS.',
   'friends.err.nolink': 'THE SERVER COULD NOT NAME ITS BOT, SO THERE IS NO LINK TO SEND.',
+  // Typing a code instead of following a link. The only way in for a player
+  // whose phone cannot be handed an invitation — see src/platform/android.ts.
+  'friends.yourCode': 'YOUR CODE',
+  'friends.enterCode': 'OR TYPE A FRIEND’S CODE',
+  'friends.codeHint': 'CODE',
+  'friends.addCode': 'ADD',
+
   'friends.visit': 'VISIT',
   'friends.roomAt': 'ROOM · {n}/{of}',
   /* Under the list, and the answer to the one thing this screen cannot fix on
@@ -713,10 +720,15 @@ const RU: Record<Key, string> = {
   'friends.add': 'ДОБАВИТЬ ДРУГА',
   'friends.added': 'ТЕПЕРЬ ВЫ ДРУЗЬЯ',
   'friends.inviteText': 'Давай дружить в Broker Stars — восемьдесят секунд, три компании и таблица, где стоят оба наших имени.',
-  'friends.err.nosuch': 'ЭТА ССЫЛКА НИКОМУ НЕ ПРИНАДЛЕЖИТ.',
-  'friends.err.yourself': 'ЭТО ТВОЯ СОБСТВЕННАЯ ССЫЛКА. ОТПРАВЬ ЕЁ КОМУ-НИБУДЬ.',
+  'friends.err.nosuch': 'ТАКОГО КОДА НИ У КОГО НЕТ.',
+  'friends.err.yourself': 'ЭТО ТВОЙ СОБСТВЕННЫЙ КОД. ДАЙ ЕГО КОМУ-НИБУДЬ.',
   'friends.err.full': 'У КОГО-ТО ИЗ ВАС ДРУЗЕЙ СТОЛЬКО, СКОЛЬКО ВМЕЩАЕТ СПИСОК.',
   'friends.err.nolink': 'СЕРВЕР НЕ СМОГ НАЗВАТЬ СВОЕГО БОТА, ТАК ЧТО ССЫЛКИ НЕТ.',
+  'friends.yourCode': 'ТВОЙ КОД',
+  'friends.enterCode': 'ИЛИ ВВЕДИ КОД ДРУГА',
+  'friends.codeHint': 'КОД',
+  'friends.addCode': 'ДОБАВИТЬ',
+
   'friends.visit': 'ПОСЕТИТЬ',
   'friends.chatPitch':
     'Не с кем играть? У игры есть чат. Там такие же ищут соперника — а ссылка, отправленная туда, возвращается с другом.',

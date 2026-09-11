@@ -2469,6 +2469,73 @@ body {
   flex: 1 1 auto;
 }
 
+/* ---------- a code, for when a link cannot travel ---------- */
+
+.friend-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 12px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.friend-code-mine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.friend-code-label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+/* Monospace and spaced out: this is a thing people read to each other one
+   character at a time, and the gaps are where they pause. */
+.friend-code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0.16em;
+}
+
+.friend-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.friend-code-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px; /* under 16px and iOS zooms the page on focus */
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.friend-code-input::placeholder {
+  letter-spacing: 0.06em;
+  opacity: 0.45;
+}
+
+.friend-code-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.friend-code-row .menu-btn {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 /* ---------- being called out ---------- */
 
 /* Over the menu, low enough to sit under the coin counters and above the row

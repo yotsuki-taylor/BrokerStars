@@ -1,6 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Coin, Lock, People } from './components';
 import { addFriend, fetchFriends } from './api';
+import { FRIEND_CODE_LENGTH, cleanCode } from '../friends/protocol';
+
+/**
+ * Keep only what a code can be made of, as it is typed.
+ *
+ * The alphabet is base32 without vowels, so a code can never spell anything and
+ * never contains a pair a phone keyboard confuses — and a character that cannot
+ * be in one is a character that will not be missed. Refusing it here rather
+ * than at the button means the box never holds something that cannot work, so
+ * there is nothing to explain afterwards.
+ *
+ * Uppercase on the way in and lowercase on the way out (`cleanCode`): a code
+ * reads better shouted, and the server only ever sees the quiet version.
+ */
+const keepCodeChars = (raw: string): string =>
+  raw
+    .toUpperCase()
+    .replace(/[^0-9BCDFGHJKLMNPQRSTVWXYZ]/g, '')
+    .slice(0, FRIEND_CODE_LENGTH);
 import { copyLink, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
@@ -131,6 +150,8 @@ export default function FriendsScreen({
   const [copied, setCopied] = useState(false);
   const [popup, setPopup] = useState<Popup | null>(null);
   const [visiting, setVisiting] = useState<Friend | null>(null);
+  const [typed, setTyped] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const settle = useCallback((next: FriendList | null) => {
     setList(next);
@@ -177,6 +198,31 @@ export default function FriendsScreen({
 
   /** Whichever of the server's two links is the right one to send from here. */
   const invite = list ? linkToShare(list.link, list.webLink) : null;
+
+  /**
+   * Add whoever the typed code belongs to.
+   *
+   * The same request the link takes — adding answers with the list as it stands
+   * afterwards, so there is nothing to fetch again — and the same two pieces of
+   * state the link path sets, so a code and a link produce the same screen.
+   *
+   * The box is cleared only on success. A code that was refused is one the
+   * player is about to correct a character of, and taking it away from them
+   * means asking for the whole thing again.
+   */
+  const submitCode = async () => {
+    const code = cleanCode(typed);
+    if (!code || adding) return;
+    setAdding(true);
+    setError(null);
+    setAdded(false);
+    const res = await addFriend(code);
+    setAdding(false);
+    setError(res.error);
+    setAdded(!res.error && Boolean(res.list));
+    if (res.list) settle(res.list);
+    if (!res.error) setTyped('');
+  };
 
   const copy = async () => {
     if (!invite) return;
@@ -260,7 +306,58 @@ export default function FriendsScreen({
         </button>
       </div>
 
-      {!list?.link && <div className="friend-note bad">{t('friends.err.nolink')}</div>}
+      {!invite && <div className="friend-note bad">{t('friends.err.nolink')}</div>}
+
+      {/*
+        Typing a code, for everybody a link cannot reach.
+        
+        A friendship used to be made one way: follow a link. That works inside
+        Telegram, where a link is a message, and it does not work in the Android
+        app at all — a `?f=` address opens the browser, not the game, and there
+        is no domain of ours for Android to bind the app to (see the manifest).
+        Which left an Android player unable to become anybody's friend, and so
+        unable to be called out to a duel by name.
+        
+        A code is the same invitation with nothing carrying it. It survives being
+        read aloud, screenshotted, or typed into a phone that has never heard of
+        this game. Both halves are here because they are one exchange: the code
+        to give, and the box to put somebody else's in.
+      */}
+      {list && (
+        <div className="friend-code">
+          <div className="friend-code-mine">
+            <span className="friend-code-label">{t('friends.yourCode')}</span>
+            <b className="friend-code-value">{list.code.toUpperCase()}</b>
+          </div>
+          <label className="friend-code-label" htmlFor="friend-code-input">
+            {t('friends.enterCode')}
+          </label>
+          <form
+            className="friend-code-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitCode();
+            }}
+          >
+            <input
+              id="friend-code-input"
+              className="friend-code-input"
+              value={typed}
+              onChange={(e) => setTyped(keepCodeChars(e.target.value))}
+              placeholder={t('friends.codeHint')}
+              maxLength={FRIEND_CODE_LENGTH}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              enterKeyHint="done"
+            />
+            <button className="menu-btn" type="submit" disabled={!cleanCode(typed) || adding}>
+              {t('friends.addCode')}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Last, and quieter than the two buttons above it: somebody who has
           friends should be sending them a link, not reading an advert. */}
