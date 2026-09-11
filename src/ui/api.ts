@@ -19,6 +19,7 @@
  *   there is nothing to send. Reading the board still works: it is public.
  */
 
+import { cleanCall, type DuelCall } from '../duel/protocol';
 import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
@@ -331,9 +332,62 @@ export async function flushPending(): Promise<void> {
  * did.
  */
 const profileCall = async (path: string, body: Record<string, unknown> = {}) => {
-  const answer = ok(await post(path, body)) as { profile?: unknown } | null;
+  const answer = ok(await post(path, body)) as { profile?: unknown; call?: unknown } | null;
+  noteCall(answer?.call);
   return cleanProfile(answer?.profile, LEAGUE_COUNT);
 };
+
+/* ------------------------------------------------------ being called out */
+
+/**
+ * Somebody wants a duel with this player, and said so while the player was
+ * somewhere else.
+ *
+ * It arrives clipped to the side of answers that were being fetched anyway —
+ * opening the session, opening the friends list — and on its own from the
+ * timer below. Which is why it is delivered as an event rather than returned:
+ * three different requests can be carrying one, none of their callers asked
+ * for it, and the screen that wants it is not the one that made the request.
+ *
+ * The server hands a call over once and forgets it (`worker/src/calls.ts`), so
+ * anything dropped here is dropped for good. Hence a list of listeners rather
+ * than a stored value: whoever is watching sees it, and if nobody is watching
+ * then the player is not looking at the game anyway.
+ */
+type CallListener = (call: DuelCall) => void;
+const callListeners = new Set<CallListener>();
+
+/** Returns the way to stop listening. */
+export function onDuelCall(listener: CallListener): () => void {
+  callListeners.add(listener);
+  return () => callListeners.delete(listener);
+}
+
+function noteCall(raw: unknown): void {
+  const call = cleanCall(raw);
+  if (!call) return;
+  for (const listener of callListeners) {
+    try {
+      listener(call);
+    } catch {
+      /* a screen that threw is not a reason to skip the next one */
+    }
+  }
+}
+
+/**
+ * Ask whether anybody is waiting. Its own small route, because this one runs on
+ * a timer and the profile is far too much to fetch to be told "nobody".
+ *
+ * Silent about everything: no server, no signature, nothing waiting and a
+ * request that failed all look the same from here, and none of them is
+ * something to tell the player about.
+ */
+export async function pollDuelCall(): Promise<void> {
+  if (!canSign()) return;
+  const answer = ok(await post('/duel/call', {})) as { call?: unknown } | null;
+  noteCall(answer?.call);
+}
 
 /**
  * Open the session. `claim` is whatever this browser had in `localStorage`
@@ -416,8 +470,14 @@ export const tradeShares = (
  * is the same bargain everything else here strikes; the screen says so in a
  * sentence rather than spinning.
  */
-export const fetchFriends = async (): Promise<FriendList | null> =>
-  cleanList(ok(await post('/friends', {})));
+export const fetchFriends = async (): Promise<FriendList | null> => {
+  const answer = ok(await post('/friends', {}));
+  // The friends screen is the one the caller used, and the one their friend is
+  // most likely looking at when the invitation lands — so the server clips a
+  // waiting call to this answer too.
+  noteCall((answer as { call?: unknown } | null)?.call);
+  return cleanList(answer);
+};
 
 /** What became of an attempt to add somebody, and the list as it stands after it. */
 export interface Added {

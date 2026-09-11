@@ -157,3 +157,17 @@ CREATE TABLE IF NOT EXISTS chat_shouts (
   player_id TEXT PRIMARY KEY,
   last_at   INTEGER NOT NULL
 );
+
+-- Being called out to a duel by name, for a friend the bot cannot reach.
+--
+-- One row per player and the PRIMARY KEY is what makes that true: a second call
+-- replaces the first, because nobody needs a queue of invitations that expire
+-- in a quarter of an hour. See `worker/src/calls.ts` and migration 009; the
+-- long version of why this exists is in the migration.
+CREATE TABLE IF NOT EXISTS duel_calls (
+  to_id      TEXT PRIMARY KEY,
+  code       TEXT NOT NULL,
+  from_id    TEXT NOT NULL,
+  from_name  TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);

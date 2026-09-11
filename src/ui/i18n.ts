@@ -112,6 +112,12 @@ const EN = {
   'daily.collect': 'COLLECT +{n}',
   'daily.questsRoll': 'Three of these a day, drawn fresh at midnight. Whatever is not collected goes with them.',
 
+  // Being called out to a duel by name, collected from the server rather than
+  // pushed to the phone — see worker/src/calls.ts.
+  'call.from': '{name} CALLS YOU OUT',
+  'call.accept': 'DUEL',
+  'call.ignore': 'NOT NOW',
+
   'settings.title': 'SETTINGS',
   'settings.help': 'HOW TO PLAY',
   'settings.tutorial': 'WATCH THE TUTORIAL',
@@ -498,6 +504,10 @@ const RU: Record<Key, string> = {
   'daily.collect': 'ЗАБРАТЬ +{n}',
   'daily.questsRoll':
     'Три штуки в день, новые каждую полночь. Что не забрал — уйдёт вместе с ними.',
+
+  'call.from': '{name} ЗОВЁТ НА ДУЭЛЬ',
+  'call.accept': 'ПРИНЯТЬ',
+  'call.ignore': 'НЕ СЕЙЧАС',
 
   'settings.title': 'НАСТРОЙКИ',
   'settings.help': 'СПРАВКА',

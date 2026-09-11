@@ -30,6 +30,38 @@ import type { Outfit } from '../ui/wardrobe';
 export const DUEL_TTL_MS = 15 * 60 * 1000;
 
 /**
+ * Somebody calling this player out to a duel by name, waiting on the server.
+ *
+ * The invitation used to be delivered — the bot put it in the friend's
+ * Telegram — and for a player signed in with Google there is no Telegram to put
+ * it in. So the server holds it and the game collects it (worker/src/calls.ts).
+ */
+export interface DuelCall {
+  code: string;
+  /** who is calling, for the banner to name. Already trimmed by the server. */
+  from: string;
+  expiresAt: number;
+}
+
+/**
+ * A call out of whatever the server put in an answer, or null.
+ *
+ * Null for an expired one as well as a malformed one, and the clock is checked
+ * on this side too: the row was alive when it was read, but the answer may have
+ * sat in a queue, and a banner offering a duel that closed while it travelled
+ * is worse than no banner.
+ */
+export function cleanCall(raw: unknown): DuelCall | null {
+  const r = raw as Record<string, unknown> | null;
+  if (!r) return null;
+  const code = normalizeCode(r.code);
+  const expiresAt = Math.floor(Number(r.expiresAt));
+  if (!code || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+  const from = String(r.from ?? '').trim().slice(0, 24);
+  return { code, from: from || 'PLAYER', expiresAt };
+}
+
+/**
  * Between "both are here" and the first tick: the versus screen's own
  * three and a half seconds, plus the 3–2–1. The server waits it out on its own
  * clock rather than asking either client when it is ready, so the two players

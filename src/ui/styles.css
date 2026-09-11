@@ -2469,6 +2469,47 @@ body {
   flex: 1 1 auto;
 }
 
+/* ---------- being called out ---------- */
+
+/* Over the menu, low enough to sit under the coin counters and above the row
+   of buttons — the band the eye is already crossing on its way to PLAY. */
+.duel-call {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 96px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(6, 40, 92, 0.94);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.duel-call-who {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+
+/* The two answers side by side and the same height, because refusing an
+   invitation should not be a smaller target than accepting one. */
+.duel-call-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.duel-call-actions .menu-btn,
+.duel-call-actions .big-btn {
+  width: 100%;
+  margin: 0;
+}
+
 /* ---------- settings ---------- */
 
 /* The overlay is the same box the help text uses; this only stacks the two or

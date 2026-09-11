@@ -40,6 +40,7 @@ import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate, chatShout, duelPush } from './bot';
 import { chatAvailable, markShout, waitLeft } from './chat';
+import * as calls from './calls';
 import * as friends from './friends';
 import * as profiles from './profile';
 import {
@@ -314,6 +315,23 @@ async function googleSignIn(request: Request, env: Env) {
 }
 
 /**
+ * Is anybody calling this player out to a duel?
+ *
+ * Its own route rather than a field on something bigger because the game asks
+ * this on a timer while the player sits in the menu, and asking for a whole
+ * profile thirty seconds at a time to find out that nobody is waiting would be
+ * a rude thing to do to a phone. `/profile` and `/friends` carry a call too,
+ * for the two moments the game was going to ask anyway.
+ *
+ * Reading takes it: see `calls.take`.
+ */
+async function duelCall(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  return json({ ok: true, call: await calls.take(env, asked.caller) });
+}
+
+/**
  * Every profile route starts the same way: a body, a signature, and the row
  * that signature belongs to. Nothing is read here without one either — a
  * wardrobe is not the leaderboard, and there is nobody it is public reading
@@ -337,8 +355,18 @@ async function whoIsAsking(
 }
 
 /** The whole profile, every time: the client's job is to draw what comes back. */
-const sent = (a: profiles.Applied) =>
-  json({ ok: !a.error, error: a.error, profile: profiles.view(a.held, a.earned, a.at) });
+/**
+ * The whole profile, every time, and whoever is calling this player out to a
+ * duel if anybody is. `call` is absent on every route but `/profile` — see
+ * `openProfile` — and null there whenever nobody is waiting.
+ */
+const sent = (a: profiles.Applied, call: calls.DuelCall | null = null) =>
+  json({
+    ok: !a.error,
+    error: a.error,
+    profile: profiles.view(a.held, a.earned, a.at),
+    ...(call ? { call } : {}),
+  });
 
 /**
  * Where a session starts. The body may carry `claim` — what this browser had in
@@ -350,7 +378,15 @@ async function openProfile(request: Request, env: Env) {
   if (asked instanceof Response) return asked;
   const { caller, body } = asked;
   const claim = body.claim == null ? null : cleanClaim(body.claim, profiles.LEAGUES);
-  return sent(await profiles.open(env, caller, claim));
+  // Opening a session is the one profile route that also collects a waiting
+  // duel call: it is what the game asks for first, and the answer it is
+  // already waiting on. The buy and wear routes deliberately do not — a banner
+  // that appeared because somebody bought a hat would be a surprise.
+  const [applied, call] = await Promise.all([
+    profiles.open(env, caller, claim),
+    calls.take(env, caller),
+  ]);
+  return sent(applied, call);
 }
 
 /** Which slot and rung a message is about, or nothing if it is about neither. */
@@ -700,13 +736,17 @@ async function newDuel(request: Request, env: Env) {
   // message a stranger.
   const invite = String(body.invite ?? '').slice(0, 32);
   let sent = false;
-  if (
-    invite &&
-    env.BOT_TOKEN &&
-    env.WEBAPP_URL &&
-    (await friends.areFriends(env, caller.id, invite))
-  ) {
-    sent = await sendMessage(env.BOT_TOKEN, invite, duelPush(env.WEBAPP_URL, code, caller.name));
+  if (invite && (await friends.areFriends(env, caller.id, invite))) {
+    // The bot reaches whoever it can address, which is a friend playing in
+    // Telegram: their id IS their chat there. It is worth more than the note
+    // below because it lights up a phone that is not looking at the game.
+    if (env.BOT_TOKEN && env.WEBAPP_URL) {
+      sent = await sendMessage(env.BOT_TOKEN, invite, duelPush(env.WEBAPP_URL, code, caller.name));
+    }
+    // And the call waits for everybody, including the friend the bot has no
+    // way to write to at all — which is every player signed in with Google,
+    // and is why this exists (worker/src/calls.ts).
+    await calls.place(env, invite, caller, code, expiresAt);
   }
 
   // A ladder position the guest has not climbed is not a payout — see
@@ -822,7 +862,7 @@ async function addFriend(request: Request, env: Env) {
 
 /** The whole answer, every time: the client's job is to draw what comes back. */
 async function friendList(env: Env, caller: Caller) {
-  const [code, list, bot] = await Promise.all([
+  const [code, list, bot, call] = await Promise.all([
     friends.codeFor(env, caller),
     friends.list(env, caller.id),
     // The link goes through the bot rather than straight at the game, for the
@@ -830,6 +870,10 @@ async function friendList(env: Env, caller: Caller) {
     // mini app, and `?start=` is the one door Telegram opens for somebody who
     // has not.
     env.BOT_TOKEN ? botUsername(env.BOT_TOKEN) : null,
+    // The friends screen is the other place a call belongs: it is the screen
+    // the caller used, and the one their friend is most likely to be looking
+    // at when the invitation lands.
+    calls.take(env, caller),
   ]);
   return {
     ok: true,
@@ -837,6 +881,7 @@ async function friendList(env: Env, caller: Caller) {
     link: bot ? `https://t.me/${bot}?start=friend_${code}` : null,
     webLink: webInvite(env, 'f', code),
     friends: list,
+    ...(call ? { call } : {}),
   };
 }
 
@@ -933,6 +978,7 @@ export default {
       if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
       if (url.pathname === '/profile/delete') return deleteAccount(request, env);
+      if (url.pathname === '/duel/call') return duelCall(request, env);
       if (url.pathname === '/friends') return myFriends(request, env);
       if (url.pathname === '/friends/add') return addFriend(request, env);
     }

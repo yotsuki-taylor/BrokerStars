@@ -48,7 +48,9 @@ import {
   claimDailyQuest,
   flushPending,
   mintToken,
+  onDuelCall,
   openProfile,
+  pollDuelCall,
   refreshProfile,
   refundItem as refundItemOnServer,
   fetchMarket,
@@ -103,7 +105,7 @@ import {
 import { apiBase, deleteAccount } from './api';
 import { platform, type Account } from '../platform';
 import { friendCodeFromLaunch, friendCodeIn } from './friends';
-import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
+import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { wipe } from './store';
@@ -202,6 +204,13 @@ interface DuelUi {
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
+/**
+ * How often the menu asks whether anybody is calling. Half a minute: slow
+ * enough to be nothing on a battery, quick enough that a friend tapping DUEL
+ * on your name is not left staring at a lobby wondering.
+ */
+const CALL_POLL_MS = 30_000;
+
 const ABILITY_NAME: Record<AbilityId, string> = {
   static: 'STATIC',
   halt: 'HALT',
@@ -1343,6 +1352,51 @@ export default function App() {
   }, []);
 
   /**
+   * Somebody calling this player out to a duel by name.
+   *
+   * Three ways it arrives and none of them is a push notification: clipped to
+   * the session the game opens with, clipped to the friends list, or from the
+   * timer below. Which was the point — the bot can only write to a player who
+   * has Telegram, and half of them now do not (worker/src/calls.ts).
+   *
+   * The server hands a call over once and forgets it, so this is the only copy.
+   * It is dropped on the floor when the player says NOT NOW, which is the right
+   * amount of ceremony for an invitation that expires in a quarter of an hour.
+   */
+  const [call, setCall] = useState<DuelCall | null>(null);
+  useEffect(() => onDuelCall(setCall), []);
+
+  /**
+   * It also expires on its own, without anybody tapping anything. A banner
+   * offering a duel that has already closed is worse than no banner.
+   */
+  useEffect(() => {
+    if (!call) return;
+    const left = call.expiresAt - Date.now();
+    if (left <= 0) {
+      setCall(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setCall(null), left);
+    return () => window.clearTimeout(timer);
+  }, [call]);
+
+  /**
+   * Asking, while the player is standing in the menu and nowhere else.
+   *
+   * The menu is where a duel would be accepted from and the one screen nobody
+   * is busy on. Asking during a match would be asking a phone to do something
+   * else during the eighty seconds it has a job, and asking while the game is
+   * in somebody's pocket would be asking for nothing at all — so the interval
+   * is hung on the screen and dies with it.
+   */
+  useEffect(() => {
+    if (screen !== 'menu') return;
+    const timer = window.setInterval(() => void pollDuelCall(), CALL_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [screen]);
+
+  /**
    * The same two invitations, arriving at a game that is already running.
    *
    * Both effects above read once, before the first frame, which is the whole
@@ -1870,6 +1924,29 @@ export default function App() {
           onFriends={() => setScreen('friends')}
           onSettings={() => setSettingsOpen(true)}
         />
+        {/* Over the menu rather than on a screen of its own: an invitation with
+            fifteen minutes on it is not worth interrupting anybody for, and it
+            is worth being unmissable while they are deciding what to play. */}
+        {call && (
+          <div className="duel-call">
+            <span className="duel-call-who">{t('call.from', { name: call.from })}</span>
+            <div className="duel-call-actions">
+              <button className="menu-btn" onClick={() => setCall(null)}>
+                {t('call.ignore')}
+              </button>
+              <button
+                className="big-btn"
+                onClick={() => {
+                  const { code } = call;
+                  setCall(null);
+                  connect(code, 'joining', { code });
+                }}
+              >
+                {t('call.accept')}
+              </button>
+            </div>
+          </div>
+        )}
         {pauseOpen && !st.finished && (
         <div className="overlay pause">
           <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>

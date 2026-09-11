@@ -66,8 +66,13 @@ const PREFIX = 'brokerstars.';
  */
 export function wipe(keep: string[] = []): void {
   try {
-    const s = store() as (KeyValueStore & Storage) | null;
-    if (!s || typeof s.key !== 'function') return;
+    // Spelled out rather than reached for as `Storage`, which is a DOM type.
+    // The Worker compiles this file — it imports the wardrobe and the room out
+    // of `src/ui/` — and it compiles without a DOM at all, so naming one here
+    // is a build error over there and nowhere else, which is the most annoying
+    // kind. The header of this module says the same thing about `localStorage`.
+    const s = store() as (KeyValueStore & Walkable) | null;
+    if (!s || typeof s.key !== 'function' || typeof s.removeItem !== 'function') return;
     const doomed: string[] = [];
     for (let i = 0; i < s.length; i++) {
       const key = s.key(i);
@@ -77,4 +82,11 @@ export function wipe(keep: string[] = []): void {
   } catch {
     /* a store we cannot walk is a store we cannot clear; the server half stands */
   }
+}
+
+/** The rest of what a browser's store offers, for the one caller that walks it. */
+interface Walkable {
+  readonly length: number;
+  key(index: number): string | null;
+  removeItem(key: string): void;
 }
