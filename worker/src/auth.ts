@@ -232,6 +232,47 @@ export async function verifyGoogleIdToken(
   }
 }
 
+/* ---------------------------------------------------------------- guests */
+
+/**
+ * A player who has not said who they are, and does not have to.
+ *
+ * Telegram hands the game an identity before it draws. Nowhere else does: a
+ * browser tab and a freshly installed app are both nobody, and until this
+ * existed, nobody could be written down — no board, no duel, no friend. Which
+ * made an invitation sent out of the Android app a link to a page where the
+ * recipient could look but not join.
+ *
+ * So the server will vouch for somebody it knows nothing about. The id is
+ * random and namespaced `a:`, which neither a Telegram id (digits) nor a Google
+ * one (`g:`) can collide with, and the session is the same `bs1.` token
+ * everything else carries — from `identify` down, a guest is an ordinary
+ * player.
+ *
+ * NOTHING IS WRITTEN HERE. Minting is arithmetic: a random id and an HMAC. A
+ * row appears only when the guest does something worth recording, so asking for
+ * a thousand of these costs this deployment a thousand HMACs and no storage.
+ *
+ * What it costs instead is that the board can be farmed by somebody willing to
+ * do it. Not cheaply — a row on the board needs a FINISHED match, results are
+ * refused more often than one per 45 seconds, and what they pay is worked out
+ * here rather than claimed. Somebody determined can still do it; they could
+ * with Google accounts too, for the price of making them.
+ */
+const GUEST_ID_BYTES = 12;
+
+export async function mintGuest(secret: string): Promise<{ token: string; caller: Caller }> {
+  const bytes = crypto.getRandomValues(new Uint8Array(GUEST_ID_BYTES));
+  const tail = hex(bytes.buffer as ArrayBuffer);
+  // Named after the tail of their own id, so a board with several guests on it
+  // has several different names rather than a column of PLAYER.
+  const caller: Caller = { id: `a:${tail}`, name: `GUEST ${tail.slice(0, 4).toUpperCase()}` };
+  return { token: await mintSession(caller, secret), caller };
+}
+
+/** Did this player never say who they are? Used where that has to be said out loud. */
+export const isGuest = (id: string): boolean => id.startsWith('a:');
+
 /* --------------------------------------------------------------- the door */
 
 /**

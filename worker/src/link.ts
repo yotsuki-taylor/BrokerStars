@@ -125,6 +125,48 @@ async function hasGame(env: Env, id: string): Promise<boolean> {
 }
 
 /**
+ * Make one account the second door into another, once something has established
+ * that they are the same person.
+ *
+ * WHAT ESTABLISHES THAT is the caller's business and there are two answers. A
+ * code typed from one device into the other (`redeem`) — two signatures instead
+ * of one claim. Or a guest session held by the same client that just signed in
+ * with Google, which is the same proof by a shorter route: whoever holds both
+ * tokens is both.
+ *
+ * Everything that can be wrong is checked before anything is written, and each
+ * answer is a different sentence to a player rather than a shrug.
+ */
+export async function adopt(env: Env, alias: Caller, playerId: string): Promise<LinkError | null> {
+  if (alias.id === playerId) return 'self';
+
+  // Only a Google account joins, and only a non-Google account is joined. Both
+  // are the direction the table is built for: `g:` on the left, a Telegram id
+  // or a guest on the right.
+  if (!alias.id.startsWith('g:') || playerId.startsWith('g:')) return 'self';
+
+  if (await isLinked(env, alias)) return 'already';
+  const other = await env.DB.prepare(
+    `SELECT 1 AS n FROM identities WHERE player_id = ?1 OR alias_id = ?1`,
+  )
+    .bind(playerId)
+    .first<{ n: number }>();
+  if (other) return 'already';
+
+  // The joining account must be empty. Anything it holds would be stranded the
+  // moment its id starts resolving to somebody else's, and stranding a save
+  // quietly is worse than refusing and saying why.
+  if (await hasGame(env, alias.id)) return 'busy';
+
+  await env.DB.prepare(
+    `INSERT INTO identities (alias_id, player_id, linked_at) VALUES (?1, ?2, ?3)`,
+  )
+    .bind(alias.id, playerId, Date.now())
+    .run();
+  return null;
+}
+
+/**
  * Spend a code and make the link. The caller is the account doing the joining.
  *
  * Everything that can be wrong is checked before anything is written, and each
@@ -142,32 +184,7 @@ export async function redeem(env: Env, caller: Caller, code: string): Promise<Li
   if (row) await env.DB.prepare(`DELETE FROM link_codes WHERE code = ?1`).bind(code).run();
 
   if (!row || row.expires_at <= Date.now()) return 'nosuch';
-  if (row.player_id === caller.id) return 'self';
-
-  // Only a Google account joins, and only a non-Google account is joined. Both
-  // are the direction the table is built for, and neither can be got at through
-  // the game — but a route is a route.
-  if (!caller.id.startsWith('g:') || row.player_id.startsWith('g:')) return 'self';
-
-  if (await isLinked(env, caller)) return 'already';
-  const other = await env.DB.prepare(
-    `SELECT 1 AS n FROM identities WHERE player_id = ?1 OR alias_id = ?1`,
-  )
-    .bind(row.player_id)
-    .first<{ n: number }>();
-  if (other) return 'already';
-
-  // The joining account must be empty. Anything it holds would be stranded the
-  // moment its id starts resolving to somebody else's, and stranding a save
-  // quietly is worse than refusing and saying why.
-  if (await hasGame(env, caller.id)) return 'busy';
-
-  await env.DB.prepare(
-    `INSERT INTO identities (alias_id, player_id, linked_at) VALUES (?1, ?2, ?3)`,
-  )
-    .bind(caller.id, row.player_id, Date.now())
-    .run();
-  return null;
+  return adopt(env, caller, row.player_id);
 }
 
 /**

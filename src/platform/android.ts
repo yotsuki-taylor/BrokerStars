@@ -24,6 +24,7 @@
  */
 
 import type { Account, Platform, SignInError } from './index';
+import { forgetGuest, guestToken } from '../ui/guest';
 
 /** Where the Worker is. Read the same way ui/api.ts reads it, and deliberately
  * not imported from there: that module imports this one through `./index`, and
@@ -145,12 +146,21 @@ export async function signIn(): Promise<SignInError | null> {
     const res = await fetch(`${API}/auth/google`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ idToken }),
+      // The guest session, if this player has been playing as one. Holding both
+      // tokens is the proof that they are the same person, so the server makes
+      // the Google account a second door into the guest's save rather than an
+      // empty room beside it — see `adopt` in worker/src/link.ts. Sent from here
+      // because here is where the request is made; the guest itself is the
+      // game's business rather than the host's (`ui/guest.ts`).
+      body: JSON.stringify({ idToken, guest: guestToken() }),
     });
     if (!res.ok) return res.status === 401 ? 'refused' : 'noserver';
     const body = (await res.json()) as { token?: string; id?: string; name?: string };
     if (!body.token || !body.id) return 'failed';
     keep({ token: body.token, id: body.id, name: String(body.name ?? '').slice(0, 24) });
+    // Spent: the server has been told the two are the same person, and the
+    // session above wins over it from here anyway.
+    forgetGuest();
     return null;
   } catch {
     return 'failed';

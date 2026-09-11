@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { identify, mintSession, readSession, verifyGoogleIdToken } from '../src/index';
+import { identify, mintGuest, mintSession, readSession, verifyGoogleIdToken } from '../src/index';
 import type { Env } from '../src/index';
 
 /**
@@ -198,5 +198,35 @@ describe('the door', () => {
     // not signed by the bot token, so it fails -- but it fails THERE, which is
     // what keeps every existing Telegram player working unchanged
     expect(await identify('auth_date=1&hash=deadbeef', env())).toBeNull();
+  });
+});
+
+describe('a guest', () => {
+  it('is an ordinary player from the door down', async () => {
+    const { token, caller } = await mintGuest(SECRET);
+    expect(caller.id.startsWith('a:')).toBe(true);
+    // the same session every other player carries: identify cannot tell it apart
+    expect(await identify(token, { SESSION_SECRET: SECRET } as Env)).toEqual(caller);
+  });
+
+  it('cannot collide with the two kinds of player that already exist', async () => {
+    // Telegram ids are digits, Google ids start `g:`; neither can be `a:`
+    const { caller } = await mintGuest(SECRET);
+    expect(/^a:[0-9a-f]{24}$/.test(caller.id)).toBe(true);
+    expect(caller.id.startsWith('g:')).toBe(false);
+    expect(Number.isFinite(Number(caller.id))).toBe(false);
+  });
+
+  it('is a different account every time it is asked for', async () => {
+    const ids = new Set<string>();
+    for (let i = 0; i < 20; i++) ids.add((await mintGuest(SECRET)).caller.id);
+    expect(ids.size).toBe(20);
+  });
+
+  it('gets a name of its own rather than a column of PLAYER', async () => {
+    const a = await mintGuest(SECRET);
+    const b = await mintGuest(SECRET);
+    expect(a.caller.name).toMatch(/^GUEST [0-9A-F]{4}$/);
+    expect(a.caller.name).not.toBe(b.caller.name);
   });
 });

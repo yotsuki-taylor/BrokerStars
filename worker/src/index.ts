@@ -61,11 +61,11 @@ import {
   sameSecret,
   webhookSecret,
 } from './telegram';
-import { identify, mintSession, verifyGoogleIdToken } from './auth';
+import { identify, isGuest, mintGuest, mintSession, verifyGoogleIdToken } from './auth';
 
 export { Duel } from './duel';
 export { verifyInitData } from './telegram';
-export { identify, mintSession, readSession, verifyGoogleIdToken } from './auth';
+export { identify, mintGuest, mintSession, readSession, verifyGoogleIdToken } from './auth';
 export type { Env } from './results';
 
 /**
@@ -279,6 +279,24 @@ async function submit(request: Request, env: Env) {
 /* -------------------------------------------------------------- the profile */
 
 /**
+ * A session for somebody who has not said who they are.
+ *
+ * The only route here that asks for nothing, because asking is the thing it
+ * exists to avoid: a browser tab and a fresh install are both nobody, and a
+ * player who is nobody cannot join a duel, be added as a friend, or be written
+ * down anywhere. See `mintGuest`.
+ *
+ * Nothing is stored, so this cannot be used to fill a database. What it can do
+ * is hand out identities to anybody who asks, which is the deal: an anonymous
+ * account is worth what it costs to make.
+ */
+async function guestSignIn(_request: Request, env: Env) {
+  if (!env.SESSION_SECRET) return bad(503, 'no session secret configured');
+  const { token, caller } = await mintGuest(env.SESSION_SECRET);
+  return json({ ok: true, token, id: caller.id, name: caller.name });
+}
+
+/**
  * Sign in with Google, once, and leave with a session.
  *
  * The only route in the Worker that accepts a Google token, and it accepts it
@@ -297,9 +315,9 @@ async function googleSignIn(request: Request, env: Env) {
   if (!env.SESSION_SECRET) return bad(503, 'no session secret configured');
   if (!env.GOOGLE_CLIENT_ID) return bad(503, 'no google client configured');
 
-  let body: { idToken?: unknown };
+  let body: { idToken?: unknown; guest?: unknown };
   try {
-    body = (await request.json()) as { idToken?: unknown };
+    body = (await request.json()) as { idToken?: unknown; guest?: unknown };
   } catch {
     return bad(400, 'not json');
   }
@@ -308,11 +326,34 @@ async function googleSignIn(request: Request, env: Env) {
   const caller = idToken ? await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID) : null;
   if (!caller) return bad(401, 'bad token');
 
+  /**
+   * Was this player a guest a moment ago?
+   *
+   * If the same client still holds a guest session, whoever is holding both
+   * tokens is both accounts — which is the same proof the typed code provides,
+   * by a shorter route. So the Google account becomes a second door into the
+   * guest's save rather than an empty room beside it, and a player who spent an
+   * evening as a guest does not lose it by signing in.
+   *
+   * Best effort, and the sign-in stands either way. `adopt` refuses when the
+   * Google account already has a game of its own, and that refusal is worth
+   * reporting rather than acting on: nobody's save is lost, but one of the two
+   * is not where the player is about to be looking. `adopted` says which
+   * happened so the screen can.
+   */
+  const guest = typeof body.guest === 'string' ? body.guest : '';
+  let adopted = false;
+  if (guest) {
+    const was = await identify(guest, env);
+    if (was && isGuest(was.id)) adopted = (await link.adopt(env, caller, was.id)) === null;
+  }
+
   return json({
     ok: true,
     token: await mintSession(caller, env.SESSION_SECRET),
     id: caller.id,
     name: caller.name,
+    adopted,
   });
 }
 
@@ -1024,6 +1065,7 @@ export default {
     }
 
     if (request.method === 'POST') {
+      if (url.pathname === '/auth/guest') return guestSignIn(request, env);
       if (url.pathname === '/auth/google') return googleSignIn(request, env);
       if (url.pathname === '/profile') return openProfile(request, env);
       if (url.pathname === '/profile/buy') return buy(request, env);

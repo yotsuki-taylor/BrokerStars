@@ -116,6 +116,7 @@ import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protoco
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { wipe } from './store';
+import { ensureGuest } from './guest';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -927,7 +928,12 @@ export default function App() {
     // coins on the board, and the balance is built out of the board — asking
     // for it before they land would answer short by exactly them.
     reconcile(
-      flushPending().then(() =>
+      // A guest session first, if this host has no identity of its own: without
+      // one the handshake below is unsigned and the server refuses it, which is
+      // how a browser tab and a fresh install used to be nobody (`ui/guest.ts`).
+      ensureGuest(Boolean(platform().authToken()))
+        .then(() => flushPending())
+        .then(() =>
         openProfile({
           coins: loadStars(),
           room: loadRoom(),

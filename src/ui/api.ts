@@ -25,6 +25,7 @@ import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
 import { platform } from '../platform';
+import { guestId, guestToken } from './guest';
 import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
 import type { Outfit, Rarity, Slot } from './wardrobe';
@@ -43,7 +44,11 @@ const BASE = String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
  * a way a server can check (src/ui/duel.ts).
  */
 export function initData(): string {
-  return platform().authToken();
+  // The host's own first, a guest session second. Inside Telegram the first is
+  // a signature Telegram made; on Android after signing in it is the session
+  // Google's token was traded for; and for everybody else it is empty, which is
+  // where guests came from (`ui/guest.ts`).
+  return platform().authToken() || guestToken();
 }
 
 /** Where the server is, for the socket a duel opens. Empty in a build with none. */
@@ -51,7 +56,7 @@ export const apiBase = (): string => BASE;
 
 /** Who the server will say we are, used only to highlight a row. */
 export function myId(): string | null {
-  return platform().userId();
+  return platform().userId() ?? guestId();
 }
 
 export const boardConfigured = (): boolean => BASE !== '';
