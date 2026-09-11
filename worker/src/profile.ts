@@ -704,6 +704,52 @@ export interface Applied {
 export type Change = (h: Held, earned: number, at: Standing) => Bought;
 
 /**
+ * The welcome present: the bandana, after a first finished match.
+ *
+ * A new player's first match is against a stranger on a board they were not
+ * shown, because seeing the board before agreeing to it is what the first item
+ * in the wardrobe buys — and they have no wardrobe. So the game gives them one,
+ * once, for finishing a match. It is the cheapest rung of the cheapest slot and
+ * it teaches the thing the shop is for: clothes are not decoration here, they
+ * change what you know and what you can do.
+ *
+ * The rule is "owns nothing on their head", not "has played exactly one match".
+ * Idempotent, needs no counter, and gives the present to anybody who was
+ * playing before it existed the next time they finish a match — which is right,
+ * since it is a welcome rather than a reward for being early.
+ *
+ * `spent` is deliberately not moved. A present that comes out of the balance is
+ * not a present, and `spent` is what the shop charges against.
+ */
+export function giftHat(held: Held): Bought {
+  if (held.owned.hat) return { ok: false, error: 'already has one' };
+  return {
+    ok: true,
+    held: {
+      ...held,
+      owned: { ...held.owned, hat: 'common' },
+      // Worn as well as owned: an item in a drawer teaches nothing, and the
+      // next board is the first place it does anything.
+      outfit: { ...held.outfit, hat: 'common' },
+    },
+  };
+}
+
+/**
+ * The same present, given to a row.
+ *
+ * Never throws and never blocks: it runs beside recording a match, and a match
+ * that was played must be banked whether or not the hat arrives with it.
+ */
+export async function giftFirstHat(env: Env, caller: Caller): Promise<void> {
+  try {
+    await change(env, caller, giftHat);
+  } catch {
+    /* the match is banked either way */
+  }
+}
+
+/**
  * Read, change, write — and if the row moved underneath, read it again and work
  * the change out afresh rather than writing a decision made about the past.
  *

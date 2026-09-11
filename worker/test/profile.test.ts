@@ -9,6 +9,7 @@ import {
   claimBonus,
   claimInto,
   claimQuest,
+  giftHat,
   priceOf,
   refundItem,
   refundRoom,
@@ -190,6 +191,59 @@ describe('getting dressed', () => {
   it('trims what is not, rather than refusing the lot', () => {
     const h = held({ owned: { torso: 'common' } });
     expect(wear(h, { torso: 'legend', hat: 'mythic' }).outfit).toEqual({ torso: 'common' });
+  });
+});
+
+describe('the welcome present', () => {
+  it('gives a bare-headed player the bandana, worn', () => {
+    const out = giftHat(EMPTY);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.owned.hat).toBe('common');
+    expect(out.held.outfit.hat).toBe('common');
+  });
+
+  it('costs the player nothing -- a present out of the balance is not a present', () => {
+    const out = giftHat(held({ spent: 40 }));
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.spent).toBe(40);
+    expect(balance(out.held, 100)).toBe(60);
+  });
+
+  it('refuses anybody who already owns a hat, however humble', () => {
+    for (const r of RARITIES) {
+      expect(giftHat(held({ owned: { hat: r } })).ok).toBe(false);
+    }
+  });
+
+  it('is given once, not once a match', () => {
+    const first = giftHat(EMPTY);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    // the second finished match asks again, and is told there is one already
+    expect(giftHat(first.held).ok).toBe(false);
+  });
+
+  it('leaves the rest of the wardrobe where it was', () => {
+    const h = held({ owned: { torso: 'rare' }, outfit: { torso: 'rare' }, room: 2, spent: 7 });
+    const out = giftHat(h);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.owned.torso).toBe('rare');
+    expect(out.held.outfit.torso).toBe('rare');
+    expect(out.held.room).toBe(2);
+    expect(out.held.spent).toBe(7);
+  });
+
+  it('does not undress somebody wearing something else on their head', () => {
+    // cannot happen -- you cannot wear what you do not own -- but the guard is
+    // `owned`, and this says so out loud
+    const h = held({ outfit: { hat: 'legend' } });
+    const out = giftHat(h);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.outfit.hat).toBe('common');
   });
 });
 

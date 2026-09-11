@@ -33,7 +33,7 @@ import type { MatchState } from '../../src/sim/types';
 import { perksFor } from '../../src/ui/perks';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
-import { outfitOf, settle } from './profile';
+import { giftFirstHat, outfitOf, settle } from './profile';
 import {
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
@@ -542,6 +542,11 @@ export class Duel implements DurableObject {
             token: `duel:${this.state.id.toString()}:${s}`,
           },
         );
+
+        // The welcome present. A duel counts for it exactly as a match against
+        // a bot does: it is a finished match, and what the game is thanking
+        // them for is finishing one (`profile.ts`).
+        await giftFirstHat(this.env, { id: player.id, name: player.name });
 
         // And the shelf, which cares about different things than the board
         // does: the duel counter it keeps, the streak, and the companies that

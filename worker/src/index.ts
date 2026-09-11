@@ -245,6 +245,8 @@ async function submit(request: Request, env: Env) {
 
   try {
     await record(env, caller, { seed, league, outcome, netWorth, tradedWell, stars, token });
+    // The welcome present, after the match is safely banked rather than before.
+    await profiles.giftFirstHat(env, caller);
   } catch (err) {
     // Two retries in flight at once both got past the check above, and the
     // UNIQUE index caught the loser. The batch rolled back, so nothing was paid

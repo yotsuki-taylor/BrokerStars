@@ -16,6 +16,7 @@ import {
   undoLast,
 } from '../sim/trading';
 import type { MatchState, Trade } from '../sim/types';
+import Character from './Character';
 import { drawChart } from './chart';
 import {
   AbilityBar,
@@ -135,6 +136,7 @@ import {
   highestOwned,
   isBuyable,
   itemId,
+  CATALOGUE,
   loadOutfit,
   loadOwned,
   rarityBelow,
@@ -651,6 +653,47 @@ function AccountPanel({
   );
 }
 
+/**
+ * The welcome present, the one time it is given.
+ *
+ * A new player's first match is played on a board they were never shown,
+ * because seeing it beforehand is what the first item in the wardrobe buys and
+ * they have no wardrobe. So finishing a match earns them one
+ * (`worker/src/profile.ts`), and this is where the game says so.
+ *
+ * Drawn on the trader rather than as a floating sprite: every item in this game
+ * is a shape cut to sit on a head or a collar, and alone it reads as a prop
+ * rather than as something somebody is wearing. Which is also the honest
+ * picture — the server put it on as well as in the drawer.
+ *
+ * The nudge towards the shop is the point of the screen as much as the present
+ * is. A player who has just been handed a thing that changes what they know is
+ * the one moment they will believe that the rest of the wardrobe does too.
+ */
+function GiftOverlay({ onShop, onClose }: { onShop: () => void; onClose: () => void }) {
+  const card = CATALOGUE.hat.common;
+  return (
+    <div className="overlay gift">
+      <h2>{t('gift.title')}</h2>
+      <div className="gift-art">
+        <Character outfit={{ hat: 'common' }} />
+      </div>
+      <b className="gift-name">{tr('item.hat.common.name', card.name)}</b>
+      <p className="gift-text">{tr('item.hat.common.text', card.text)}</p>
+      <p className="settings-note gift-why">{t('gift.why')}</p>
+      <p className="settings-note gift-more">{t('gift.more')}</p>
+      <div className="settings-list">
+        <button className="big-btn" onClick={onShop}>
+          {t('gift.shop')}
+        </button>
+        <button className="menu-btn" onClick={onClose}>
+          {t('gift.later')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsOverlay({
   onHelp,
   onTutorial,
@@ -837,6 +880,9 @@ export default function App() {
   const [award, setAward] = useState<Award | null>(null);
   /** name of the league this match's win opened, shown once on the result screen */
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
+  /** Null until the first profile answers; see `applyProfile`. */
+  const hadHat = useRef<boolean | null>(null);
+  const [gifted, setGifted] = useState(false);
   const awarded = useRef(false);
 
   // The game loop is built once and never sees a re-render, so the league it
@@ -889,6 +935,21 @@ export default function App() {
     saveDaily(p.daily);
     setRoomDone(p.room);
     saveRoom(p.room);
+    /**
+     * Did a hat just appear where there was none?
+     *
+     * That is the welcome present arriving (`giftFirstHat` on the server), and
+     * noticing it this way means the server needs to say nothing extra: the
+     * profile is refetched after every match anyway, and the thing simply is
+     * not there and then is.
+     *
+     * The first profile of a session only records the state — `null` until then
+     * — so a player who already owns a hat is never told they were given one.
+     */
+    const hasHat = Boolean(p.owned.hat);
+    if (hadHat.current === false && hasHat) setGifted(true);
+    hadHat.current = hasHat;
+
     const bought = setOf(p.owned);
     setOwned(bought);
     saveOwned(bought);
@@ -2004,6 +2065,11 @@ export default function App() {
           rivalName={rival.name}
           rivalOutfit={rivalOutfit}
           duel={Boolean(duel)}
+          // Only in a duel: a match against a bot has already shown these on a
+          // screen of their own, and showing them twice would be a screen that
+          // says nothing new.
+          stocks={duel && wantsBoardScreen(perks.ui) ? cfg.stocks : null}
+          quirks={perks.ui.showQuirks}
           onReady={() => {
             setScreen('match');
             setCountdown(3);
@@ -2203,6 +2269,18 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Over whatever screen the player is on when the profile comes back with
+          it, which is the result screen they just finished on. */}
+      {gifted && (
+        <GiftOverlay
+          onShop={() => {
+            setGifted(false);
+            setScreen('shop');
+          }}
+          onClose={() => setGifted(false)}
+        />
       )}
 
       {settingsOpen && (
@@ -2434,6 +2512,18 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Over whatever screen the player is on when the profile comes back with
+          it, which is the result screen they just finished on. */}
+      {gifted && (
+        <GiftOverlay
+          onShop={() => {
+            setGifted(false);
+            setScreen('shop');
+          }}
+          onClose={() => setGifted(false)}
+        />
       )}
 
       {settingsOpen && (

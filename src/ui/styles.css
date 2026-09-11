@@ -2608,11 +2608,151 @@ body {
   margin: 0;
 }
 
+/* ---------- the three companies, on a duel's intro ---------- */
+
+/* Along the bottom, under the two figures: the top half of this screen is
+   about who turned up and the board has no business crossing it. */
+/* The bottom of the versus screen: the player's name, and above it the three
+   companies when the hat has bought a look at them. One column rather than two
+   things each anchored to `bottom` — which is what they were, and the name
+   plate landed across the third company. */
+.versus-foot {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.versus-board {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: versus-board-in 320ms ease-out both;
+}
+
+/* In the stack the plate is one of the rows, so it gives up the corner it used
+   to pin itself into. Everywhere else it is still absolutely placed. */
+.versus-foot .name-plate.bottom {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+}
+
+@keyframes versus-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.versus-board-title {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+  /* The only line here with nothing behind it: the rows carry their own dark
+     plate, this one sits straight on the flare and a trader's shoulder. */
+  text-shadow: 0 1px 3px rgba(4, 22, 48, 0.9), 0 0 8px rgba(4, 22, 48, 0.7);
+  margin-bottom: 2px;
+}
+
+.versus-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 2px solid;
+  background: rgba(4, 22, 52, 0.86);
+}
+
+.versus-logo {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.versus-stock-name {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  /* a long name yields to the price rather than pushing it off the row */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.versus-stock-kind {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+/* Pushed to the far edge so three prices read as a column. */
+.versus-stock-price {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---------- the welcome present ---------- */
+
+/* The same box the settings and help overlays use; only what is inside it is
+   different, so a present does not arrive looking like a different game. */
+.overlay.gift .gift-art {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 4px 0 10px;
+}
+
+/* Head and shoulders: the present is on his head, and a full figure at this
+   size would put it in the top eighth of the picture. */
+.overlay.gift .gift-art .character {
+  height: 26dvh;
+  max-width: 52%;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+}
+
+.overlay.gift .gift-name {
+  font-size: 20px;
+  letter-spacing: 0.05em;
+}
+
+.overlay.gift .gift-text {
+  margin: 6px 0 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* What the thing does, why it arrived, and what the rest of the drawer is for
+   — three paragraphs, which read as one block of grey unless they are let
+   apart. The order is deliberate and so is the shrinking: the item first, the
+   reason second, the shop last and quietest, because a nudge that shouts as
+   loudly as the present is an advertisement. */
+.overlay.gift .settings-note.gift-why {
+  margin-top: 12px;
+}
+
+.overlay.gift .settings-note.gift-more {
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
 /* ---------- settings ---------- */
 
 /* The overlay is the same box the help text uses; this only stacks the two or
    three choices in it into full-width rows. */
-.overlay.settings .settings-list {
+.overlay.settings .settings-list,
+.overlay.gift .settings-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2620,14 +2760,17 @@ body {
   margin: 6px 0 14px;
 }
 
-.overlay.settings .settings-list .big-btn {
+.overlay.settings .settings-list .big-btn,
+.overlay.gift .settings-list .big-btn,
+.overlay.gift .settings-list .menu-btn {
   width: 100%;
 }
 
 /* A line of prose between the buttons: who is signed in, what an account is
    for, and what deleting one takes with it. Quieter than a button and quieter
    than the heading, because none of it is a thing to tap. */
-.overlay.settings .settings-note {
+.overlay.settings .settings-note,
+.overlay.gift .settings-note {
   margin: 0;
   text-align: center;
   font-size: 14px;

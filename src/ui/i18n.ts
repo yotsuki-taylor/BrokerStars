@@ -155,6 +155,20 @@ const EN = {
   'call.accept': 'DUEL',
   'call.ignore': 'NOT NOW',
 
+  // Shown on the duel intro to a player whose hat earns them a look at the
+  // board. A bot match gets a screen of its own; a duel has six seconds.
+  'versus.board': 'TODAY’S THREE',
+
+  // The welcome present, after a first finished match. Its name and what it
+  // does come out of the catalogue through `tr`, so this file holds only the
+  // sentences around them.
+  'gift.title': 'A PRESENT',
+  'gift.why': 'For finishing your first match. It is yours, and you are wearing it.',
+  'gift.more':
+    'Everything in the wardrobe does something. Five slots, five grades each — abilities, a bigger board, a softer landing when it goes wrong.',
+  'gift.shop': 'SEE THE SHOP',
+  'gift.later': 'LATER',
+
   'settings.title': 'SETTINGS',
   'settings.help': 'HOW TO PLAY',
   'settings.tutorial': 'WATCH THE TUTORIAL',
@@ -579,6 +593,15 @@ const RU: Record<Key, string> = {
   'call.from': '{name} ЗОВЁТ НА ДУЭЛЬ',
   'call.accept': 'ПРИНЯТЬ',
   'call.ignore': 'НЕ СЕЙЧАС',
+
+  'versus.board': 'СЕГОДНЯШНЯЯ ТРОЙКА',
+
+  'gift.title': 'ПОДАРОК',
+  'gift.why': 'За первый доигранный матч. Он твой, и он уже надет.',
+  'gift.more':
+    'В гардеробе всё что-нибудь умеет. Пять слотов, по пять уровней — способности, доска побольше, мягкая посадка, когда всё пошло не так.',
+  'gift.shop': 'В МАГАЗИН',
+  'gift.later': 'ПОТОМ',
 
   'settings.title': 'НАСТРОЙКИ',
   'settings.help': 'СПРАВКА',

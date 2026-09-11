@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Character from './Character';
-import { tex } from './components';
-import { t } from './i18n';
+import { LogoMask, money, tex } from './components';
+import { t, tr } from './i18n';
+import { TRAIT_LABEL, type StockConfig } from '../sim/companies';
 import type { Outfit } from './wardrobe';
 
 /**
@@ -36,6 +37,8 @@ export default function VersusScreen({
   rivalName,
   rivalOutfit,
   duel = false,
+  stocks = null,
+  quirks = false,
   onReady,
   onCancel,
 }: {
@@ -45,6 +48,18 @@ export default function VersusScreen({
   rivalOutfit: Outfit;
   /** a friend rather than a draw from the pool: no searching, no way out */
   duel?: boolean;
+  /**
+   * The three companies, for a player whose hat says they get to see them.
+   *
+   * Only ever passed for a duel. A match against a bot shows them properly, on
+   * a screen of their own with a PLAY button and a reroll — a duel cannot: the
+   * server dealt one board for both players and started its clock, so there is
+   * nothing to refuse and no waiting for a tap. What is left is the half of the
+   * item that still works, which is knowing what you are about to face.
+   */
+  stocks?: StockConfig[] | null;
+  /** whether the hat also spells out what each company is like */
+  quirks?: boolean;
   onReady: () => void;
   onCancel: () => void;
 }) {
@@ -114,7 +129,36 @@ export default function VersusScreen({
       )}
 
       {rivalIn && <div className="name-plate top">{rivalName}</div>}
-      <div className="name-plate bottom">{playerName}</div>
+
+      {/* The bottom corner, stacked rather than layered. The player's own name
+          has always sat here; the board joins it above, once the rival is up —
+          before that the screen is about who turned up, and a board read while
+          a silhouette is still resolving is a board nobody reads. */}
+      <div className="versus-foot">
+        {stocks && rivalIn && (
+          <div className="versus-board">
+            <span className="versus-board-title">{t('versus.board')}</span>
+            {stocks.map((s) => (
+              <div className="versus-stock" key={s.id} style={{ borderColor: s.color }}>
+                <LogoMask file={s.logo} color={s.color} className="versus-logo" />
+                <span className="versus-stock-name" style={{ color: s.color }}>
+                  {s.name}
+                </span>
+                {quirks && (
+                  <span className="versus-stock-kind">
+                    {tr(
+                      `trait.${s.trait?.kind ?? 'plain'}.label`,
+                      TRAIT_LABEL[s.trait?.kind ?? 'plain'],
+                    )}
+                  </span>
+                )}
+                <span className="versus-stock-price">{money(s.basePrice)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="name-plate bottom">{playerName}</div>
+      </div>
     </div>
   );
 }
