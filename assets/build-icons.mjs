@@ -1,84 +1,112 @@
 /**
- * The app icon, drawn here rather than dropped in as a file.
+ * Every icon Android and Play ask for, cut from one drawing.
  *
- * There was no icon to start from: the game's own art is a promo shot of a
- * match and a handful of 48px company logos, none of which is a mark. So this
- * draws one in the game's own language -- the blue the window chrome is painted
- * (#0B4FA8, the same constant as src/platform/telegram.ts and the theme-color
- * meta) and the green a rising line is drawn in during a match.
+ * `source-icon.png` is the artwork; everything below is arithmetic on it. It is
+ * a script rather than a folder of exported files so that changing the art is
+ * dropping in one image and running this, instead of re-exporting a hundred and
+ * thirty-six sizes by hand and hoping none was missed.
  *
- * TWO SIZES, because Android asks for two different things and sizing them the
- * same wastes one of them. The adaptive icon's foreground may be cropped to the
- * middle of the canvas by whatever shape the launcher likes, so its mark sits
- * inside the 62.5% safe area. The legacy icon and the 512px one Play shows in
- * the listing are never cropped, so their mark fills the frame properly.
+ *   node assets/build-icons.mjs
+ *   npx @capacitor/assets generate --android
  *
- * Run with `node assets/build-icons.mjs`, then `npx @capacitor/assets generate
- * --android` to cut the dozen sizes Android wants out of these three.
+ * THE ONE THING WORTH UNDERSTANDING HERE is what an adaptive icon does to a
+ * drawing, because it is not what you would expect and it decides every number
+ * below.
+ *
+ * Android does not show a launcher icon as drawn. It hands the launcher a
+ * 108dp canvas and lets it cut whatever shape it likes out of the middle 72dp
+ * — circle, squircle, rounded square, teardrop, the manufacturer's choice. Only
+ * that middle 66.7% is promised to survive; everything outside it is decoration
+ * for the parallax wiggle and may simply be gone.
+ *
+ * The artwork is a store icon: drawn edge to edge, with the BUY and SELL
+ * buttons running off the bottom and money in the corners. Used full-bleed as a
+ * launcher icon the buttons are the first thing lost — the bottom of the art is
+ * exactly where a round mask bites. So the drawing is pulled in a little and
+ * the blue behind it fills what the launcher would otherwise have eaten.
+ *
+ * How far in is `SAFE`, and it was chosen by looking rather than by arithmetic:
+ * `preview-adaptive.mjs` cuts the real files with the real masks, and at 0.85
+ * both words stay whole under a circle while the frame stays narrow enough that
+ * the icon does not look timid beside its neighbours. Pulled all the way in to
+ * 0.667 nothing is cropped at all, and it looks small; left at 1.0 it fills the
+ * frame and a circle takes the ends off BUY and SELL.
+ *
+ * The blue is sampled from the corners of the artwork itself (#003FC5 and its
+ * neighbours), so the frame reads as the drawing's own background rather than
+ * as a mat somebody put behind it.
+ *
+ * The legacy icon and the 512px one Play shows in the listing are never masked,
+ * so they get the drawing whole, edge to edge, exactly as it was made.
  */
 import sharp from 'sharp';
 
-/** The mark, in a 640-unit box, wherever that box ends up. */
-const mark = `
-  <path d="M56 74 V566 H600" fill="none" stroke="#FFFFFF" stroke-opacity="0.38"
-        stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M96 470 L206 392 L292 432 L396 268 L470 316 L566 138"
-        fill="none" stroke="#FFFFFF" stroke-width="84"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M96 470 L206 392 L292 432 L396 268 L470 316 L566 138"
-        fill="none" stroke="#3FD11A" stroke-width="52"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="566" cy="138" r="62" fill="#FFFFFF"/>
-  <circle cx="566" cy="138" r="38" fill="#3FD11A"/>`;
+const SOURCE = 'assets/source-icon.png';
+const SIZE = 1024;
 
-const ground = `
+/** How much of the launcher's guaranteed square the drawing is allowed to fill. */
+const SAFE = 0.85;
+
+/** The blue the artwork fades to at its edges, so the frame does not show. */
+const GROUND = `
   <defs>
-    <radialGradient id="ground" cx="50%" cy="42%" r="72%">
-      <stop offset="0%" stop-color="#1E74E8"/>
-      <stop offset="55%" stop-color="#0B4FA8"/>
-      <stop offset="100%" stop-color="#063A7E"/>
+    <radialGradient id="ground" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#0A66E8"/>
+      <stop offset="60%" stop-color="#0044C8"/>
+      <stop offset="100%" stop-color="#00339E"/>
     </radialGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#ground)"/>`;
+  <rect width="${SIZE}" height="${SIZE}" fill="url(#ground)"/>`;
 
-/** `fill` is how much of the 1024 canvas the 640-unit mark is scaled to cover. */
-const svg = (body) =>
-  Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${body}</svg>`);
+const ground = (size, body = GROUND) =>
+  Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${SIZE} ${SIZE}">${body}</svg>`,
+  );
 
-function placed(fill) {
-  const size = 1024 * fill;
-  const scale = size / 640;
-  const offset = (1024 - size) / 2;
-  return `<g transform="translate(${offset} ${offset}) scale(${scale})">${mark}</g>`;
+/** The drawing, scaled to `fill` of the canvas and centred on it. */
+async function inset(fill, canvas = SIZE) {
+  const art = Math.round(canvas * fill);
+  const buf = await sharp(SOURCE).resize(art, art).png().toBuffer();
+  const offset = Math.round((canvas - art) / 2);
+  return sharp(ground(canvas))
+    .composite([{ input: buf, left: offset, top: offset }])
+    .png()
+    .toBuffer();
 }
 
-const png = (body, file) => sharp(svg(body)).png().toFile(`assets/${file}`);
+/* What the launcher masks. @capacitor/assets already insets this file into the
+   guaranteed square, so SAFE is measured against that square, not the canvas. */
+await sharp(await inset(SAFE)).toFile('assets/icon-foreground.png');
 
-await png(ground, 'icon-background.png');
-// cropped by the launcher: stay inside the safe area
-await png(placed(0.625), 'icon-foreground.png');
-// never cropped: fill the frame
-await png(ground + placed(0.82), 'icon.png');
+/* What shows through wherever the launcher cropped. */
+await sharp(ground(SIZE)).png().toFile('assets/icon-background.png');
+
+/* Never masked — the drawing as it was made. */
+await sharp(SOURCE).resize(SIZE, SIZE).png().toFile('assets/icon.png');
 
 /**
- * The splash is a square that will be cropped to whatever shape the phone is,
- * so the mark sits small and dead centre where no aspect ratio can reach it.
- * Same blue as the window chrome, so the seam between splash and first frame
- * does not show.
+ * The splash is a square cropped to the shape of the phone, so the drawing sits
+ * small and dead centre where no aspect ratio can reach it. Flat blue rather
+ * than the gradient: this one is seen beside the game's own first frame, and
+ * that frame is #0B4FA8.
  */
 const SPLASH = 2732;
-const splash = (dark) => {
-  const size = 620;
-  const scale = size / 640;
-  const offset = (SPLASH - size) / 2;
-  return Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${SPLASH}" height="${SPLASH}" viewBox="0 0 ${SPLASH} ${SPLASH}">` +
-      `<rect width="${SPLASH}" height="${SPLASH}" fill="${dark ? '#06306B' : '#0B4FA8'}"/>` +
-      `<g transform="translate(${offset} ${offset}) scale(${scale})">${mark}</g>` +
-      `</svg>`,
-  );
-};
+async function splash(background) {
+  const art = 760;
+  const offset = Math.round((SPLASH - art) / 2);
+  const buf = await sharp(SOURCE).resize(art, art).png().toBuffer();
+  return sharp(
+    Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${SPLASH}" height="${SPLASH}">` +
+        `<rect width="${SPLASH}" height="${SPLASH}" fill="${background}"/></svg>`,
+    ),
+  )
+    .composite([{ input: buf, left: offset, top: offset }])
+    .png()
+    .toBuffer();
+}
 
-await sharp(splash(false)).png().toFile('assets/splash.png');
-await sharp(splash(true)).png().toFile('assets/splash-dark.png');
+await sharp(await splash('#0B4FA8')).toFile('assets/splash.png');
+await sharp(await splash('#06306B')).toFile('assets/splash-dark.png');
+
 console.log('icon.png, icon-foreground.png, icon-background.png, splash.png, splash-dark.png');
