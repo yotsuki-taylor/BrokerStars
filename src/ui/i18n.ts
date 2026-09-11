@@ -330,7 +330,10 @@ const EN = {
   'duel.err.notfound': 'THAT DUEL IS NOT THERE ANY MORE.',
   'duel.err.expired': 'THAT INVITATION HAS RUN OUT. ASK FOR ANOTHER.',
   'duel.err.full': 'SOMEBODY ELSE TOOK THAT SEAT.',
-  'duel.err.badsig': 'TELEGRAM DID NOT VOUCH FOR YOU. OPEN THE GAME FROM THE BOT.',
+  // Was "open the game from the bot", written when Telegram was the only way
+  // to be anybody. Guests mean this is now rare and no longer about Telegram:
+  // it is a server that would not vouch for anybody at all.
+  'duel.err.badsig': 'COULD NOT WORK OUT WHO YOU ARE. REOPEN THE GAME AND TRY AGAIN.',
   'duel.err.noserver': 'THE SERVER IS NOT SET UP FOR DUELS.',
   'duel.err.started': 'THAT DUEL IS ALREADY UNDER WAY.',
   'duel.err.nolink': 'THE SERVER COULD NOT NAME ITS BOT, SO THERE IS NO LINK TO SEND.',
@@ -386,7 +389,10 @@ const EN = {
   'friends.title': 'FRIENDS',
   'friends.loading': 'LOADING',
   'friends.offline': 'The list is not answering. Try again in a moment.',
-  'friends.noServer': 'Open the game in Telegram to keep a friends list.',
+  // Same correction as duel.err.badsig: a friends list no longer needs
+  // Telegram, it needs a server that will say who is asking — and a guest
+  // session is enough for that everywhere.
+  'friends.noServer': 'No server behind this build, so there is no list to keep.',
   'friends.emptyTitle': 'NOBODY YET',
   'friends.empty': 'Send somebody the link below. When they tap it you will both be on each other’s list.',
   'friends.add': 'ADD A FRIEND',
@@ -742,7 +748,7 @@ const RU: Record<Key, string> = {
   'duel.err.notfound': 'ЭТОЙ ДУЭЛИ БОЛЬШЕ НЕТ.',
   'duel.err.expired': 'ПРИГЛАШЕНИЕ ИСТЕКЛО. ПОПРОСИ НОВОЕ.',
   'duel.err.full': 'МЕСТО УЖЕ ЗАНЯЛИ.',
-  'duel.err.badsig': 'TELEGRAM ЗА ТЕБЯ НЕ ПОРУЧИЛСЯ. ОТКРОЙ ИГРУ ИЗ БОТА.',
+  'duel.err.badsig': 'НЕ ВЫШЛО ПОНЯТЬ, КТО ТЫ. ПЕРЕОТКРОЙ ИГРУ И ПОПРОБУЙ СНОВА.',
   'duel.err.noserver': 'СЕРВЕР НЕ НАСТРОЕН НА ДУЭЛИ.',
   'duel.err.started': 'ЭТА ДУЭЛЬ УЖЕ ИДЁТ.',
   'duel.err.nolink': 'СЕРВЕР НЕ СМОГ НАЗВАТЬ СВОЕГО БОТА, ОТПРАВЛЯТЬ НЕЧЕГО.',
@@ -791,7 +797,7 @@ const RU: Record<Key, string> = {
   'friends.title': 'ДРУЗЬЯ',
   'friends.loading': 'ЗАГРУЖАЕМ',
   'friends.offline': 'Список не отвечает. Попробуй через минуту.',
-  'friends.noServer': 'Открой игру в Telegram, чтобы вести список друзей.',
+  'friends.noServer': 'За этой сборкой нет сервера, так что и списка нет.',
   'friends.emptyTitle': 'ПОКА НИКОГО',
   'friends.empty': 'Отправь кому-нибудь ссылку снизу. Он нажмёт — и вы оба окажетесь в списках друг у друга.',
   'friends.add': 'ДОБАВИТЬ ДРУГА',
