@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.1",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.1",
     "@types/node": "^26.4.0",
     "@types/react": "^18.3.12",
