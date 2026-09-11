@@ -40,6 +40,12 @@ captures/
 
 # IntelliJ
 *.iml
+# The whole directory, rather than the file-by-file list below that the template
+# ships with. That list is a losing race: Android Studio invents new files with
+# every release, and it wrote four this project had never heard of the first
+# time it opened it. None of them are the build -- they are one developer's
+# window layout and caches. The build is in the gradle files beside this one.
+.idea/
 .idea/workspace.xml
 .idea/tasks.xml
 .idea/gradle.xml
@@ -102,3 +108,7 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Which JVM this machine's Gradle daemon picked. Local tooling state, written
+# on the first build and different on every machine.
+gradle/gradle-daemon-jvm.properties
