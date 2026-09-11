@@ -117,7 +117,7 @@ import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protoco
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { wipe } from './store';
-import { ensureGuest } from './guest';
+import { ensureGuest, guestName } from './guest';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -240,6 +240,20 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
  */
 function playerName(): string {
   const name = platform().userName();
+  return name ? name.slice(0, 12).toUpperCase() : t('match.you');
+}
+
+/**
+ * What to call this player on somebody else's screen.
+ *
+ * The same name, except for the fallback. ТЫ is the right word on your own HUD
+ * and the wrong one on a rival's, where a player called YOU is nobody — and it
+ * is the word every guest was going up under, since a guest has no host to ask
+ * for a name. It has one of its own: the server names each guest as it mints it
+ * (`mintGuest`), which is what that name is for.
+ */
+function duelName(): string {
+  const name = platform().userName() || guestName();
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -1532,7 +1546,7 @@ export default function App() {
       setScreen('duel');
       duelRef.current = new DuelSocket(
         code,
-        { name: playerName(), outfit: outfitRef.current },
+        { name: duelName(), outfit: outfitRef.current },
         onDuelMessage,
         (state) => setDuel((d) => (d ? { ...d, conn: state } : d)),
       );
