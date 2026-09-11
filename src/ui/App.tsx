@@ -515,8 +515,18 @@ const keepLinkChars = (raw: string): string =>
 function AccountPanel({
   account,
   onOwnFooter,
+  onSignedIn,
 }: {
   account?: Account;
+  /**
+   * Somebody just signed in, and the game is now a different player's.
+   *
+   * The profile is fetched once, on the way in (see the handshake in `App`),
+   * and a sign-in happens long after that — so without this the office stays
+   * empty, the coins stay at zero, and a player who has been playing for weeks
+   * in Telegram concludes their save is gone. It is not: nobody asked for it.
+   */
+  onSignedIn?: () => void;
   /**
    * Told when this panel has taken over the overlay's bottom button.
    *
@@ -553,6 +563,7 @@ function AccountPanel({
       return;
     }
     setSigned(true);
+    onSignedIn?.();
   }
 
   async function doDelete() {
@@ -642,11 +653,14 @@ function AccountPanel({
 function SettingsOverlay({
   onHelp,
   onTutorial,
+  onSignedIn,
   onPickLang,
   onClose,
 }: {
   onHelp: () => void;
   onTutorial?: () => void;
+  /** Passed straight to the account panel; see `AccountPanel`. */
+  onSignedIn?: () => void;
   onPickLang: (l: Lang) => void;
   onClose: () => void;
 }) {
@@ -678,7 +692,7 @@ function SettingsOverlay({
           ))}
         </div>
       ) : view === 'account' && hasAccount ? (
-        <AccountPanel account={account} onOwnFooter={setOwnFooter} />
+        <AccountPanel account={account} onOwnFooter={setOwnFooter} onSignedIn={onSignedIn} />
       ) : (
         <div className="settings-list">
           <button className="big-btn ghost" onClick={onHelp}>
@@ -2187,6 +2201,9 @@ export default function App() {
 
       {settingsOpen && (
         <SettingsOverlay
+          // A sign-in makes this a different player's game; the handshake that
+          // fetched a profile ran long before it, so ask again.
+          onSignedIn={() => reconcile(refreshProfile())}
           onHelp={() => {
             setSettingsOpen(false);
             setHelpOpen(true);
@@ -2415,6 +2432,9 @@ export default function App() {
 
       {settingsOpen && (
         <SettingsOverlay
+          // A sign-in makes this a different player's game; the handshake that
+          // fetched a profile ran long before it, so ask again.
+          onSignedIn={() => reconcile(refreshProfile())}
           onHelp={() => {
             setSettingsOpen(false);
             setHelpOpen(true);
