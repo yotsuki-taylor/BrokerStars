@@ -118,7 +118,25 @@ const POOR_HAS: Record<RoomSlot, boolean> = {
 const BASE_URL =
   (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 
-const tex = (name: string) => `${BASE_URL}textures/room/${name}.png`;
+/**
+ * WebP, and the room is the only place in the game that uses it.
+ *
+ * These are nine full-screen 1080x1920 layers stacked to make one office, and
+ * as PNGs they were 7.1 MB — more than everything else the game ships put
+ * together, downloaded by every player to draw one screen. At quality 90 they
+ * are 0.57 MB and a pixel-for-pixel comparison of the wallpaper, the skirting
+ * and the floorboards shows nothing to tell apart.
+ *
+ * Safe everywhere this game runs: WebView has read WebP since Android 4.2 and
+ * this app's floor is 7, Telegram's WebView is modern Chrome, and every browser
+ * has supported it for years.
+ *
+ * Only here because only here is the extension in one place. Everywhere else a
+ * texture is named with its extension in a data file — `sim/companies.ts`,
+ * `ui/leagues.ts` — and converting those means editing the names rather than
+ * one line.
+ */
+const tex = (name: string) => `${BASE_URL}textures/room/${name}.webp`;
 
 export function stepIndexOf(slot: RoomSlot): number {
   return ROOM_STEPS.findIndex((s) => s.slot === slot);
