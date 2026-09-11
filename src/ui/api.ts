@@ -13,14 +13,16 @@
  *   no VITE_API_URL — a build with no server behind it, which is every local
  *   `npm run dev` unless somebody sets one.
  *
- *   no Telegram initData — the game opened in a plain browser rather than
- *   inside Telegram. The server refuses unsigned results by design, so there is
- *   nothing to send. Reading the board still works: it is public.
+ *   no token from the host — the game opened somewhere that cannot say who is
+ *   playing in a way a server can check, which today means anywhere but inside
+ *   Telegram (src/platform/). The server refuses unsigned results by design, so
+ *   there is nothing to send. Reading the board still works: it is public.
  */
 
 import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
+import { platform } from '../platform';
 import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
 import type { Outfit, Rarity, Slot } from './wardrobe';
@@ -28,14 +30,18 @@ import type { Outfit, Rarity, Slot } from './wardrobe';
 const BASE = String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 /**
- * The signed one. `initDataUnsafe` is the forgeable one — see admin.ts.
+ * The signed one. `platform().userId()` is the forgeable one — see admin.ts.
+ *
+ * Still called `initData` because that is the name the server knows it by: the
+ * field in every POST body below and in `worker/src/index.ts`. What fills it is
+ * the host's business now, and outside Telegram nothing does.
  *
  * Exported because duels need it too: the object that runs a duel has to know
  * who is on each end of it, and this string is the only thing that says so in
  * a way a server can check (src/ui/duel.ts).
  */
 export function initData(): string {
-  return String((window as any).Telegram?.WebApp?.initData ?? '');
+  return platform().authToken();
 }
 
 /** Where the server is, for the socket a duel opens. Empty in a build with none. */
@@ -43,8 +49,7 @@ export const apiBase = (): string => BASE;
 
 /** Who the server will say we are, used only to highlight a row. */
 export function myId(): string | null {
-  const id = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
-  return id == null ? null : String(id);
+  return platform().userId();
 }
 
 export const boardConfigured = (): boolean => BASE !== '';

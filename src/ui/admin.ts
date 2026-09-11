@@ -2,11 +2,14 @@
  * Developer conveniences for one person: free purchases and undo.
  *
  * NOT a security boundary, and cannot be one. The id is baked into the client
- * bundle at build time, so anyone can read it, and it is checked against
- * Telegram's `initDataUnsafe`, which is unsigned and trivially forged. It only
- * keeps the buttons out of ordinary players' way. Anything that must not be
- * cheated has to be enforced on a server, which this prototype does not have.
+ * bundle at build time, so anyone can read it, and it is checked against the
+ * host's unverified idea of who is playing — `platform().userId()`, which
+ * inside Telegram is `initDataUnsafe` and is trivially forged. It only keeps
+ * the buttons out of ordinary players' way. Anything that must not be cheated
+ * has to be enforced on a server, which this prototype does not have.
  */
+
+import { platform } from '../platform';
 
 const ADMIN_ID = String(import.meta.env.VITE_ADMIN_ID ?? '').trim();
 
@@ -14,8 +17,7 @@ export function isAdmin(): boolean {
   // a local dev build is always the developer's own machine
   if (import.meta.env.DEV) return true;
   if (!ADMIN_ID) return false;
-  const id = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
-  return id != null && String(id) === ADMIN_ID;
+  return platform().userId() === ADMIN_ID;
 }
 
 const FREE_KEY = 'brokerstars.admin.free';

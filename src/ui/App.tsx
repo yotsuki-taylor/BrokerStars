@@ -99,6 +99,7 @@ import {
   type Link,
 } from './duel';
 import { apiBase } from './api';
+import { platform } from '../platform';
 import { friendCodeFromLaunch } from './friends';
 import type { DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
@@ -204,20 +205,17 @@ const ABILITY_NAME: Record<AbilityId, string> = {
   rumour: 'RUMOUR',
 };
 function haptic(kind: 'light' | 'heavy' = 'light') {
-  const tg = (window as any).Telegram?.WebApp?.HapticFeedback;
-  if (tg?.impactOccurred) tg.impactOccurred(kind === 'heavy' ? 'medium' : 'light');
-  else navigator.vibrate?.(kind === 'heavy' ? 25 : 10);
+  platform().haptic(kind);
 }
 
 /**
- * Display name from Telegram when the game runs as a mini app. Cosmetic only —
- * initDataUnsafe is client-supplied and unverified, and nothing here trusts it.
+ * Display name from the host, when the host has one to give. Cosmetic only —
+ * it is client-supplied and unverified, and nothing here trusts it. A host with
+ * no name for the player leaves the game calling them what it always called
+ * them.
  */
 function playerName(): string {
-  const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-  // `||`, not `??`: Telegram sends an empty first_name rather than leaving it
-  // out, and `??` only falls through on null, so the username was never reached
-  const name = String(u?.first_name || u?.username || '').trim();
+  const name = platform().userName();
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 

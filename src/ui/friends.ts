@@ -9,8 +9,9 @@
 
 import { cleanCode } from '../friends/protocol';
 import { apiBase, initData } from './api';
+import { platform } from '../platform';
 
-/** Friends need a server to be kept on and a Telegram to prove who is asking. */
+/** Friends need a server to keep them and a host that can prove who is asking. */
 export const friendsAvailable = (): boolean => Boolean(apiBase()) && Boolean(initData());
 
 /**
@@ -36,7 +37,7 @@ export function friendCodeFromLaunch(): string | null {
     /* an address bar we cannot read is one with no invitation in it */
   }
   if (code) return code;
-  const start = String((window as any).Telegram?.WebApp?.initDataUnsafe?.start_param ?? '');
+  const start = platform().launchParam();
   return start.startsWith('friend_') ? cleanCode(start.slice(7)) : null;
 }
 
@@ -67,12 +68,10 @@ export { shareInvite, copyLink } from './duel';
 export const CHAT_LINK = 'https://t.me/+9R4CBPEDUwg0MTQy';
 
 /**
- * Open it. Through Telegram's own opener when there is one, so the chat comes
- * up inside the app the player is already in rather than in a browser tab that
- * asks them to open Telegram.
+ * Open it. The host decides how: inside Telegram that is Telegram's own opener,
+ * so the chat comes up in the app the player is already in rather than in a
+ * browser tab that asks them to open Telegram.
  */
 export function openChat(): void {
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.openTelegramLink) tg.openTelegramLink(CHAT_LINK);
-  else window.open(CHAT_LINK, '_blank', 'noopener');
+  platform().openLink(CHAT_LINK);
 }

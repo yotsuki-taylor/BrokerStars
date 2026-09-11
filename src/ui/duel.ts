@@ -23,10 +23,11 @@ import {
   type ServerMsg,
 } from '../duel/protocol';
 import { apiBase, initData } from './api';
+import { platform } from '../platform';
 import { perksFor } from './perks';
 import type { Outfit } from './wardrobe';
 
-/** A duel needs a server to run on and a Telegram to prove who is playing. */
+/** A duel needs a server to run on and a host that can prove who is playing. */
 export const duelsAvailable = (): boolean => Boolean(apiBase()) && Boolean(initData());
 
 export interface Invite {
@@ -103,19 +104,21 @@ export function duelCodeFromLaunch(): string | null {
     /* an address bar we cannot read is one with no duel in it */
   }
   if (code) return code;
-  const start = String((window as any).Telegram?.WebApp?.initDataUnsafe?.start_param ?? '');
+  const start = platform().launchParam();
   return start.startsWith('duel_') ? normalizeCode(start.slice(5)) : null;
 }
 
 /**
  * Hand the link to a friend. Telegram's own share sheet is the contact picker:
  * it opens the chat list, and the message lands in whichever one is tapped.
+ *
+ * The sheet is a t.me address, so it is still the right thing to open from a
+ * host that is not Telegram — a browser tab lands on the same picker. A host
+ * with a contact picker of its own is the reason to revisit this.
  */
 export function shareInvite(link: string, text: string): void {
   const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.openTelegramLink) tg.openTelegramLink(url);
-  else window.open(url, '_blank', 'noopener');
+  platform().openLink(url);
 }
 
 /** How a shout into the group chat ended. */

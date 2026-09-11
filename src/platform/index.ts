@@ -1,0 +1,78 @@
+/**
+ * Where the game is running, and everything that answer changes.
+ *
+ * The game proper — the market, the match, the wardrobe — never cared whether
+ * it was opened from a chat or from an icon on a home screen. Six files did,
+ * because they reached into `window.Telegram.WebApp` themselves: who the player
+ * is, what the launch link said, how a link gets handed to a friend, whether a
+ * tap buzzes. Ten places in seventeen thousand lines, and those ten were the
+ * whole of what tied this game to Telegram.
+ *
+ * They come through here now. A build that is not a mini app — the Android one
+ * — is a third file beside `telegram.ts` and `web.ts` and a line in `platform`
+ * below; nothing above this module has to learn about it.
+ *
+ * Nothing here is memoized, deliberately. Every one of those ten call sites
+ * used to read `window.Telegram` afresh, and this keeps that: the object is put
+ * there by the script tag in index.html, and a lookup that happened to run
+ * first would otherwise answer "plain browser" for the rest of the session.
+ */
+
+import { TELEGRAM, inTelegram } from './telegram';
+import { WEB } from './web';
+
+export interface Platform {
+  /**
+   * Which set of methods this is, for a build that has to say so. Not a stand-in
+   * for "is there a real player behind this": `'telegram'` only means the SDK
+   * answered, and it answers in a browser tab too — see `inTelegram`. Ask
+   * `authToken()` for that.
+   */
+  readonly id: 'telegram' | 'web';
+
+  /**
+   * Whatever the host wants doing before the game draws — full height, a
+   * gesture to disable, chrome to paint. Called once, from main.tsx.
+   */
+  ready(): void;
+
+  /**
+   * Proof of who is asking, for the server to check. Empty when there is none,
+   * and empty is the normal answer outside a mini app rather than a failure —
+   * see `canSign` in ui/api.ts, which treats it as "not in this life" and
+   * queues nothing.
+   *
+   * Still travels to the server under the JSON key `initData`: that is the
+   * server's field name (worker/src/index.ts) and renaming it here would only
+   * mean renaming it back at the socket.
+   */
+  authToken(): string;
+
+  /**
+   * Who the host says this is, unverified. Good for highlighting the player's
+   * own row on a board and for keeping developer buttons out of other people's
+   * way; good for nothing that must not be forged. `authToken` is the checkable
+   * one.
+   */
+  userId(): string | null;
+
+  /** A display name, unverified and cosmetic. Empty when the host has none. */
+  userName(): string;
+
+  /**
+   * The parameter the game was launched with, raw. Duel and friend invitations
+   * both arrive this way, and both know their own prefix — this only fetches.
+   */
+  launchParam(): string;
+
+  /** A tap, felt. Silently nothing on a host with no motor. */
+  haptic(kind: 'light' | 'heavy'): void;
+
+  /** Send the player somewhere else: an invitation, the group chat. */
+  openLink(url: string): void;
+}
+
+/** The one we are running on, asked fresh every time. */
+export function platform(): Platform {
+  return inTelegram() ? TELEGRAM : WEB;
+}
