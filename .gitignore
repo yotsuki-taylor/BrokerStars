@@ -33,6 +33,22 @@ assets/splash-dark.png
 # changes. Looking at them is the point; keeping them is not.
 assets/_preview*.png
 
+# The listing's own pictures: the 512 tile and the banner, both drawn by
+# assets/build-store.mjs from the same master as everything else, and the
+# screenshots, cut by assets/build-screens.mjs from captures off a phone.
+#
+# Out for the reason the icon sources are out, and one more. They are derived,
+# so the script is the thing worth keeping. And once uploaded they live in Play
+# Console, which is where a listing's pictures belong — a megabyte of PNG in
+# every clone of this repository, forever, for files needed once, buys nothing.
+#
+# What stays is assets/store/listing.md, and it stays for the opposite reason:
+# it is text, it is small, and it goes stale when the code changes. That is
+# precisely what version control is for.
+assets/play-icon-512.png
+assets/play-feature-graphic.png
+assets/store/*.png
+
 # Signing keys, anywhere in the tree. `android/.gitignore` covers only the
 # android/ subtree, and a key made in whatever folder the terminal happened to
 # be in would be untracked but offered by `git add .` — into a public
