@@ -48,8 +48,13 @@ import {
   claimDailyQuest,
   flushPending,
   mintToken,
+  linkAvailable,
+  linkStatus,
+  mintLinkCode,
   onDuelCall,
   openProfile,
+  redeemLinkCode,
+  undoLink,
   pollDuelCall,
   refreshProfile,
   refundItem as refundItemOnServer,
@@ -106,6 +111,7 @@ import { apiBase, deleteAccount } from './api';
 import { platform, type Account } from '../platform';
 import { friendCodeFromLaunch, friendCodeIn } from './friends';
 import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
+import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
 import { wipe } from './store';
@@ -313,11 +319,181 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
  * coins, the office and the wardrobe all work signed out, and what an account
  * buys is the part a server has to keep.
  */
+/**
+ * The other door into this account, and how to open one.
+ *
+ * Two hosts meet here and they want opposite halves of the same exchange. In
+ * the Android app the player IS a Google account and the question is which
+ * Telegram save to join; in Telegram the player HAS the save and the question
+ * is what code to give. So one side mints and the other types, and the section
+ * below draws whichever half this host is.
+ *
+ * It appears at all only where a request can be signed — `linkAvailable` —
+ * which on Android means after signing in. Before that there is no account to
+ * link to anything, and offering it would be offering a door with no house.
+ */
+function LinkPanel({ canMint }: { canMint: boolean }) {
+  const [linked, setLinked] = useState<boolean | null>(null);
+  const [code, setCode] = useState<LinkState | null>(null);
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void linkStatus().then((state) => {
+      if (alive) setLinked(state);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Still asking. Drawing the unlinked state and then flipping it is worse than
+  // drawing nothing for a moment.
+  if (linked === null) return null;
+
+  const undo = async () => {
+    setBusy(true);
+    setNote(null);
+    const done = await undoLink();
+    setBusy(false);
+    if (!done) {
+      setNote(t('account.failed'));
+      return;
+    }
+    setLinked(false);
+    setNote(t('link.undone'));
+  };
+
+  const getCode = async () => {
+    setBusy(true);
+    setNote(null);
+    const state = await mintLinkCode();
+    setBusy(false);
+    if (!state) {
+      setNote(t('account.failed'));
+      return;
+    }
+    // The server answers `linked` rather than a code when there is nothing to
+    // mint, which is an answer and not a failure.
+    if (state.linked) setLinked(true);
+    else setCode(state);
+  };
+
+  const redeem = async () => {
+    const clean = cleanLinkCode(typed);
+    if (!clean || busy) return;
+    setBusy(true);
+    setNote(null);
+    const error = await redeemLinkCode(clean);
+    setBusy(false);
+    if (error) {
+      setNote(t(LINK_ERROR[error]));
+      return;
+    }
+    // The account this app speaks for has just become a different one. Every
+    // screen reads its own corner of the game at mount, so the honest way to
+    // show the save that has just arrived is to start again.
+    window.location.reload();
+  };
+
+  if (linked) {
+    return (
+      <div className="settings-list">
+        <p className="settings-note">{t('link.linked')}</p>
+        <button className="big-btn ghost" disabled={busy} onClick={undo}>
+          {busy ? t('account.working') : t('link.undo')}
+        </button>
+        {note && <p className="settings-note">{note}</p>}
+      </div>
+    );
+  }
+
+  if (canMint) {
+    return (
+      <div className="settings-list">
+        <p className="settings-note">{t('link.why')}</p>
+        {code?.code ? (
+          <>
+            <p className="settings-note">{t('link.codeIs')}</p>
+            <b className="friend-code-value">{code.code.toUpperCase()}</b>
+            <p className="settings-note">{t('link.minutes')}</p>
+          </>
+        ) : (
+          <button className="big-btn" disabled={busy} onClick={getCode}>
+            {busy ? t('account.working') : t('link.get')}
+          </button>
+        )}
+        {note && <p className="settings-note">{note}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="settings-list">
+      <p className="settings-note">{t('link.enter')}</p>
+      <form
+        className="friend-code-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void redeem();
+        }}
+      >
+        <input
+          className="friend-code-input"
+          value={typed}
+          onChange={(e) => setTyped(keepLinkChars(e.target.value))}
+          placeholder={t('friends.codeHint')}
+          maxLength={LINK_CODE_LENGTH}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
+        />
+        <button className="menu-btn" type="submit" disabled={!cleanLinkCode(typed) || busy}>
+          {busy ? t('account.working') : t('link.do')}
+        </button>
+      </form>
+      {note && <p className="settings-note">{note}</p>}
+    </div>
+  );
+}
+
+/** One sentence per way it can go wrong, spelled out so the keys stay literal. */
+const LINK_ERROR = {
+  nosuch: 'link.err.nosuch',
+  self: 'link.err.self',
+  busy: 'link.err.busy',
+  already: 'link.err.already',
+  noserver: 'link.err.noserver',
+} as const;
+
+/** The code alphabet, filtered as it is typed. Same rule as a friend code. */
+const keepLinkChars = (raw: string): string =>
+  raw
+    .toUpperCase()
+    .replace(/[^0-9BCDFGHJKLMNPQRSTVWXYZ]/g, '')
+    .slice(0, LINK_CODE_LENGTH);
+
+/**
+ * Signing in, signing out, the one door that only goes one way, and the second
+ * door into the same account.
+ *
+ * `account` is absent on every host that already knows who is playing before
+ * the game draws — a mini app is opened by somebody Telegram signed for — so
+ * everything about signing in is drawn only where signing in is a thing that
+ * happens. Linking is drawn on both, because it takes both.
+ *
+ * The copy says the game plays without signing in, because it does. Matches,
+ * coins, the office and the wardrobe have always worked with no server behind
+ * them; an account buys the part a server has to keep.
+ */
 function AccountPanel({
   account,
   onOwnFooter,
 }: {
-  account: Account;
+  account?: Account;
   /**
    * Told when this panel has taken over the overlay's bottom button.
    *
@@ -328,7 +504,7 @@ function AccountPanel({
    */
   onOwnFooter: (own: boolean) => void;
 }) {
-  const [signed, setSigned] = useState(() => account.signedIn());
+  const [signed, setSigned] = useState(() => account?.signedIn() ?? false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
@@ -341,6 +517,7 @@ function AccountPanel({
   }, [asking, gone, onOwnFooter]);
 
   async function doSignIn() {
+    if (!account) return;
     setBusy(true);
     setNote(null);
     const err = await account.signIn();
@@ -366,7 +543,7 @@ function AccountPanel({
       setNote(t('account.failed'));
       return;
     }
-    account.signOut();
+    account?.signOut();
     wipe([LANG_KEY]);
     setGone(true);
   }
@@ -401,34 +578,41 @@ function AccountPanel({
   }
 
   return (
-    <div className="settings-list">
-      <p className="settings-note">{signed ? platform().userName() : t('account.out')}</p>
-      {signed ? (
-        <>
-          <button
-            className="big-btn ghost"
-            disabled={busy}
-            onClick={() => {
-              account.signOut();
-              setSigned(false);
-            }}
-          >
-            {t('account.signOut')}
-          </button>
-          <button className="big-btn ghost" disabled={busy} onClick={() => setAsking(true)}>
-            {t('account.delete')}
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="settings-note">{t('account.why')}</p>
-          <button className="big-btn" disabled={busy} onClick={doSignIn}>
-            {busy ? t('account.working') : t('account.signIn')}
-          </button>
-        </>
+    <>
+      {account && (
+        <div className="settings-list">
+          <p className="settings-note">{signed ? platform().userName() : t('account.out')}</p>
+          {signed ? (
+            <>
+              <button
+                className="big-btn ghost"
+                disabled={busy}
+                onClick={() => {
+                  account.signOut();
+                  setSigned(false);
+                }}
+              >
+                {t('account.signOut')}
+              </button>
+              <button className="big-btn ghost" disabled={busy} onClick={() => setAsking(true)}>
+                {t('account.delete')}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="settings-note">{t('account.why')}</p>
+              <button className="big-btn" disabled={busy} onClick={doSignIn}>
+                {busy ? t('account.working') : t('account.signIn')}
+              </button>
+            </>
+          )}
+          {note && <p className="settings-note">{note}</p>}
+        </div>
       )}
-      {note && <p className="settings-note">{note}</p>}
-    </div>
+      {/* Minting is for the side keeping its save, which is the side that is
+          not itself a Google account. */}
+      {linkAvailable() && <LinkPanel canMint={!account} />}
+    </>
   );
 }
 
@@ -446,6 +630,9 @@ function SettingsOverlay({
   const [view, setView] = useState<'menu' | 'lang' | 'account'>('menu');
   const [ownFooter, setOwnFooter] = useState(false);
   const account = platform().account;
+  // Drawn for a host where signing in happens, and also for one where it does
+  // not but a second way in can still be arranged — which is Telegram.
+  const hasAccount = Boolean(account) || linkAvailable();
   const title =
     view === 'lang'
       ? t('settings.language')
@@ -467,7 +654,7 @@ function SettingsOverlay({
             </button>
           ))}
         </div>
-      ) : view === 'account' && account ? (
+      ) : view === 'account' && hasAccount ? (
         <AccountPanel account={account} onOwnFooter={setOwnFooter} />
       ) : (
         <div className="settings-list">
@@ -482,8 +669,8 @@ function SettingsOverlay({
           <button className="big-btn ghost" onClick={() => setView('lang')}>
             {t('settings.language')}
           </button>
-          {/* Only where signing in is a thing that happens in the game. */}
-          {account && (
+          {/* Signing in, or linking, or both. */}
+          {hasAccount && (
             <button className="big-btn ghost" onClick={() => setView('account')}>
               {t('settings.account')}
             </button>

@@ -145,6 +145,26 @@ const EN = {
   'account.keep': 'KEEP IT',
   'account.deleteDone': 'Gone. The game starts over from here.',
 
+  // One person, two ways in. Shown in Telegram as well as in the app: it is the
+  // Telegram save that is being kept, so that is where a code is minted.
+  'link.title': 'GOOGLE',
+  'link.why':
+    'Link a Google account and this office, this wardrobe and these coins are waiting in the Android app too. Nothing is copied — it is one game with two doors.',
+  'link.get': 'GET A CODE',
+  'link.codeIs': 'TYPE THIS IN THE ANDROID APP',
+  'link.minutes': 'Good for ten minutes.',
+  'link.enter': 'CODE FROM TELEGRAM',
+  'link.do': 'LINK',
+  'link.linked': 'LINKED TO GOOGLE',
+  'link.undo': 'UNLINK',
+  'link.undone': 'Unlinked. This game stays where it is.',
+  'link.err.nosuch': 'That code is not one of ours, or it has run out.',
+  'link.err.self': 'That code came from this same account.',
+  'link.err.busy':
+    'This Google account already has a game of its own. Delete it first, above, and then link.',
+  'link.err.already': 'One of these two is linked to something already.',
+  'link.err.noserver': 'This build has no server to link through.',
+
   'help.title': 'HOW TO PLAY',
   'help.match':
     '80 seconds. You and your rival trade the same three stocks. Whoever ends with the bigger net worth — cash plus positions — wins. Positions close automatically at the whistle, so the finish is never a race to sell.',
@@ -540,6 +560,24 @@ const RU: Record<Key, string> = {
   'account.deleteGo': 'ДА, УДАЛИТЬ',
   'account.keep': 'ОСТАВИТЬ',
   'account.deleteDone': 'Готово. Игра начинается заново.',
+
+  'link.title': 'GOOGLE',
+  'link.why':
+    'Привяжи аккаунт Google — и этот кабинет, этот гардероб и эти монеты будут ждать тебя в Android-приложении. Ничего не копируется: это одна игра с двумя входами.',
+  'link.get': 'ПОЛУЧИТЬ КОД',
+  'link.codeIs': 'ВВЕДИ ЭТОТ КОД В ПРИЛОЖЕНИИ',
+  'link.minutes': 'Годен десять минут.',
+  'link.enter': 'КОД ИЗ TELEGRAM',
+  'link.do': 'ПРИВЯЗАТЬ',
+  'link.linked': 'АККАУНТ GOOGLE ПРИВЯЗАН',
+  'link.undo': 'ОТВЯЗАТЬ',
+  'link.undone': 'Отвязано. Эта игра остаётся на месте.',
+  'link.err.nosuch': 'Такого кода нет, или он уже истёк.',
+  'link.err.self': 'Этот код выдан этому же аккаунту.',
+  'link.err.busy':
+    'У этого аккаунта Google уже есть своя игра. Сначала удалите её кнопкой выше, потом привязывайте.',
+  'link.err.already': 'Один из двух аккаунтов уже к чему-то привязан.',
+  'link.err.noserver': 'В этой сборке нет сервера, через который можно связать.',
 
   'help.title': 'КАК ИГРАТЬ',
   'help.match':

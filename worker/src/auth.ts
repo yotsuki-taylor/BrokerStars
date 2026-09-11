@@ -27,6 +27,7 @@ import type { Env } from './results';
 import type { Caller } from './telegram';
 import { verifyInitData } from './telegram';
 import { b64urlDecode, b64urlEncode, b64urlText, hex, hmacSha256, sameSignature } from './crypto';
+import { resolve } from './link';
 
 const enc = new TextEncoder();
 
@@ -243,10 +244,22 @@ export async function verifyGoogleIdToken(
  */
 export async function identify(token: string, env: Env): Promise<Caller | null> {
   if (!token) return null;
-  if (token.startsWith(SESSION_PREFIX)) {
-    return env.SESSION_SECRET ? readSession(token, env.SESSION_SECRET) : null;
-  }
-  return env.BOT_TOKEN ? verifyInitData(token, env.BOT_TOKEN) : null;
+  const caller = token.startsWith(SESSION_PREFIX)
+    ? env.SESSION_SECRET
+      ? await readSession(token, env.SESSION_SECRET)
+      : null
+    : env.BOT_TOKEN
+      ? await verifyInitData(token, env.BOT_TOKEN)
+      : null;
+  if (!caller) return null;
+
+  // Two ways in, one player. A Google account that has been linked to a
+  // Telegram one answers to that one's id from here down, so nothing below this
+  // line has ever had to learn that a person can have two accounts (`link.ts`).
+  // Costs a lookup only for callers whose id looks like Google's; a Telegram id
+  // can never be an alias, so a Telegram player pays nothing.
+  const id = await resolve(env, caller.id);
+  return id === caller.id ? caller : { ...caller, id };
 }
 
 /** Where a player's id came from, for the places that have to care. */

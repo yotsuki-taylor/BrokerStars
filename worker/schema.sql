@@ -171,3 +171,20 @@ CREATE TABLE IF NOT EXISTS duel_calls (
   from_name  TEXT NOT NULL,
   expires_at INTEGER NOT NULL
 );
+
+-- One person, two ways in: `g:<sub>` IS this Telegram player. An alias rather
+-- than a merge, so nothing moves and unlinking is deleting one row; the long
+-- version of why is in migration 010, and the code is `worker/src/link.ts`.
+CREATE TABLE IF NOT EXISTS identities (
+  alias_id  TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL UNIQUE,
+  linked_at INTEGER NOT NULL
+);
+
+-- How somebody proves both accounts are theirs: one side mints, the other
+-- types it in, and the server has seen two signatures instead of one claim.
+CREATE TABLE IF NOT EXISTS link_codes (
+  code       TEXT PRIMARY KEY,
+  player_id  TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL
+);

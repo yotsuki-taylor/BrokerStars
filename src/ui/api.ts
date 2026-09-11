@@ -20,6 +20,7 @@
  */
 
 import { cleanCall, type DuelCall } from '../duel/protocol';
+import { cleanLinkState, type LinkError, type LinkState } from '../link/protocol';
 import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
@@ -544,4 +545,47 @@ export async function fetchMarket(): Promise<Market | null> {
 export async function deleteAccount(): Promise<boolean> {
   const answer = await post('/profile/delete', { confirm: 'delete' });
   return answer?.status === 200;
+}
+
+/* ------------------------------------------------ one person, two ways in */
+
+/**
+ * Can this build link anything at all? A server to ask and a host that can
+ * prove who is asking — the same two things friends and duels need, and for
+ * the same reason: a link is a claim about an account, and an account is the
+ * one thing a client is never believed about.
+ */
+export const linkAvailable = (): boolean => BASE !== '' && initData() !== '';
+
+/** Whether this player already has a second way in. Null when nothing answered. */
+export async function linkStatus(): Promise<boolean | null> {
+  const body = ok(await post('/link', {})) as { linked?: unknown } | null;
+  return body ? body.linked === true : null;
+}
+
+/**
+ * Ask for a code to give the other account.
+ *
+ * Null when nothing answered. A state with `linked` already true and no code is
+ * the server saying there is nothing to mint, which is an answer rather than a
+ * failure — see `linkCode` in worker/src/index.ts.
+ */
+export async function mintLinkCode(): Promise<LinkState | null> {
+  const body = ok(await post('/link/code', {}));
+  return body ? cleanLinkState(body) : null;
+}
+
+/** Spend a code. Null means it worked; anything else is a sentence to draw. */
+export async function redeemLinkCode(code: string): Promise<LinkError | null> {
+  const answer = ok(await post('/link/redeem', { code })) as
+    | { ok?: boolean; error?: LinkError }
+    | null;
+  if (!answer) return 'noserver';
+  return answer.ok ? null : (answer.error ?? 'nosuch');
+}
+
+/** Undo it, from either end. True when the server says it is undone. */
+export async function undoLink(): Promise<boolean> {
+  const answer = ok(await post('/link/undo', {})) as { ok?: boolean } | null;
+  return answer?.ok === true;
 }

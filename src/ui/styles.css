@@ -2536,6 +2536,18 @@ body {
   margin: 0;
 }
 
+/* The link code in the settings overlay, where it is the thing on the screen
+   rather than a line beside a button — so bigger, and centred like everything
+   else in that column. */
+.overlay.settings .friend-code-value {
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: 0.22em;
+  /* the letter-spacing hangs off the last character and pulls the whole line
+     left of centre; half of it back is the fix */
+  text-indent: 0.22em;
+}
+
 /* ---------- being called out ---------- */
 
 /* Over the menu, low enough to sit under the coin counters and above the row

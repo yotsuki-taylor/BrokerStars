@@ -34,6 +34,7 @@
 import { dayOf } from '../../src/daily/protocol';
 import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
 import { cleanCode } from '../../src/friends/protocol';
+import { cleanLinkCode } from '../../src/link/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
 import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
@@ -42,6 +43,7 @@ import { answerUpdate, chatShout, duelPush } from './bot';
 import { chatAvailable, markShout, waitLeft } from './chat';
 import * as calls from './calls';
 import * as friends from './friends';
+import * as link from './link';
 import * as profiles from './profile';
 import {
   REWARDS,
@@ -312,6 +314,58 @@ async function googleSignIn(request: Request, env: Env) {
     id: caller.id,
     name: caller.name,
   });
+}
+
+/* ---------------------------------------------------- one person, two ways in */
+
+/**
+ * Whether this player is linked to a second way in. What the settings screen
+ * asks before it draws anything.
+ */
+async function linkState(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  return json({ ok: true, linked: await link.isLinked(env, asked.caller) });
+}
+
+/**
+ * Mint a code for the account keeping its save, which is the Telegram one.
+ *
+ * Refused to an account that is already linked rather than quietly minting a
+ * code that `redeem` would then refuse: the player asked a question, and "you
+ * already are" is the answer to it.
+ */
+async function linkCode(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller } = asked;
+  if (await link.isLinked(env, caller)) return json({ ok: false, error: 'already', linked: true });
+  const minted = await link.mint(env, caller);
+  return json({ ok: true, linked: false, ...minted });
+}
+
+/**
+ * Spend a code. The caller is the account doing the joining — the Google one.
+ *
+ * Every way this can fail is a different sentence to the player, so the error
+ * travels rather than a status: see `LinkError` in src/link/protocol.ts.
+ */
+async function linkRedeem(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  const code = cleanLinkCode(body.code);
+  if (!code) return json({ ok: false, error: 'nosuch' });
+  const error = await link.redeem(env, caller, code);
+  return json({ ok: !error, error, linked: !error });
+}
+
+/** Undo it, from either end. The save is untouched; only the second door goes. */
+async function linkUndo(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  await link.unlink(env, asked.caller);
+  return json({ ok: true, linked: false });
 }
 
 /**
@@ -978,6 +1032,10 @@ export default {
       if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
       if (url.pathname === '/profile/delete') return deleteAccount(request, env);
+      if (url.pathname === '/link') return linkState(request, env);
+      if (url.pathname === '/link/code') return linkCode(request, env);
+      if (url.pathname === '/link/redeem') return linkRedeem(request, env);
+      if (url.pathname === '/link/undo') return linkUndo(request, env);
       if (url.pathname === '/duel/call') return duelCall(request, env);
       if (url.pathname === '/friends') return myFriends(request, env);
       if (url.pathname === '/friends/add') return addFriend(request, env);
