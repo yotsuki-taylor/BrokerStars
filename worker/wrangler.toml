@@ -37,15 +37,20 @@ enabled = true
 # mint one for any player. Only an Android build needs it; without it sessions
 # are refused and Telegram players never notice (worker/src/auth.ts).
 #
-# GOOGLE_CLIENT_ID goes below once there is a Google Cloud project: the WEB
-# client id, not the Android one, because that is what an Android sign-in names
-# as its audience. Public — it is compiled into the app — and its whole job is
-# to refuse a token minted for somebody else's application. Left out until then,
-# which is what makes /auth/google answer 503 rather than guess.
+# GOOGLE_CLIENT_ID below is the WEB client from the Google Cloud project, not
+# the Android one, because the web client is what an Android sign-in names as
+# its audience. Public — it is compiled into the app, where anybody can read it
+# — and its whole job is to refuse a token minted for somebody else's
+# application, which is the one thing standing between this game and every
+# other Google sign-in on earth (worker/src/auth.ts).
+#
+# Setting it is not enough on its own: /auth/google also needs SESSION_SECRET,
+# which is a secret and is not here, and answers 503 until both exist.
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
 ADMIN_ID = "165233146"
 CHAT_ID = "-1004363436099"
+GOOGLE_CLIENT_ID = "814427976892-u602o00j2nedkmunlu0p9k8chbi27raf.apps.googleusercontent.com"
 
 [[d1_databases]]
 binding = "DB"
