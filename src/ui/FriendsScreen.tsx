@@ -20,7 +20,7 @@ const keepCodeChars = (raw: string): string =>
     .toUpperCase()
     .replace(/[^0-9BCDFGHJKLMNPQRSTVWXYZ]/g, '')
     .slice(0, FRIEND_CODE_LENGTH);
-import { copyLink, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
+import { copyText, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
 import type { Friend, FriendError, FriendList } from '../friends/protocol';
@@ -226,7 +226,7 @@ export default function FriendsScreen({
 
   const copy = async () => {
     if (!invite) return;
-    setCopied(await copyLink(invite));
+    setCopied(await copyText(invite));
     window.setTimeout(() => setCopied(false), 1600);
   };
 

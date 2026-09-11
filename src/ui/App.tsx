@@ -19,6 +19,7 @@ import type { MatchState, Trade } from '../sim/types';
 import { drawChart } from './chart';
 import {
   AbilityBar,
+  Check,
   StockRow,
   TraderCard,
   money,
@@ -97,7 +98,7 @@ import {
   applySync,
   applyTick,
   buildMirror,
-  copyLink,
+  copyText,
   linkToShare,
   createInvite,
   duelCodeFromLaunch,
@@ -337,6 +338,7 @@ function LinkPanel({ canMint }: { canMint: boolean }) {
   const [code, setCode] = useState<LinkState | null>(null);
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
@@ -411,13 +413,34 @@ function LinkPanel({ canMint }: { canMint: boolean }) {
   }
 
   if (canMint) {
+    // Read out once. The check below happens in JSX and the copy happens inside
+    // a callback, and narrowing in the first does not reach the second.
+    const minted = code?.code ? code.code.toUpperCase() : null;
     return (
       <div className="settings-list">
         <p className="settings-note">{t('link.why')}</p>
-        {code?.code ? (
+        {minted ? (
           <>
             <p className="settings-note">{t('link.codeIs')}</p>
-            <b className="friend-code-value">{code.code.toUpperCase()}</b>
+            <b className="friend-code-value">{minted}</b>
+            {/* This code has to get from one device to another by hand, and
+                eight characters read off a screen is exactly the length at
+                which people start making mistakes. */}
+            <button
+              className="menu-btn"
+              onClick={async () => {
+                setCopied(await copyText(minted));
+                window.setTimeout(() => setCopied(false), 1600);
+              }}
+            >
+              {copied ? (
+                <>
+                  <Check size={16} /> {t('duel.copied')}
+                </>
+              ) : (
+                t('link.copy')
+              )}
+            </button>
             <p className="settings-note">{t('link.minutes')}</p>
           </>
         ) : (
@@ -1989,7 +2012,7 @@ export default function App() {
           }}
           onCopy={() => {
             const send = linkToShare(duel.link, duel.webLink);
-            return send ? copyLink(send) : Promise.resolve(false);
+            return send ? copyText(send) : Promise.resolve(false);
           }}
           // Only when the server said there is a chat to shout into: the button
           // is drawn from whether this prop is here at all.

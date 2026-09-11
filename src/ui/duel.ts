@@ -186,10 +186,17 @@ export async function shoutInvite(code: string): Promise<Shout> {
   }
 }
 
-/** Best effort, and the caller shows the link either way. */
-export async function copyLink(link: string): Promise<boolean> {
+/**
+ * Put a string on the clipboard. Best effort, and every caller goes on showing
+ * the thing it copied either way.
+ *
+ * Called `copyText` rather than `copyLink`: it started life copying an
+ * invitation and now also copies a link code, which is not a link and is the
+ * one thing in this game somebody has to carry between two devices by hand.
+ */
+export async function copyText(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(link);
+    await navigator.clipboard.writeText(text);
     return true;
   } catch {
     return false;
