@@ -64,6 +64,17 @@ export interface Platform {
   userName(): string;
 
   /**
+   * What language the host thinks this player reads, as a BCP-47 tag — `ru`,
+   * `en-GB`, `pt-BR`. Empty when it has no idea.
+   *
+   * A guess, and treated as one: it decides only what a player who has never
+   * chosen sees first, and a stored choice always wins (`ui/i18n.ts`). Telegram
+   * knows because the player set it in Telegram; a browser and a WebView know
+   * because the device does.
+   */
+  language(): string;
+
+  /**
    * The parameter the game was launched with, raw. Duel and friend invitations
    * both arrive this way, and both know their own prefix — this only fetches.
    */

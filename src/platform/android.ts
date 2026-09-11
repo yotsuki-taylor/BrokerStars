@@ -228,6 +228,11 @@ export const ANDROID: Platform = {
     return load()?.name ?? '';
   },
 
+  language(): string {
+    // The WebView reports the device's locale, which is the phone's language.
+    return String((globalThis as any).navigator?.language ?? '');
+  },
+
   launchParam(): string {
     return launchParam;
   },

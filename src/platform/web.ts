@@ -37,6 +37,10 @@ export const WEB: Platform = {
     return '';
   },
 
+  language(): string {
+    return String((globalThis as any).navigator?.language ?? '');
+  },
+
   launchParam(): string {
     return '';
   },

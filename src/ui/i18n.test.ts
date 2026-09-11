@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COMPANIES, TRAIT_LABEL, TRAIT_SHORT } from '../sim/companies';
-import { LANGS, lang, setLang, t, tr, translatedIds, type Key } from './i18n';
+import { LANGS, lang, pickLang, setLang, t, tr, translatedIds, type Key } from './i18n';
 import { LEAGUES } from './leagues';
 import { ROOM_STEPS } from './renovation';
 import { CATALOGUE, RARITIES, RARITY_LABEL, SLOTS, SLOT_LABEL, SLOT_THEME } from './wardrobe';
@@ -272,3 +272,39 @@ const KEYS = [
   'friends.chatPitch',
   'friends.chatJoin',
 ] as const satisfies readonly Key[];
+
+describe('which language a stranger is greeted in', () => {
+  it('obeys a choice that was actually made, whatever the device says', () => {
+    // the one rule that outranks everything: a tap in settings is not a guess
+    expect(pickLang('ru', 'en-US')).toBe('ru');
+    expect(pickLang('en', 'ru-RU')).toBe('en');
+  });
+
+  it('takes the host at its word when nobody has chosen', () => {
+    expect(pickLang(null, 'ru')).toBe('ru');
+    expect(pickLang(null, 'en')).toBe('en');
+  });
+
+  it('reads only the language out of a full tag', () => {
+    // ru-RU, ru_RU and RU are one language; the region is not ours to care about
+    for (const tag of ['ru-RU', 'ru_RU', 'RU', ' ru ']) expect(pickLang(null, tag)).toBe('ru');
+    expect(pickLang(null, 'en-GB')).toBe('en');
+  });
+
+  it('falls back to English for a language this game does not have', () => {
+    // pt-BR is somebody the game cannot greet properly either way
+    expect(pickLang(null, 'pt-BR')).toBe('en');
+    expect(pickLang(null, 'de')).toBe('en');
+  });
+
+  it('falls back to English when the host says nothing at all', () => {
+    expect(pickLang(null, '')).toBe('en');
+    expect(pickLang(null, '   ')).toBe('en');
+  });
+
+  it('ignores a stored value that is not a language', () => {
+    // a store somebody else wrote to, or one left over from a rename
+    expect(pickLang('klingon', 'ru')).toBe('ru');
+    expect(pickLang('', 'ru')).toBe('ru');
+  });
+});

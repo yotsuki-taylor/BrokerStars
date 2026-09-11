@@ -23,6 +23,11 @@ describe('with no host to ask', () => {
     expect(p.launchParam()).toBe('');
   });
 
+  it('has no opinion about language', () => {
+    // node has no navigator; a browser would answer, and either is fine
+    expect(typeof platform().language()).toBe('string');
+  });
+
   it('does not throw on the things it cannot do', async () => {
     const p = platform();
     await expect(p.ready()).resolves.toBeUndefined();
@@ -46,6 +51,12 @@ describe('inside Telegram', () => {
     // why the name is picked with `||` and not `??`
     fakeTelegram({ initDataUnsafe: { user: { first_name: '', username: 'broker' } } });
     expect(platform().userName()).toBe('broker');
+  });
+
+  it('reports the language the player set in Telegram', () => {
+    // Telegram's own, not the phone's: one of the two was chosen deliberately
+    fakeTelegram({ initDataUnsafe: { user: { language_code: 'ru' } } });
+    expect(platform().language()).toBe('ru');
   });
 
   it('reads the launch parameter raw, prefix and all', () => {

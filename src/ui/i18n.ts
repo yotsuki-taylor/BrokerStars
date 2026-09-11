@@ -23,6 +23,8 @@
  * called anywhere without threading a prop through nine files.
  */
 
+import { platform } from '../platform';
+
 export type Lang = 'en' | 'ru';
 
 export const LANGS: Lang[] = ['en', 'ru'];
@@ -39,32 +41,56 @@ export const LANG_KEY = 'brokerstars.lang';
 const KEY = LANG_KEY;
 
 /**
- * What a player who has never chosen gets.
+ * The last resort, when nobody has chosen and the host has no idea either.
  *
- * English, and this was Russian until the game went to a store. The argument
- * for Russian was that it is who is playing and a first screen in the wrong
- * language is a worse greeting than a switch nobody has to find. Both halves of
- * that still hold — what changed is who "who is playing" means. A listing on
- * Play is read from everywhere, and a default of Russian greets almost all of
- * it wrongly.
- *
- * Neither default is right for everybody, which is the honest shape of the
- * problem: the only answer that greets both is to read the language off the
- * device. That is a change worth making and is not this one.
- *
- * Russian is one tap away in settings, and once tapped it is what the storage
- * below remembers.
+ * English rather than Russian, and only because something has to be: this is
+ * reached by a player whose device says nothing useful, and English is the one
+ * a stranger is likeliest to read. It used to be the whole answer, which was
+ * the wrong shape of answer — see `pickLang`.
  */
 const DEFAULT_LANG: Lang = 'en';
 
+/**
+ * Which language to open in, given what is remembered and what the host says.
+ *
+ * Three sources in a deliberate order.
+ *
+ * A STORED CHOICE ALWAYS WINS. Somebody who tapped a language in settings has
+ * said what they want, and no amount of cleverness about their device is worth
+ * more than that — including on a phone whose locale disagrees with them.
+ *
+ * THEN THE HOST'S GUESS. Telegram knows because the player set a language in
+ * Telegram; a browser and a WebView know because the device does. A guess, but
+ * a good one, and the whole reason a fixed default was always wrong for
+ * somebody: Russian greeted the world wrongly, English greets Russian speakers
+ * wrongly, and this greets both.
+ *
+ * THEN `DEFAULT_LANG`, for a host that says nothing.
+ *
+ * Only the primary subtag is read — `ru-RU`, `ru_RU` and `ru` are one language,
+ * and `pt-BR` is a language this game does not have either way.
+ */
+export function pickLang(stored: string | null, host: string): Lang {
+  if (stored === 'ru' || stored === 'en') return stored;
+  const tag = host.trim().toLowerCase().split(/[-_]/)[0];
+  return (LANGS as string[]).includes(tag) ? (tag as Lang) : DEFAULT_LANG;
+}
+
 /** Private browsing and locked-down webviews throw on access, so never assume. */
 function loadLang(): Lang {
+  let stored: string | null = null;
   try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw === 'ru' || raw === 'en' ? raw : DEFAULT_LANG;
+    stored = window.localStorage.getItem(KEY);
   } catch {
-    return DEFAULT_LANG;
+    /* a store we cannot read is a player who has never chosen */
   }
+  let host = '';
+  try {
+    host = platform().language();
+  } catch {
+    /* a host that throws being asked is a host with no opinion */
+  }
+  return pickLang(stored, host);
 }
 
 /**

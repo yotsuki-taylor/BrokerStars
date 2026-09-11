@@ -79,6 +79,20 @@ export const TELEGRAM: Platform = {
     return String(u?.first_name || u?.username || '').trim();
   },
 
+  language(): string {
+    // Telegram's own first: it is the language the player set in Telegram
+    // rather than the one the phone happens to be in, and of the two only that
+    // one was chosen deliberately.
+    //
+    // Then the device, which is not a fallback for a rare case — it is the
+    // ordinary answer in a browser tab. This adapter is chosen whenever the SDK
+    // has loaded, and the SDK loads on any page (see `inTelegram`); outside a
+    // real mini-app session its stub knows no language at all. Without this
+    // line the web build would never detect one.
+    const said = String(webApp()?.initDataUnsafe?.user?.language_code ?? '').trim();
+    return said || String((globalThis as any).navigator?.language ?? '');
+  },
+
   launchParam(): string {
     return String(webApp()?.initDataUnsafe?.start_param ?? '');
   },
