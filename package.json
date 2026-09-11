@@ -14,7 +14,7 @@
     "build:android": "tsc -b && vite build --mode android",
     "android": "npm run build:android && cap sync android",
     "android:open": "cap open android",
-    "icons": "node assets/build-icons.mjs && cap assets generate --android && node assets/shrink-splash.mjs"
+    "icons": "node assets/build-icons.mjs && capacitor-assets generate --android && node assets/shrink-splash.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
