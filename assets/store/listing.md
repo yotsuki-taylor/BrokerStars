@@ -3,16 +3,23 @@
 Paste these into Play Console. The English one is the default locale (`en-US`);
 Russian is a second locale added under **Store listing → Manage translations**.
 
-Everything here is checked against the game rather than invented: eighty
-seconds is `durationSec` in `src/sim/config.ts`, the five leagues are
-`src/ui/leagues.ts`, the five abilities `src/sim/abilities.ts`, and the
-twenty-eight companies `src/sim/companies.ts`. If any of those change, this
-file is wrong and should change with them.
+Every claim here is read off the game rather than remembered. Eighty seconds is
+`durationSec` in `src/sim/config.ts`; the leagues and their blurbs are
+`src/ui/leagues.ts`; what the five abilities actually do is `src/sim/abilities.ts`
+and the item text in `src/ui/i18n.ts`; three orders a day is `ORDERS_A_DAY`;
+seven upgrades is `ROOM_STEPS`; twenty-eight companies and twenty-two awards are
+their catalogues. If any of those change, this file is wrong and should change
+with them.
+
+THE RUSSIAN NAMES ARE THE GAME'S OWN, not translations of the English ones. The
+first draft of this file translated BRONZE PIT as "Бронзовая яма" and the game
+calls it "Бронзовый ряд"; four of the five leagues were wrong that way. Anything
+a player can read on screen is in `i18n.ts` and should be copied from there.
 
 Two things are said plainly in both languages and should stay said: the
 companies are invented, and no real money is involved. A game about a stock
-market that is coy about either is a game that gets read as a trading app —
-by a player, or by a reviewer.
+market that is coy about either is a game that gets read as a trading app — by a
+player deciding whether to install it, or by a reviewer deciding what it is.
 
 ---
 
@@ -22,7 +29,7 @@ by a player, or by a reviewer.
 80 seconds. Three stocks. One rival. Trade fast, read the board, cash out.
 ```
 
-## English — full description (2130 / 4000)
+## English — full description (2312 / 4000)
 
 ```
 Eighty seconds. Three companies. One rival across the table.
@@ -35,29 +42,32 @@ themselves at the whistle, so the finish is never a scramble to sell.
 BUY, SELL, SHORT
 Every company has a character. Some drift, some spike, some fall out of the sky
 in the last quarter. Twenty-eight of them, each with its own habits, and three
-of them on the board each match. Learning which is which is the whole game.
+on the board each match. Learning which is which is the whole game.
 
 FIVE ABILITIES
-Freeze a price. Halt trading. Read the dossier before anybody else. Call in a
-margin call on your rival. Start a rumour. One use each, and the moment you
-spend it matters more than the fact you have it.
+Five seconds in which your rival cannot open anything new. Ten in which nobody
+trades whatever they are deepest in — you included. A dossier that shows what
+they are holding for the rest of the match. A margin call that closes their
+positions where they stand. A rumour that pushes your biggest position your way
+for six seconds. One use each, and when you spend it matters more than having
+it.
 
 FIVE LEAGUES
-Bronze Pit, Silver Floor, Gold Desk, Global Fund, Bull Crown. Each pays better
-and each rival plays harder — the one in the Bull Crown will take the other
-side of your trade on purpose.
+Bronze Pit, Silver Floor, Gold Desk, Global Fund, Bull Crown. The first rival
+trades late, small, and panics out. The last one reads the tape before you do —
+beat it and you have doubled your money.
 
 AN OFFICE THAT FILLS UP
-Coins go into the room behind the menu: walls, a window, a desk, shelves,
-a monitor, posters. Seven upgrades from a bare room to somewhere worth sitting.
+Coins go into the room behind the menu: walls, a window, a desk, shelves, a
+monitor, posters. Seven upgrades from a bare room to somewhere worth sitting.
 Clothes too — five things to wear, five grades of each, and the good ones are
 not just for looking at.
 
 A SHARE COUNTER
-Between matches there is a slower game: a handful of orders a day, prices that
-move overnight, and a portfolio that is ranked on a board of its own. The coins
-you win are one table; what your shares are worth is another, and they reward
-opposite habits.
+Between matches there is a slower game: three orders a day, prices that move
+overnight, and a portfolio ranked on a board of its own. The coins you win are
+one table; what your shares are worth is another, and they reward opposite
+habits.
 
 DUELS
 Play a friend rather than the house. Same eighty seconds, same three companies,
@@ -81,7 +91,7 @@ faster than the person across from you.
 80 секунд. Три акции. Один соперник. Кто прочёл рынок быстрее, тот и богаче.
 ```
 
-## Русский — полное описание (1965 / 4000)
+## Русский — полное описание (2157 / 4000)
 
 ```
 Восемьдесят секунд. Три компании. Один соперник напротив.
@@ -97,14 +107,16 @@ faster than the person across from you.
 выходят три. Выучить, кто есть кто, — это и есть игра.
 
 ПЯТЬ СПОСОБНОСТЕЙ
-Заморозить цену. Остановить торги. Прочесть досье раньше всех. Устроить
-сопернику маржин-колл. Пустить слух. По одному разу за матч — и момент, когда
-ты это тратишь, важнее самой способности.
+Пять секунд, в которые соперник не может открыть ничего нового. Десять, когда
+никто не торгует тем, во что он вложен глубже всего, — ты тоже. Досье: до конца
+матча видно, что он держит. Маржин-колл, закрывающий все его позиции там, где
+они стоят. Слух, который шесть секунд двигает твою крупнейшую позицию в твою
+сторону. По одному разу за матч, и когда потратить — важнее, чем иметь.
 
 ПЯТЬ ЛИГ
-Бронзовая яма, Серебряный этаж, Золотой стол, Глобальный фонд, Бычья корона.
-Чем выше, тем больше платят и тем злее соперник: в короне он встанет по другую
-сторону твоей сделки нарочно.
+Бронзовый ряд, Серебряный зал, Золотой стол, Мировой фонд, Корона быка. Первый
+соперник заходит поздно, мелко и паникует. Последний читает ленту раньше тебя —
+обыграешь, считай, удвоил счёт.
 
 КАБИНЕТ, КОТОРЫЙ ОБРАСТАЕТ
 Монеты уходят в комнату за меню: стены, окно, стол, полки, монитор, постеры.
@@ -112,9 +124,9 @@ faster than the person across from you.
 вещей, по пять уровней каждая, и хорошие нужны не только для вида.
 
 СТОЙКА АКЦИЙ
-Между матчами идёт медленная игра: несколько заявок в сутки, цены меняются за
-ночь, а портфель попадает в отдельную таблицу. Заработанные монеты — один
-рейтинг, стоимость акций — другой, и они поощряют противоположные привычки.
+Между матчами идёт медленная игра: три заявки в сутки, цены меняются за ночь, а
+портфель попадает в отдельную таблицу. Заработанные монеты — один рейтинг,
+стоимость акций — другой, и они поощряют противоположные привычки.
 
 ДУЭЛИ
 Сыграй с другом, а не с машиной. Те же восемьдесят секунд, те же три компании,
