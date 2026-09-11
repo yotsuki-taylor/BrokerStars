@@ -44,7 +44,7 @@ import {
 } from '../../src/duel/protocol';
 import { otherSeat, ordered, snapshotFor, syncFor, type Seat } from '../../src/duel/snapshot';
 import { award, clearedBar, record, topLeague, type Env, type Outcome } from './results';
-import { verifyInitData } from './telegram';
+import { identify } from './auth';
 
 interface Player {
   id: string;
@@ -240,8 +240,11 @@ export class Duel implements DurableObject {
       return null;
     };
 
-    if (!this.env.BOT_TOKEN) return fail('noserver');
-    const caller = await verifyInitData(String(msg.initData ?? ''), this.env.BOT_TOKEN);
+    // Either kind of player may sit down — a Telegram signature or a session
+    // this Worker minted (`auth.ts`). Which one is not this object's business:
+    // a seat is held by a `Caller.id` and always was.
+    if (!this.env.BOT_TOKEN && !this.env.SESSION_SECRET) return fail('noserver');
+    const caller = await identify(String(msg.initData ?? ''), this.env);
     if (!caller) return fail('badsig');
 
     await this.load();

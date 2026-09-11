@@ -30,6 +30,18 @@ enabled = true
 # chat needs the bot's token and this is not it. To find the id, add the bot to
 # the group and say `/chat` in it -- the bot answers with the number, which
 # goes below with the minus sign it comes with.
+#
+# SESSION_SECRET is NOT here either, for the same reason BOT_TOKEN is not:
+#   wrangler secret put SESSION_SECRET
+# It is what the Worker signs its own sessions with, and anybody holding it can
+# mint one for any player. Only an Android build needs it; without it sessions
+# are refused and Telegram players never notice (worker/src/auth.ts).
+#
+# GOOGLE_CLIENT_ID goes below once there is a Google Cloud project: the WEB
+# client id, not the Android one, because that is what an Android sign-in names
+# as its audience. Public — it is compiled into the app — and its whole job is
+# to refuse a token minted for somebody else's application. Left out until then,
+# which is what makes /auth/google answer 503 rather than guess.
 [vars]
 WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
 ADMIN_ID = "165233146"

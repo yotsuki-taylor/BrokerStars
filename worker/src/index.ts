@@ -56,13 +56,22 @@ import {
   sendMessage,
   type Caller,
   sameSecret,
-  verifyInitData,
   webhookSecret,
 } from './telegram';
+import { identify, mintSession, verifyGoogleIdToken } from './auth';
 
 export { Duel } from './duel';
 export { verifyInitData } from './telegram';
+export { identify, mintSession, readSession, verifyGoogleIdToken } from './auth';
 export type { Env } from './results';
+
+/**
+ * Can this deployment tell anybody from anybody? Telegram needs the bot token,
+ * an Android session needs the key it was signed with, and a deployment with
+ * neither has no way to know who is asking — so it accepts nothing, which is
+ * the same fail-closed answer the bot token alone used to give.
+ */
+const canAuth = (env: Env): boolean => Boolean(env.BOT_TOKEN || env.SESSION_SECRET);
 
 /**
  * Nothing can be handed in faster than a match can be played. A match is 80
@@ -161,10 +170,10 @@ interface Submission {
 const MAX_TOKEN = 64;
 
 async function submit(request: Request, env: Env) {
-  if (!env.BOT_TOKEN) {
-    // Fail closed. Without the token nothing can be told from anything, and a
+  if (!canAuth(env)) {
+    // Fail closed. With neither key nothing can be told from anything, and a
     // board that accepts unsigned scores is worse than no board.
-    return bad(503, 'no bot token configured');
+    return bad(503, 'no auth configured');
   }
 
   let body: Submission;
@@ -174,8 +183,11 @@ async function submit(request: Request, env: Env) {
     return bad(400, 'not json');
   }
 
-  const initData = typeof body.initData === 'string' ? body.initData : '';
-  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  // `authToken` and `token` below are two different things sharing a word: one
+  // says who is handing a match in, the other names the match so it can be
+  // handed in twice without being paid for twice.
+  const authToken = typeof body.initData === 'string' ? body.initData : '';
+  const caller = await identify(authToken, env);
   if (!caller) return bad(401, 'bad signature');
 
   const league = Number(body.league);
@@ -264,6 +276,44 @@ async function submit(request: Request, env: Env) {
 /* -------------------------------------------------------------- the profile */
 
 /**
+ * Sign in with Google, once, and leave with a session.
+ *
+ * The only route in the Worker that accepts a Google token, and it accepts it
+ * exactly once per sign-in: what goes back is a token of ours (`auth.ts`),
+ * which is what every subsequent request carries. A client that kept sending
+ * Google's would put Google's key server in the path of every trade and would
+ * have to re-authenticate every hour.
+ *
+ * Two ways to be unconfigured and they mean different things. No
+ * `SESSION_SECRET` and there is nothing to sign a session with; no
+ * `GOOGLE_CLIENT_ID` and there is no way to tell a token minted for this game
+ * from one minted for any other application, which is the whole check. Either
+ * way the honest answer is that this deployment does not do Google sign-in.
+ */
+async function googleSignIn(request: Request, env: Env) {
+  if (!env.SESSION_SECRET) return bad(503, 'no session secret configured');
+  if (!env.GOOGLE_CLIENT_ID) return bad(503, 'no google client configured');
+
+  let body: { idToken?: unknown };
+  try {
+    body = (await request.json()) as { idToken?: unknown };
+  } catch {
+    return bad(400, 'not json');
+  }
+
+  const idToken = typeof body.idToken === 'string' ? body.idToken : '';
+  const caller = idToken ? await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID) : null;
+  if (!caller) return bad(401, 'bad token');
+
+  return json({
+    ok: true,
+    token: await mintSession(caller, env.SESSION_SECRET),
+    id: caller.id,
+    name: caller.name,
+  });
+}
+
+/**
  * Every profile route starts the same way: a body, a signature, and the row
  * that signature belongs to. Nothing is read here without one either — a
  * wardrobe is not the leaderboard, and there is nobody it is public reading
@@ -273,15 +323,15 @@ async function whoIsAsking(
   request: Request,
   env: Env,
 ): Promise<{ caller: Caller; body: Record<string, unknown> } | Response> {
-  if (!env.BOT_TOKEN) return bad(503, 'no bot token configured');
+  if (!canAuth(env)) return bad(503, 'no auth configured');
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
     return bad(400, 'not json');
   }
-  const initData = typeof body.initData === 'string' ? body.initData : '';
-  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  const token = typeof body.initData === 'string' ? body.initData : '';
+  const caller = await identify(token, env);
   if (!caller) return bad(401, 'bad signature');
   return { caller, body };
 }
@@ -405,6 +455,53 @@ async function refund(request: Request, env: Env) {
 }
 
 /**
+ * Delete everything this player is, and mean it.
+ *
+ * Google Play requires an app that signs people in to let them sign out
+ * permanently — in the app, not by writing to somebody — and this is that
+ * route. It is not Android-only: a Telegram player has exactly the same right
+ * to it, and `whoIsAsking` already treats both the same.
+ *
+ * Every table keyed on a player id, in one batch so that a half-deleted player
+ * cannot exist: the board row, the matches behind it, the profile with the
+ * room and the wardrobe and the portfolio, the friend code, both directions of
+ * every friendship, and the group-chat cooldown.
+ *
+ * `results` goes first for the foreign key it holds on `players`. Friendships
+ * are deleted from both ends — a list with a dead name on it is what deleting
+ * only one direction would leave behind.
+ *
+ * What is deliberately NOT here is anything that survives outside the database:
+ * a duel this player is sitting in runs to the whistle in the object that owns
+ * it, and messages the bot has already delivered are in somebody else's chat.
+ * Both are gone within minutes; neither is the player's to recall.
+ */
+async function deleteAccount(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  // Typed out rather than tapped: a route that empties an account should not be
+  // reachable by a mis-sent request, and the client asks for the word first.
+  if (String(body.confirm ?? '') !== 'delete') return bad(400, 'not confirmed');
+
+  const id = caller.id;
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM results WHERE player_id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM players WHERE id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM profiles WHERE id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM friend_codes WHERE player_id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM friends WHERE player_id = ?1 OR friend_id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM chat_shouts WHERE player_id = ?1`).bind(id),
+  ]);
+
+  // The session the request arrived on still verifies — it is signed, not
+  // stored — so the client is told to throw it away. The next thing it sends
+  // will simply open a new and empty account, which is what a deleted one is.
+  return json({ ok: true, signOut: true });
+}
+
+/**
  * The dollar board: who is richest at the share counter.
  *
  * It ranks cash PLUS shares at today's prices, not the balance — see
@@ -520,7 +617,7 @@ function mintCode(): string {
 const duelStub = (env: Env, code: string) => env.DUEL.get(env.DUEL.idFromName(`duel:${code}`));
 
 async function newDuel(request: Request, env: Env) {
-  if (!env.BOT_TOKEN) return bad(503, 'no bot token configured');
+  if (!canAuth(env)) return bad(503, 'no auth configured');
 
   let body: { initData?: unknown; outfit?: unknown; league?: unknown; invite?: unknown };
   try {
@@ -529,8 +626,8 @@ async function newDuel(request: Request, env: Env) {
     return bad(400, 'not json');
   }
 
-  const initData = typeof body.initData === 'string' ? body.initData : '';
-  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  const token = typeof body.initData === 'string' ? body.initData : '';
+  const caller = await identify(token, env);
   if (!caller) return bad(401, 'bad signature');
 
   const code = mintCode();
@@ -555,7 +652,11 @@ async function newDuel(request: Request, env: Env) {
   // The link goes through the bot rather than straight at the game: the friend
   // it lands on may never have opened the mini app, and `?start=` is the one
   // door Telegram opens for somebody who has not.
-  const bot = await botUsername(env.BOT_TOKEN);
+  //
+  // No bot token, no link: a deployment that only serves the Android build has
+  // no bot to route anybody through, and `link` being null is a case the duel
+  // screen has always had to draw anyway.
+  const bot = env.BOT_TOKEN ? await botUsername(env.BOT_TOKEN) : null;
   const link = bot ? `https://t.me/${bot}?start=duel_${code}` : null;
 
   // Called somebody out by name from the friends list? Then the invitation is
@@ -568,7 +669,12 @@ async function newDuel(request: Request, env: Env) {
   // message a stranger.
   const invite = String(body.invite ?? '').slice(0, 32);
   let sent = false;
-  if (invite && env.WEBAPP_URL && (await friends.areFriends(env, caller.id, invite))) {
+  if (
+    invite &&
+    env.BOT_TOKEN &&
+    env.WEBAPP_URL &&
+    (await friends.areFriends(env, caller.id, invite))
+  ) {
     sent = await sendMessage(env.BOT_TOKEN, invite, duelPush(env.WEBAPP_URL, code, caller.name));
   }
 
@@ -619,8 +725,8 @@ async function shoutDuel(request: Request, env: Env) {
     return bad(400, 'not json');
   }
 
-  const initData = typeof body.initData === 'string' ? body.initData : '';
-  const caller = initData ? await verifyInitData(initData, env.BOT_TOKEN) : null;
+  const token = typeof body.initData === 'string' ? body.initData : '';
+  const caller = await identify(token, env);
   if (!caller) return bad(401, 'bad signature');
 
   const code = normalizeCode(String(body.code ?? ''));
@@ -753,10 +859,14 @@ export default {
     if (url.pathname === '/health') {
       return json({
         ok: true,
-        signedWrites: Boolean(env.BOT_TOKEN),
+        signedWrites: canAuth(env),
         duels: Boolean(env.DUEL),
         bot: Boolean(env.BOT_TOKEN && env.WEBAPP_URL),
         chat: chatAvailable(env),
+        // which doors this deployment actually opens, so a build that cannot
+        // sign anybody in finds out from the server rather than from a 401
+        telegram: Boolean(env.BOT_TOKEN),
+        google: Boolean(env.SESSION_SECRET && env.GOOGLE_CLIENT_ID),
       });
     }
 
@@ -782,12 +892,14 @@ export default {
     }
 
     if (request.method === 'POST') {
+      if (url.pathname === '/auth/google') return googleSignIn(request, env);
       if (url.pathname === '/profile') return openProfile(request, env);
       if (url.pathname === '/profile/buy') return buy(request, env);
       if (url.pathname === '/profile/wear') return wear(request, env);
       if (url.pathname === '/profile/daily') return daily(request, env);
       if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
+      if (url.pathname === '/profile/delete') return deleteAccount(request, env);
       if (url.pathname === '/friends') return myFriends(request, env);
       if (url.pathname === '/friends/add') return addFriend(request, env);
     }

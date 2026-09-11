@@ -8,6 +8,13 @@
  * lives in a file of its own with a test pointed straight at it.
  */
 
+import { hex, hmacSha256, sameSignature } from './crypto';
+
+/**
+ * Who the server decided is asking, whichever door they came in by. Telegram
+ * signs for one kind and `auth.ts` for the other; from here on down nothing
+ * cares which, and `id` is the only thing the database is keyed on.
+ */
 export interface Caller {
   id: string;
   name: string;
@@ -17,28 +24,6 @@ export interface Caller {
 const MAX_INIT_DATA_AGE_SECONDS = 24 * 60 * 60;
 
 const enc = new TextEncoder();
-
-async function hmac(key: ArrayBuffer | Uint8Array, message: string): Promise<ArrayBuffer> {
-  const k = await crypto.subtle.importKey(
-    'raw',
-    key as BufferSource,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  return crypto.subtle.sign('HMAC', k, enc.encode(message));
-}
-
-const hex = (buf: ArrayBuffer): string =>
-  [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-
-/** Constant time, because comparing a signature with === leaks it a byte at a time. */
-function sameSignature(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 /**
  * Telegram's check, exactly as documented: every field except `hash`, sorted by
@@ -60,8 +45,8 @@ export async function verifyInitData(initData: string, botToken: string): Promis
     if (k !== 'hash') pairs.push(`${k}=${v}`);
   }
 
-  const secret = await hmac(enc.encode('WebAppData'), botToken);
-  const mine = hex(await hmac(secret, pairs.join('\n')));
+  const secret = await hmacSha256(enc.encode('WebAppData'), botToken);
+  const mine = hex(await hmacSha256(secret, pairs.join('\n')));
   if (!sameSignature(mine, hash)) return null;
 
   const authDate = Number(params.get('auth_date') ?? 0);
@@ -93,7 +78,7 @@ export async function verifyInitData(initData: string, botToken: string): Promis
  * Hex, because Telegram only allows `A-Za-z0-9_-` in it.
  */
 export async function webhookSecret(botToken: string): Promise<string> {
-  return hex(await hmac(enc.encode(botToken), 'BrokerStarsWebhook')).slice(0, 48);
+  return hex(await hmacSha256(enc.encode(botToken), 'BrokerStarsWebhook')).slice(0, 48);
 }
 
 /** Constant time, for the same reason the signature check is. */

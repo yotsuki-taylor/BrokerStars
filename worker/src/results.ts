@@ -53,6 +53,33 @@ export interface Env {
    * told the id.
    */
   CHAT_ID?: string;
+  /**
+   * The key the Worker signs its own session tokens with — set it with
+   * `wrangler secret put SESSION_SECRET`.
+   *
+   * A secret, and the second door into the game: anybody holding it can mint a
+   * session for any player id they like, which is precisely what the Android
+   * build trades a Google sign-in for (`auth.ts`). Missing is not fatal and is
+   * the right state for a deployment with no Android build behind it — sessions
+   * are simply refused, and Telegram players never notice.
+   *
+   * Its own secret rather than something derived from `BOT_TOKEN`, because the
+   * whole point of the Android build is not to depend on a Telegram bot. Rotate
+   * it and every Android player signs in again; nothing else moves.
+   */
+  SESSION_SECRET?: string;
+  /**
+   * The OAuth client id a Google ID token must be addressed to — the WEB client
+   * from the Google Cloud project, which is what an Android sign-in names as
+   * its audience, not the Android client.
+   *
+   * Public by nature: it is compiled into the app, where anybody can read it,
+   * and it protects nothing on its own. What it does is make `/auth/google`
+   * refuse a token minted for somebody else's application, which is the one
+   * thing standing between this game and every other Google sign-in on earth.
+   * Missing means `/auth/google` refuses everything.
+   */
+  GOOGLE_CLIENT_ID?: string;
   DUEL: DurableObjectNamespace;
 }
 
