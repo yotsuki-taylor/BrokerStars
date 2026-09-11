@@ -44,6 +44,21 @@ import sharp from 'sharp';
 const SOURCE = 'assets/source-icon.png';
 const SIZE = 1024;
 
+/**
+ * Every PNG written here is a 256-colour one, and the artwork itself is too.
+ *
+ * These are working files: the generator downscales them into the hundred-odd
+ * sizes Android asks for, and the largest thing anybody ever LOOKS at is the
+ * 512px tile in Play's listing or a 192px launcher icon. Side by side at both
+ * of those, quantised and not are indistinguishable -- flat cartoon fills with
+ * a handful of gradients have nothing for banding to get hold of.
+ *
+ * Full colour cost 6.4 MB across this folder for a difference no screen shows.
+ * The original artwork is in the repository's history if a future change ever
+ * needs it back at full depth.
+ */
+const PNG = { palette: true, colors: 256, dither: 1, effort: 10 };
+
 /** How much of the launcher's guaranteed square the drawing is allowed to fill. */
 const SAFE = 0.85;
 
@@ -66,11 +81,11 @@ const ground = (size, body = GROUND) =>
 /** The drawing, scaled to `fill` of the canvas and centred on it. */
 async function inset(fill, canvas = SIZE) {
   const art = Math.round(canvas * fill);
-  const buf = await sharp(SOURCE).resize(art, art).png().toBuffer();
+  const buf = await sharp(SOURCE).resize(art, art).png(PNG).toBuffer();
   const offset = Math.round((canvas - art) / 2);
   return sharp(ground(canvas))
     .composite([{ input: buf, left: offset, top: offset }])
-    .png()
+    .png(PNG)
     .toBuffer();
 }
 
@@ -82,7 +97,7 @@ await sharp(await inset(SAFE)).toFile('assets/icon-foreground.png');
 await sharp(ground(SIZE)).png().toFile('assets/icon-background.png');
 
 /* Never masked — the drawing as it was made. */
-await sharp(SOURCE).resize(SIZE, SIZE).png().toFile('assets/icon.png');
+await sharp(SOURCE).resize(SIZE, SIZE).png(PNG).toFile('assets/icon.png');
 
 /**
  * The splash is a square cropped to the shape of the phone, so the drawing sits
@@ -94,7 +109,7 @@ const SPLASH = 2732;
 async function splash(background) {
   const art = 760;
   const offset = Math.round((SPLASH - art) / 2);
-  const buf = await sharp(SOURCE).resize(art, art).png().toBuffer();
+  const buf = await sharp(SOURCE).resize(art, art).png(PNG).toBuffer();
   return sharp(
     Buffer.from(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${SPLASH}" height="${SPLASH}">` +
@@ -102,7 +117,7 @@ async function splash(background) {
     ),
   )
     .composite([{ input: buf, left: offset, top: offset }])
-    .png()
+    .png(PNG)
     .toBuffer();
 }
 
