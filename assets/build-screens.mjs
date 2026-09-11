@@ -28,13 +28,22 @@ const BOTTOM = 126;
 const WIDTH = 1080;
 const DISPLAY_HEIGHT = 2410;
 
+/**
+ * The order they appear in the listing, and the first is the only one most
+ * people will see: a match in progress, which is the game.
+ *
+ * The leaderboard is deliberately not among them. It is the one screen in this
+ * game made of other people: real display names, chosen by players who were
+ * never asked whether they wanted to appear in a shop window that is indexed
+ * and kept for years. In-game it is public to other players, which is not the
+ * same audience or the same permanence.
+ */
 const ORDER = [
   ['match', '1-match'],
   ['result', '2-result'],
   ['menu', '3-office'],
   ['shop', '4-wardrobe'],
-  ['rating', '5-rating'],
-  ['leagues', '6-leagues'],
+  ['leagues', '5-leagues'],
 ];
 
 for (const [from, to] of ORDER) {
