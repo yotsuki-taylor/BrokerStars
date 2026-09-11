@@ -125,10 +125,13 @@ export async function signIn(): Promise<SignInError | null> {
   try {
     const { SocialLogin } = await import('@capgo/capacitor-social-login');
     await SocialLogin.initialize({ google: { webClientId: clientId } });
-    const { result } = await SocialLogin.login({
-      provider: 'google',
-      options: { scopes: ['profile', 'email'] },
-    });
+    // No `scopes`, deliberately, and do not add any. The plugin already asks for
+    // `openid`, `userinfo.email` and `userinfo.profile`, which is the whole of
+    // what an ID token needs — and passing a scopes array AT ALL, even with
+    // those same three in it, makes the plugin demand that MainActivity extend a
+    // class of its own and refuse the login until it does. We want an identity,
+    // not access to anybody's Google data, so there is nothing here to ask for.
+    const { result } = await SocialLogin.login({ provider: 'google', options: {} });
     const token = 'idToken' in result ? result.idToken : null;
     if (!token) return 'failed';
     idToken = token;
