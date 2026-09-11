@@ -58,6 +58,10 @@ captures/
 # Comment next line if keeping position of elements in Navigation Editor is relevant for you
 .idea/navEditor.xml
 
+# The upload key's passwords and the path to it. The example beside it is the
+# committed one; this is the filled-in copy and must never be.
+keystore.properties
+
 # Keystore files
 # Uncommented, and not optional here: this repository is public, and the upload
 # key is the only thing that proves a new release of this app comes from us.

@@ -1,5 +1,23 @@
 apply plugin: 'com.android.application'
 
+/*
+ * Where the upload key lives, and deliberately not here.
+ *
+ * `android/keystore.properties` names the keystore file and holds its
+ * passwords. It is gitignored and this repository is public; the file beside it
+ * ending `.example` is the one that is committed and says what to write.
+ *
+ * Missing is not an error. A debug build must work on a machine that has never
+ * seen the key -- a contributor, or CI -- so the signing config simply is not
+ * applied and `bundleRelease` produces an unsigned bundle. Play will refuse
+ * that, which is the right place to find out rather than at compile time.
+ */
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.brokerstars.game"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +34,37 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            /*
+             * Left off, and that is a decision rather than the template's
+             * default going unread.
+             *
+             * Almost all of this app's weight is the web bundle in `assets/`,
+             * which R8 neither reads nor shrinks. What it would shrink is the
+             * thin Java shell and the plugins -- and those are exactly the
+             * classes reached by reflection from Capacitor's bridge and from
+             * Credential Manager, which is where minification breaks an app in
+             * ways that only show up in a release build, on a device, at the
+             * point somebody tries to sign in.
+             *
+             * Play does not ask for it. Turn it on the day the size is worth
+             * the keep rules, not before.
+             */
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
