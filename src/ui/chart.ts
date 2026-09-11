@@ -92,6 +92,32 @@ function niceStep(span: number): number {
 }
 
 /** Live price chart: two normalised lines, break-even markers, optional truth overlay. */
+/**
+ * Where the head of a line is, for a right-hand edge that may sit anywhere in
+ * the drawn history rather than only inside the newest tick.
+ *
+ * A duel's chart runs on a clock of its own, deliberately behind the arrivals
+ * (`ui/line.ts`), and how far behind is not fixed: an edge more than one tick
+ * back is ordinary and not an error. Reading that as a position INSIDE THE
+ * NEWEST TICK -- which is what this did -- walks off the end of the segment. At
+ * an edge one tick back it drew the head at `prev - (cur - prev)`: a price that
+ * never existed, moving the opposite way to the market, placed behind a line
+ * already drawn past it. A line doubling back on itself and a percentage chip
+ * counting the wrong way, on about two frames in five even over a connection
+ * with no jitter at all. That was "the chart jumps in PvP".
+ *
+ * So the edge is a position in the whole series, and the head is read off the
+ * two samples it really falls between. Clamped into the series at both ends:
+ * there is nothing to draw before the first sample or past the last.
+ */
+export function headOf(history: number[], at: number): { index: number; value: number } {
+  const last = history.length - 1;
+  const p = Math.min(last, Math.max(0, at));
+  const i = Math.min(last, Math.floor(p));
+  const j = Math.min(last, i + 1);
+  return { index: i, value: history[i] + (history[j] - history[i]) * (p - i) };
+}
+
 export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: ChartOpts): void {
   const ctx = fit(canvas);
   if (!ctx) return;
@@ -291,9 +317,16 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
   state.stocks.forEach((st, i) => {
     const from = Math.max(0, Math.floor(xMin));
     const last = st.history.length - 1;
+    // Where the right-hand edge has got to, as a position in the series.
+    const edge = Math.min(last, Math.max(0, last - 1 + opts.progress));
+    const head = headOf(st.history, edge);
     ctx.beginPath();
     let started = false;
-    for (let t = from; t < last; t++) {
+    // Only as far as the sample the head has passed. Drawing every sample the
+    // history holds would put the line in front of its own head whenever the
+    // edge is more than a tick back, which is where the doubling-back came
+    // from.
+    for (let t = from; t <= head.index; t++) {
       const x = px(t);
       const y = py(val(i, st.history[t]));
       if (!started) {
@@ -301,11 +334,8 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
         started = true;
       } else ctx.lineTo(x, y);
     }
-    // live point, interpolated inside the tick
-    const prev = st.history[Math.max(0, last - 1)];
-    const cur = st.history[last];
-    const liveVal = val(i, prev + (cur - prev) * opts.progress);
-    const lx = px(Math.max(0, last - 1 + opts.progress));
+    const liveVal = val(i, head.value);
+    const lx = px(edge);
     const ly = py(liveVal);
     if (started) ctx.lineTo(lx, ly);
     ctx.strokeStyle = cfg.stocks[i].color;
@@ -315,7 +345,10 @@ export function drawChart(canvas: HTMLCanvasElement, state: MatchState, opts: Ch
       x: lx,
       y: ly,
       value: liveVal,
-      price: cur,
+      // The chip in price mode says what a share costs right now, which is the
+      // newest price and not the one under the head: it is the number the BUY
+      // button will charge.
+      price: st.history[last],
       offScale: liveVal < lo || liveVal > hi,
     });
   });

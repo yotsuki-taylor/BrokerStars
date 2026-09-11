@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AXIS_TAU_MS, easeAxis, type AxisDomain } from './chart';
+import { AXIS_TAU_MS, easeAxis, headOf, type AxisDomain } from './chart';
 
 const FRAME = 16.7;
 /** Does the drawn axis still cover everything that is on screen? */
@@ -64,5 +64,72 @@ describe('the vertical axis glide', () => {
     const prev = { lo: -30, hi: 30 };
     const out = easeAxis(prev, { lo: -6, hi: 6 }, { lo: -5, hi: 5 }, 0);
     expect(out).toEqual(prev);
+  });
+});
+
+/**
+ * Where the line's head is drawn, which in a duel is not "somewhere inside the
+ * newest tick". The chart runs on a clock deliberately behind the arrivals
+ * (`ui/line.ts`) and how far behind moves about; an edge more than a whole tick
+ * back is ordinary. These are the cases that used to be extrapolated.
+ */
+describe('the head of a live line', () => {
+  // a market that only ever goes up, so anything drawn below a sample it has
+  // passed is invented rather than merely early
+  const RISING = [100, 110, 120, 130];
+
+  it('sits on the newest sample when the edge has caught up', () => {
+    expect(headOf(RISING, 3)).toEqual({ index: 3, value: 130 });
+  });
+
+  it('interpolates inside the newest tick', () => {
+    expect(headOf(RISING, 2.5).value).toBeCloseTo(125);
+  });
+
+  it('rides the previous tick when the edge is a whole one back', () => {
+    // THE BUG: read as a position inside the newest tick this was
+    // 120 + (130 - 120) * -1 = 110 drawn at the far end, a price falling while
+    // the market rose. It is a real sample of a real segment.
+    const head = headOf(RISING, 1.5);
+    expect(head.value).toBeCloseTo(115);
+    expect(head.index).toBe(1);
+  });
+
+  it('never invents a value outside the two samples it falls between', () => {
+    for (let at = 0; at <= 3; at += 0.05) {
+      const head = headOf(RISING, at);
+      const a = RISING[head.index];
+      const b = RISING[Math.min(3, head.index + 1)];
+      expect(head.value).toBeGreaterThanOrEqual(Math.min(a, b) - 1e-9);
+      expect(head.value).toBeLessThanOrEqual(Math.max(a, b) + 1e-9);
+    }
+  });
+
+  it('moves the way the market moved, at every edge', () => {
+    // the whole complaint, as a property: on a line that only rises, the head
+    // may never go backwards as the edge advances
+    let last = -Infinity;
+    for (let at = -2; at <= 4; at += 0.05) {
+      const v = headOf(RISING, at).value;
+      expect(v).toBeGreaterThanOrEqual(last - 1e-9);
+      last = v;
+    }
+  });
+
+  it('names the last sample the line may be drawn through', () => {
+    // everything past this is in front of the head, and drawing it is what put
+    // the line ahead of its own end
+    expect(headOf(RISING, 1.5).index).toBe(1);
+    expect(headOf(RISING, 2.999).index).toBe(2);
+  });
+
+  it('clamps into the series rather than running off either end', () => {
+    expect(headOf(RISING, -5)).toEqual({ index: 0, value: 100 });
+    expect(headOf(RISING, 99)).toEqual({ index: 3, value: 130 });
+  });
+
+  it('survives a series of one, which is a match on its first tick', () => {
+    expect(headOf([100], 0)).toEqual({ index: 0, value: 100 });
+    expect(headOf([100], -0.4)).toEqual({ index: 0, value: 100 });
   });
 });
