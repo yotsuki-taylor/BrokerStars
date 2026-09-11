@@ -39,12 +39,23 @@ export const LANG_KEY = 'brokerstars.lang';
 const KEY = LANG_KEY;
 
 /**
- * What a player who has never chosen gets. Russian: that is who is playing,
- * and a first screen in the wrong language is a worse greeting than a switch
- * nobody has to find. English is one tap away in settings, and once tapped it
- * is what the storage below remembers.
+ * What a player who has never chosen gets.
+ *
+ * English, and this was Russian until the game went to a store. The argument
+ * for Russian was that it is who is playing and a first screen in the wrong
+ * language is a worse greeting than a switch nobody has to find. Both halves of
+ * that still hold — what changed is who "who is playing" means. A listing on
+ * Play is read from everywhere, and a default of Russian greets almost all of
+ * it wrongly.
+ *
+ * Neither default is right for everybody, which is the honest shape of the
+ * problem: the only answer that greets both is to read the language off the
+ * device. That is a change worth making and is not this one.
+ *
+ * Russian is one tap away in settings, and once tapped it is what the storage
+ * below remembers.
  */
-const DEFAULT_LANG: Lang = 'ru';
+const DEFAULT_LANG: Lang = 'en';
 
 /** Private browsing and locked-down webviews throw on access, so never assume. */
 function loadLang(): Lang {
