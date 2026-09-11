@@ -895,7 +895,7 @@ export default function App() {
   /** name of the league this match's win opened, shown once on the result screen */
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
   /** Null until the first profile answers; see `applyProfile`. */
-  const hadHat = useRef<boolean | null>(null);
+  const hadHat = useRef<{ hat: boolean; spent: number } | null>(null);
   const [gifted, setGifted] = useState(false);
   const awarded = useRef(false);
 
@@ -959,10 +959,17 @@ export default function App() {
      *
      * The first profile of a session only records the state — `null` until then
      * — so a player who already owns a hat is never told they were given one.
+     *
+     * `spent` is what tells a present from a purchase. Both put a hat in the
+     * drawer and both come back through here, but only one of them costs
+     * something — so a hat that arrives while the balance stands still is the
+     * one the server gave away. Otherwise somebody buying their first hat over
+     * the counter would be congratulated for finishing a match.
      */
     const hasHat = Boolean(p.owned.hat);
-    if (hadHat.current === false && hasHat) setGifted(true);
-    hadHat.current = hasHat;
+    const before = hadHat.current;
+    if (before && !before.hat && hasHat && p.spent <= before.spent) setGifted(true);
+    hadHat.current = { hat: hasHat, spent: p.spent };
 
     const bought = setOf(p.owned);
     setOwned(bought);
