@@ -16,7 +16,7 @@ import {
   money,
 } from './components';
 import { t, tr } from './i18n';
-import { ROOM_DONE, ROOM_STEPS } from './renovation';
+import { ROOM_DONE, ROOM_STEPS, stepIndexOf } from './renovation';
 import type { Outfit } from './wardrobe';
 
 /** Main menu: the player's room, the player standing in it, and the way out to a match. */
@@ -70,13 +70,31 @@ export default function Menu({
   const price = freeMode ? 0 : (step?.price ?? 0);
   const affordable = coins >= price;
 
+  /**
+   * What the room shows right now — one step ahead while a purchase is being
+   * confirmed, so the preview is the whole scene rather than the furniture
+   * alone.
+   */
+  const shown = confirming ? roomDone + 1 : roomDone;
+
+  /**
+   * Is there a desk under him yet?
+   *
+   * Without one he stands in an empty room and the renovation card below is
+   * what his figure is cut off by. With one he is sitting AT it, and the desk
+   * is drawn over him — so he has to come up, or the near edge crosses him at
+   * the shoulders and he reads as somebody standing behind a desk rather than
+   * working at one. See `.hero-seated` in styles.css for the amount.
+   */
+  const seated = shown > stepIndexOf('table');
+
   // never leave the confirm state hanging over a different upgrade
   useEffect(() => setConfirming(false), [roomDone]);
 
   return (
     <div className="menu">
       {/* while confirming, the room already shows what the upgrade would look like */}
-      <Room done={confirming ? roomDone + 1 : roomDone} />
+      <Room done={shown} />
 
       {/* The corner used to be the help button and nothing else. Help is one of
           two things behind it now, so the corner opens a menu instead, and the
@@ -132,12 +150,12 @@ export default function Menu({
         <People size={28} />
       </button>
 
-      <div className="hero">
+      <div className={`hero${seated ? ' hero-seated' : ''}`}>
         <Character outfit={outfit} />
       </div>
 
       {/* The near half of the room, over the character: he sits AT the desk. */}
-      <Room done={confirming ? roomDone + 1 : roomDone} front />
+      <Room done={shown} front />
 
       {admin && (
         <div className="admin-bar">

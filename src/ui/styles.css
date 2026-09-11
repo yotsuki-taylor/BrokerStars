@@ -933,6 +933,25 @@ body {
   max-width: 62%;
   transform: translateY(13%);
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+  /* so buying the desk lifts him into it rather than snapping */
+  transition: transform 320ms ease-out;
+}
+
+/*
+  Once there is a desk, he is sitting at it.
+
+  The desk sprite is drawn OVER the figure (see Room.tsx), and at the standing
+  offset its near edge crosses him around the shoulders — which reads as
+  somebody standing behind a desk rather than working at one. Coming up by
+  seven points puts the edge across his middle, where a desk meets a person who
+  is sitting at it, and leaves the monitor in front of his chest where it
+  belongs.
+
+  An empty room keeps the lower offset: with nothing to sit at, the only thing
+  cutting him off is the renovation card, and that wants him lower.
+*/
+.hero-seated .character {
+  transform: translateY(6%);
 }
 
 .menu-actions {
