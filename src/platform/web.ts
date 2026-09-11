@@ -20,7 +20,7 @@ import type { Platform } from './index';
 export const WEB: Platform = {
   id: 'web',
 
-  ready(): void {
+  async ready(): Promise<void> {
     /* a browser tab needs no arranging */
   },
 

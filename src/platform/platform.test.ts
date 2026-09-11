@@ -23,9 +23,9 @@ describe('with no host to ask', () => {
     expect(p.launchParam()).toBe('');
   });
 
-  it('does not throw on the things it cannot do', () => {
+  it('does not throw on the things it cannot do', async () => {
     const p = platform();
-    expect(() => p.ready()).not.toThrow();
+    await expect(p.ready()).resolves.toBeUndefined();
     expect(() => p.haptic('heavy')).not.toThrow();
     expect(() => p.openLink('https://t.me/x')).not.toThrow();
   });
@@ -63,6 +63,43 @@ describe('inside Telegram', () => {
   it('survives an older client that is missing half the methods', () => {
     fakeTelegram({ ready: () => {}, expand: () => {} });
     expect(() => platform().ready()).not.toThrow();
+  });
+});
+
+describe('inside the Android app', () => {
+  /** What Capacitor's own bridge script puts on the window in a native WebView. */
+  function fakeCapacitor(platformName: string): void {
+    (globalThis as any).window = { Capacitor: { getPlatform: () => platformName } };
+  }
+
+  it('is chosen by the bridge, not by the build', () => {
+    fakeCapacitor('android');
+    expect(platform().id).toBe('android');
+  });
+
+  it('leaves a Capacitor web build to the web adapter', () => {
+    // `npx cap serve` and a plain browser both report 'web'; neither has a
+    // native bridge behind it and neither can sign anybody in
+    fakeCapacitor('web');
+    expect(platform().id).toBe('web');
+  });
+
+  it('has nobody signed in until somebody signs in', () => {
+    fakeCapacitor('android');
+    const p = platform();
+    expect(p.authToken()).toBe('');
+    expect(p.userId()).toBeNull();
+    expect(p.userName()).toBe('');
+  });
+
+  it('wins over a Telegram SDK that somehow loaded anyway', () => {
+    // the Android build strips the script tag, so this cannot happen today --
+    // the test pins which answer is right if a future build ever carries both
+    (globalThis as any).window = {
+      Capacitor: { getPlatform: () => 'android' },
+      Telegram: { WebApp: { initData: 'auth=whatever' } },
+    };
+    expect(platform().id).toBe('android');
   });
 });
 

@@ -10,13 +10,21 @@
     "sim": "tsx src/headless/run.ts",
     "bot": "node bot/bot.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:android": "tsc -b && vite build --mode android",
+    "android": "npm run build:android && cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.1",
+    "@capgo/capacitor-social-login": "^8.5.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
     "@types/node": "^26.4.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

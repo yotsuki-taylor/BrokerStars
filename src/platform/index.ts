@@ -18,6 +18,7 @@
  * first would otherwise answer "plain browser" for the rest of the session.
  */
 
+import { ANDROID, inAndroid } from './android';
 import { TELEGRAM, inTelegram } from './telegram';
 import { WEB } from './web';
 
@@ -28,13 +29,16 @@ export interface Platform {
    * answered, and it answers in a browser tab too — see `inTelegram`. Ask
    * `authToken()` for that.
    */
-  readonly id: 'telegram' | 'web';
+  readonly id: 'telegram' | 'web' | 'android';
 
   /**
    * Whatever the host wants doing before the game draws — full height, a
-   * gesture to disable, chrome to paint. Called once, from main.tsx.
+   * gesture to disable, chrome to paint, a session to remember, the link the
+   * app was opened on. Called once, from main.tsx, and awaited: Android cannot
+   * answer `launchParam()` until the intent has been read, and a duel invitation
+   * that arrives after the first render is a duel invitation nobody joins.
    */
-  ready(): void;
+  ready(): Promise<void>;
 
   /**
    * Proof of who is asking, for the server to check. Empty when there is none,
@@ -72,7 +76,15 @@ export interface Platform {
   openLink(url: string): void;
 }
 
-/** The one we are running on, asked fresh every time. */
+/**
+ * The one we are running on, asked fresh every time.
+ *
+ * Android is tested first and the order is not arbitrary: the Android build
+ * carries no Telegram SDK (vite.config.ts takes the tag out), so the two can
+ * never both answer — but if a future build ever did carry both, the native
+ * host is the one that actually knows who is playing.
+ */
 export function platform(): Platform {
+  if (inAndroid()) return ANDROID;
   return inTelegram() ? TELEGRAM : WEB;
 }

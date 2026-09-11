@@ -45,7 +45,7 @@ const CHROME = '#0B4FA8';
 export const TELEGRAM: Platform = {
   id: 'telegram',
 
-  ready(): void {
+  async ready(): Promise<void> {
     const tg = webApp();
     if (!tg) return;
     try {
