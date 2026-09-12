@@ -38,6 +38,7 @@ import { settle as settleInvite } from './invites';
 import {
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
+  HOST_WAIT_MS,
   type ClientMsg,
   type DuelError,
   type DuelAward,
@@ -80,6 +81,20 @@ const LINGER_MS = 120_000;
 export class Duel implements DurableObject {
   private meta: Meta | null = null;
   private loaded = false;
+
+  /**
+   * The whistle, held for a host who is not on the socket yet, and when it
+   * blows regardless. Null whenever nothing is being waited for.
+   */
+  private holding: ReturnType<typeof setTimeout> | null = null;
+  private startsBy: number | null = null;
+
+  /**
+   * Whether each seat has said it is looking at something else. A socket that
+   * has never said is treated as present -- every client before this existed
+   * says nothing, and they were all watching.
+   */
+  private away: [boolean, boolean] = [false, false];
 
   /** the live sockets, by seat; a reconnect replaces the one it finds */
   private sockets: [WebSocket | null, WebSocket | null] = [null, null];
@@ -209,6 +224,15 @@ export class Duel implements DurableObject {
       // us. There is nothing to answer and nothing to charge it against.
       if (msg?.k === 'ping') return;
 
+      // Handled here rather than in `command`, which refuses everything before
+      // the whistle -- and before the whistle is the only time this matters.
+      if (msg?.k === 'here') {
+        if (seat === null) return;
+        this.away[seat] = msg.away === true;
+        if (seat === 0 && !this.away[0]) void this.readyUp();
+        return;
+      }
+
       if (msg?.k === 'hello') {
         if (seat !== null) return;
         void this.seat(ws, msg).then((s) => {
@@ -286,12 +310,60 @@ export class Duel implements DurableObject {
     this.sockets[seat] = ws;
 
     if (meta.phase === 'lobby') {
-      this.broadcastLobby();
-      if (meta.players[0] && meta.players[1]) await this.begin();
+      if (meta.players[0] && meta.players[1]) await this.readyUp();
+      else this.broadcastLobby();
     } else {
       this.resume(seat);
     }
     return seat;
+  }
+
+  /**
+   * Both seats are taken. Start, unless the host is not here to start.
+   *
+   * A seat is a row in the metadata and exists from the moment the invitation
+   * was minted; a socket is a phone that is actually looking. The difference
+   * between them is a whole half of a match, because the thing that takes a
+   * host out of the game is sending the invitation -- so the instant their
+   * friend accepts is the instant they are least likely to be watching.
+   *
+   * Waiting is bounded and the friend is told what is being waited for
+   * (`broadcastLobby`). If the host turns up inside it, this runs again from
+   * their own `seat` call and the wait is over.
+   */
+  private async readyUp(): Promise<void> {
+    const meta = this.meta;
+    // Called from three places, two of which can happen at any time: a socket
+    // seating and a player coming back to the screen. Only a lobby with both
+    // seats taken has anything to decide.
+    if (!meta || meta.phase !== 'lobby' || !meta.players[0] || !meta.players[1]) return;
+
+    if (this.sockets[0] && !this.away[0]) {
+      this.hold(null);
+      this.broadcastLobby();
+      await this.begin();
+      return;
+    }
+    // already counting: leave the deadline where it is rather than pushing it
+    // back every time the friend's socket hiccups and re-seats
+    if (this.startsBy === null) this.hold(Date.now() + HOST_WAIT_MS);
+    this.broadcastLobby();
+  }
+
+  /** Set or clear the held whistle. */
+  private hold(until: number | null): void {
+    if (this.holding !== null) clearTimeout(this.holding);
+    this.holding = null;
+    this.startsBy = until;
+    if (until === null) return;
+    this.holding = setTimeout(() => {
+      this.holding = null;
+      this.startsBy = null;
+      // The host never came. The match is the friend's as much as theirs, and
+      // an absent player simply does not trade -- which is what happened every
+      // time before the whistle was ever held.
+      void this.begin();
+    }, Math.max(0, until - Date.now()));
   }
 
   private broadcastLobby(): void {
@@ -305,6 +377,7 @@ export class Duel implements DurableObject {
         rival: rival ? { name: rival.name, outfit: rival.outfit } : null,
         league: meta.league,
         expiresAt: meta.expiresAt,
+        startsBy: this.startsBy,
       });
     }
   }
@@ -314,6 +387,9 @@ export class Duel implements DurableObject {
   private async begin(): Promise<void> {
     const meta = this.meta;
     if (!meta || meta.phase !== 'lobby') return;
+    // Whichever of the two reasons to start got here first, the other one is
+    // now moot: the held whistle goes before anything else does.
+    this.hold(null);
     const [a, b] = meta.players;
     if (!a || !b) return;
 

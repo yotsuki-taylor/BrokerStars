@@ -4,7 +4,7 @@ import { t } from './i18n';
 import type { DuelError } from '../duel/protocol';
 import type { Shout } from './duel';
 
-export type DuelPhase = 'opening' | 'waiting' | 'joining' | 'handover' | 'error';
+export type DuelPhase = 'opening' | 'waiting' | 'joining' | 'handover' | 'holding' | 'error';
 
 /**
  * Everything that happens before the versus screen: minting an invitation,
@@ -33,6 +33,7 @@ export default function DuelScreen({
   error,
   appHref = null,
   onPlayHere,
+  startsBy = null,
   onSend,
   onCopy,
   onShout,
@@ -59,6 +60,11 @@ export default function DuelScreen({
   appHref?: string | null;
   /** Ignore the app and play the duel in this page, as a guest. */
   onPlayHere?: () => void;
+  /**
+   * When the match starts anyway, for a friend waiting on a host who is not
+   * looking. Null unless that is what is happening.
+   */
+  startsBy?: number | null;
   onSend: () => void;
   onCopy: () => Promise<boolean>;
   /**
@@ -144,6 +150,30 @@ export default function DuelScreen({
             {t('common.cancel')}
           </button>
         </div>
+      </div>
+    );
+  }
+
+  /**
+   * Accepted, and now waiting on the person who did the inviting.
+   *
+   * They are almost certainly in the chat app they sent the link from, and the
+   * object is holding the whistle for them rather than starting a match they
+   * would miss the first half of. The countdown is the honest thing to show:
+   * it says both that something is happening and when it stops mattering.
+   */
+  if (phase === 'holding') {
+    const wait = Math.max(0, Math.ceil(((startsBy ?? 0) - now) / 1000));
+    return (
+      <div className="overlay duel">
+        <h2>{t('duel.title')}</h2>
+        <div className="duel-status">{t('duel.holding', { name: rivalName ?? '' })}</div>
+        <div className={`duel-clock${wait <= 5 ? ' urgent' : ''}`}>{wait}</div>
+        <p>{t('duel.holdingNote')}</p>
+        <div className="spacer" />
+        <button className="big-btn ghost" onClick={onBack}>
+          {t('common.cancel')}
+        </button>
       </div>
     );
   }

@@ -321,6 +321,12 @@ const EN = {
   'duel.opening': 'OPENING A DUEL…',
   'duel.joining': 'JOINING THE DUEL…',
 
+  // Shown to whoever accepted, while the object holds the whistle for a host
+  // who is not looking at their screen. The countdown is how long that lasts.
+  'duel.holding': 'WAITING FOR {name}',
+  'duel.holdingNote':
+    'They are probably still in the chat they sent this from. The market opens either way when the count runs out.',
+
   // Asked of a browser on an Android phone, where this invitation may belong in
   // an app instead. Nothing can look, so the question is put to the player.
   'duel.handover':
@@ -774,6 +780,10 @@ const RU: Record<Key, string> = {
   'duel.title': 'ДУЭЛЬ С ДРУГОМ',
   'duel.opening': 'ОТКРЫВАЕМ ДУЭЛЬ…',
   'duel.joining': 'ПОДКЛЮЧАЕМСЯ К ДУЭЛИ…',
+
+  'duel.holding': 'ЖДЁМ {name}',
+  'duel.holdingNote':
+    'Он, скорее всего, ещё в чате, откуда отправил вызов. Когда счёт закончится, рынок откроется в любом случае.',
 
   'duel.handover':
     'У тебя Андроид. Если Broker Stars установлен, дуэль лучше играть там — твой аккаунт и гардероб в нём.',

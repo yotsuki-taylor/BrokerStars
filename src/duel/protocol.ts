@@ -67,6 +67,21 @@ export function cleanCall(raw: unknown): DuelCall | null {
  * clock rather than asking either client when it is ready, so the two players
  * start together whatever their phones are doing.
  */
+/**
+ * How long a duel holds the whistle for a host who is not on the socket.
+ *
+ * The invitation is minted before anybody connects, so the host's SEAT exists
+ * whether or not their phone does -- and the friend sitting down used to start
+ * the match on the spot. That is the same twenty seconds somebody spends in a
+ * chat app choosing who to send a link to, which is where the host almost
+ * always is at that exact moment (`ui/App.tsx` taps them on the shoulder).
+ *
+ * Bounded, because the friend is real and waiting. After this the match starts
+ * regardless and an absent host simply does not trade, which is what happened
+ * every time before this existed.
+ */
+export const HOST_WAIT_MS = 20_000;
+
 export const DUEL_INTRO_MS = 6500;
 
 /** A code is this long, and is the whole of the invitation's secrecy. */
@@ -172,6 +187,17 @@ export type ClientMsg =
   | { k: 'ability' }
   | { k: 'resign' }
   /**
+   * Whether this player is actually looking at the game.
+   *
+   * Sent when it changes and once on the way in. It exists for one decision:
+   * whether a duel may start. A seat is a row in the object's metadata and
+   * exists from the moment the invitation was minted, and a socket can be alive
+   * in a WebView the player cannot see -- neither says anybody is watching, and
+   * a match that starts unwatched is a match somebody loses half of before they
+   * know it began. See `HOST_WAIT_MS`.
+   */
+  | { k: 'here'; away: boolean }
+  /**
    * Nothing to answer. It exists so that something goes *up* the socket now
    * and then: a duellist who is not trading sends nothing for a minute at a
    * time, and a lobby sends nothing for fifteen, and there are carriers and
@@ -181,7 +207,24 @@ export type ClientMsg =
 
 export type ServerMsg =
   /** seated, and waiting for the other one. `expiresAt` is server time. */
-  | { k: 'lobby'; you: 0 | 1; rival: DuelProfile | null; league: number; expiresAt: number }
+  | {
+      k: 'lobby';
+      you: 0 | 1;
+      rival: DuelProfile | null;
+      league: number;
+      expiresAt: number;
+      /**
+       * When the match will start without whoever is missing, or null when
+       * nobody is being waited for.
+       *
+       * Set only in one situation: both seats are taken but the host has no
+       * socket. Sending the invitation is what takes a host out of the game, so
+       * the moment their friend accepts is exactly the moment they are most
+       * likely to be in a chat app -- and a match that started then would run
+       * its first half without them. See `HOST_WAIT_MS`.
+       */
+      startsBy?: number | null;
+    }
   /**
    * Both are in and the match exists. Everything here is ordered for the
    * recipient: `names[0]` is theirs. The board is sent rather than re-drawn,

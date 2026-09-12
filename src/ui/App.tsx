@@ -174,6 +174,11 @@ interface DuelUi {
   /** the socket, which says nothing about `link` above — that is the invitation */
   conn: Link;
   rivalGone: boolean;
+  /**
+   * When the match starts without the host, while a friend waits on one who is
+   * not looking. Null whenever nobody is being waited for.
+   */
+  startsBy: number | null;
   /** the league the server actually paid at, once it has said */
   payLeague: number | null;
   /**
@@ -1432,18 +1437,22 @@ export default function App() {
               t('duel.notifyBody', { name: msg.rival.name }),
             );
           }
-          setDuel((d) =>
-            d
-              ? {
-                  ...d,
-                  phase: d.phase === 'match' ? d.phase : 'waiting',
-                  rival: msg.rival,
-                  league: msg.league,
-                  expiresAt: msg.expiresAt,
-                  error: null,
-                }
-              : d,
-          );
+          setDuel((d) => {
+            if (!d) return d;
+            // The friend, waiting on a host who is not looking: a screen of
+            // their own rather than the invitation screen, which is about
+            // sending a link they were the recipient of.
+            const holding = msg.you === 1 && Boolean(msg.startsBy);
+            return {
+              ...d,
+              phase: d.phase === 'match' ? d.phase : holding ? 'holding' : 'waiting',
+              rival: msg.rival,
+              league: msg.league,
+              expiresAt: msg.expiresAt,
+              startsBy: msg.startsBy ?? null,
+              error: null,
+            };
+          });
           break;
 
         case 'setup': {
@@ -1551,6 +1560,7 @@ export default function App() {
         error: null,
         conn: 'connecting',
         rivalGone: false,
+        startsBy: null,
         payLeague: null,
         invited: null,
         chat: false,
@@ -1580,6 +1590,7 @@ export default function App() {
       error: reason,
       conn: 'lost',
       rivalGone: false,
+      startsBy: null,
       payLeague: null,
       invited: null,
       chat: false,
@@ -1612,6 +1623,7 @@ export default function App() {
         error: null,
         conn: 'connecting',
         rivalGone: false,
+        startsBy: null,
         payLeague: null,
         invited: null,
         chat: false,
@@ -1671,6 +1683,7 @@ export default function App() {
         error: null,
         conn: 'connecting',
         rivalGone: false,
+        startsBy: null,
         payLeague: null,
         invited: null,
         chat: false,
@@ -2166,6 +2179,7 @@ export default function App() {
           invited={duel.invited}
           error={duel.error}
           appHref={duel.phase === 'handover' && duel.code ? appLink(duel.code) : null}
+          startsBy={duel.startsBy}
           onPlayHere={() => {
             if (duel.code) connect(duel.code, 'joining', { code: duel.code });
           }}

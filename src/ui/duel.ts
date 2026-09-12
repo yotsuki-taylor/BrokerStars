@@ -289,7 +289,18 @@ export class DuelSocket {
     private readonly onLink: (state: Link) => void,
   ) {
     this.onLink('connecting');
+    // Told, rather than guessed at: a socket can be perfectly alive in a WebView
+    // the player cannot see, and the object on the other end has one decision
+    // that turns on the difference (`HOST_WAIT_MS`).
+    document.addEventListener('visibilitychange', this.watch);
     this.dial();
+  }
+
+  /** Bound once, so the listener can be taken off again. */
+  private readonly watch = (): void => this.sayWhereIAm();
+
+  private sayWhereIAm(): void {
+    this.send({ k: 'here', away: document.hidden });
   }
 
   private dial(): void {
@@ -310,6 +321,7 @@ export class DuelSocket {
       this.grace = 0;
       this.onLink('open');
       this.send({ k: 'hello', initData: initData(), ...this.hello });
+      this.sayWhereIAm();
       window.clearInterval(this.heartbeat);
       this.heartbeat = window.setInterval(() => this.send({ k: 'ping' }), PING_MS);
     };
@@ -361,6 +373,7 @@ export class DuelSocket {
 
   close(): void {
     this.closed = true;
+    document.removeEventListener('visibilitychange', this.watch);
     window.clearTimeout(this.timer);
     window.clearTimeout(this.grace);
     window.clearInterval(this.heartbeat);
