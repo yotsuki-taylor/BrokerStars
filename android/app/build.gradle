@@ -29,8 +29,8 @@ android {
         // one it accepted, so this goes up by one for every bundle that leaves
         // this machine -- including a rebuild of the same code. versionName is
         // what a person reads and moves when the game does.
-        versionCode 7
-        versionName "1.0.6"
+        versionCode 8
+        versionName "1.0.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
