@@ -113,7 +113,7 @@ import {
 } from './duel';
 import { apiBase, deleteAccount } from './api';
 import { platform, type Account } from '../platform';
-import { friendCodeFromLaunch, friendCodeIn } from './friends';
+import { friendAppLink, friendCodeFromLaunch, friendCodeIn } from './friends';
 import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
 import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
@@ -641,6 +641,35 @@ function AccountPanel({
           not itself a Google account. */}
       {linkAvailable() && <LinkPanel canMint={!account} />}
     </>
+  );
+}
+
+/**
+ * An invitation that arrived in a browser on a phone that may also have the app.
+ *
+ * The duel screen asks the same question in its own layout, because a duel
+ * arriving has a screen of its own to ask on. A friend invitation does not: it
+ * lands on the friends list, so the question goes over the top of it.
+ *
+ * An anchor rather than a button, for the reason written out in `canHandOver`:
+ * a tap on a real link is what an Android browser hands to the system, and a
+ * browser with nothing to hand it to simply stays here, where the other button
+ * still works.
+ */
+function HandoverOverlay({ href, onHere }: { href: string; onHere: () => void }) {
+  return (
+    <div className="overlay handover">
+      <h2>{t('friends.title')}</h2>
+      <p>{t('invite.handover')}</p>
+      <div className="settings-list">
+        <a className="big-btn" href={href}>
+          {t('duel.inApp')}
+        </a>
+        <button className="menu-btn" onClick={onHere}>
+          {t('invite.here')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1642,10 +1671,17 @@ export default function App() {
    * would find nothing the second time.
    */
   const [friendCode, setFriendCode] = useState<string | null>(null);
+  /**
+   * The same invitation, held rather than spent, while an Android browser asks
+   * whether the app should have it instead. Null everywhere else, which is the
+   * behaviour this screen has always had.
+   */
+  const [friendOffer, setFriendOffer] = useState<string | null>(null);
   useEffect(() => {
     const code = friendCodeFromLaunch();
     if (!code) return;
-    setFriendCode(code);
+    if (canHandOver()) setFriendOffer(code);
+    else setFriendCode(code);
     setScreen('friends');
   }, []);
 
@@ -2160,6 +2196,18 @@ export default function App() {
   if (screen === 'friends') {
     return (
       <div className="app">
+        {/* Over the friends screen rather than instead of it: the answer is
+            about where this invitation should land, and the list underneath is
+            what it lands in. */}
+        {friendOffer && (
+          <HandoverOverlay
+            href={friendAppLink(friendOffer)}
+            onHere={() => {
+              setFriendCode(friendOffer);
+              setFriendOffer(null);
+            }}
+          />
+        )}
         <FriendsScreen
           joining={friendCode}
           onDuel={(friend) => {
@@ -2171,6 +2219,7 @@ export default function App() {
             // coming back to this screen later is a list, not the same piece of
             // news over again.
             setFriendCode(null);
+            setFriendOffer(null);
             setScreen('menu');
           }}
         />

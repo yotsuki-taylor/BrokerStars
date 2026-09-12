@@ -2774,12 +2774,26 @@ a.big-btn {
   opacity: 0.7;
 }
 
+/* The question an invitation asks when it lands in a browser on a phone that
+   might also have the app. Two lines and two buttons, so it sits in the middle
+   rather than filling the screen. */
+.overlay.handover {
+  justify-content: center;
+}
+
+.overlay.handover p {
+  text-align: center;
+  line-height: 1.45;
+  margin: 6px 0 16px;
+}
+
 /* ---------- settings ---------- */
 
 /* The overlay is the same box the help text uses; this only stacks the two or
    three choices in it into full-width rows. */
 .overlay.settings .settings-list,
-.overlay.gift .settings-list {
+.overlay.gift .settings-list,
+.overlay.handover .settings-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2789,7 +2803,9 @@ a.big-btn {
 
 .overlay.settings .settings-list .big-btn,
 .overlay.gift .settings-list .big-btn,
-.overlay.gift .settings-list .menu-btn {
+.overlay.gift .settings-list .menu-btn,
+.overlay.handover .settings-list .big-btn,
+.overlay.handover .settings-list .menu-btn {
   width: 100%;
 }
 

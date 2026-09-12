@@ -54,7 +54,8 @@ export const friendCodeIn = (param: string): string | null =>
  * Re-exported rather than copied, and rather than having every caller reach
  * into the duel module for something that is not about duels.
  */
-export { shareInvite, copyText, linkToShare } from './duel';
+export { shareInvite, copyText, linkToShare, canHandOver } from './duel';
+export { friendAppLink } from './duel';
 
 /**
  * The game's own group chat.

@@ -151,6 +151,9 @@ export function linkToShare(bot: string | null, web: string | null): string | nu
  */
 export const appLink = (code: string): string => `brokerstars://duel/${code}`;
 
+/** The same door, for an invitation to be somebody's friend rather than to a match. */
+export const friendAppLink = (code: string): string => `brokerstars://friend/${code}`;
+
 /**
  * Is this page worth offering the app to?
  *
@@ -159,12 +162,18 @@ export const appLink = (code: string): string => `brokerstars://duel/${code}`;
  * devices where the offer could mean anything, and the player answers by
  * tapping or not tapping.
  *
- * WHY IT IS A SCREEN AND NOT A LINK ON THE WAY PAST. The invitation could be
- * taken here and handed over afterwards, and that would be worse: sitting down
- * starts the match, and the seat is held by the id that took it. The app would
- * arrive a second later as somebody else and be told the duel had started. So
- * the choice is made before anybody sits, which costs an Android player one tap
- * and costs everybody else nothing.
+ * WHY IT IS A SCREEN AND NOT A LINK ON THE WAY PAST. Both kinds of invitation
+ * are spent by being taken, and taken here means taken by whoever this page is
+ * — which on a phone with the app installed is the wrong person.
+ *
+ * A duel: sitting down starts the match and the seat is held by the id that
+ * took it, so the app arriving a second later is somebody else and is told the
+ * duel has started. A friendship: the code is redeemed by the browser's guest,
+ * the pair is paid for that guest once and only once (`worker/src/invites.ts`),
+ * and the account the player actually keeps never gets the fifty.
+ *
+ * So the choice is made before anything is taken, which costs an Android player
+ * one tap and costs everybody else nothing.
  *
  * Not offered inside the app itself, where there is nothing to hand over to.
  */

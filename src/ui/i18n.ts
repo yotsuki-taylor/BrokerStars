@@ -424,6 +424,13 @@ const EN = {
   'invite.title': 'INVITE A FRIEND — {coins} COINS EACH',
   'invite.how': 'Paid to both of you once they have finished {matches} matches.',
   'invite.done': 'All of them claimed. Friends still pay in duels.',
+
+  // Asked when an invitation to be somebody's friend is opened in a browser on
+  // an Android phone. The reason it is asked BEFORE the code is redeemed is in
+  // `canHandOver`: redeeming it here spends it on this page's guest account.
+  'invite.handover':
+    'Somebody wants to be your friend. If you have Broker Stars installed, add them in the app — that is where your account and your coins are.',
+  'invite.here': 'ADD THEM HERE',
   'friends.added': 'YOU TWO ARE FRIENDS NOW',
   'friends.inviteText': 'Be my friend in Broker Stars — eighty seconds, three companies, and a table with both our names on it.',
   'friends.err.nosuch': 'THAT CODE DOES NOT BELONG TO ANYBODY.',
@@ -847,6 +854,10 @@ const RU: Record<Key, string> = {
   'invite.title': 'ПРИГЛАСИ ДРУГА — ПО {coins} МОНЕТ',
   'invite.how': 'Оба получите, когда он доиграет {matches} матча.',
   'invite.done': 'Все приглашения исчерпаны. Друзья всё ещё платят в дуэлях.',
+
+  'invite.handover':
+    'Тебя зовут в друзья. Если Broker Stars установлен, добавь в приложении — твой аккаунт и монеты там.',
+  'invite.here': 'ДОБАВИТЬ ЗДЕСЬ',
   'friends.added': 'ТЕПЕРЬ ВЫ ДРУЗЬЯ',
   'friends.inviteText': 'Давай дружить в Broker Stars — восемьдесят секунд, три компании и таблица, где стоят оба наших имени.',
   'friends.err.nosuch': 'ТАКОГО КОДА НИ У КОГО НЕТ.',
