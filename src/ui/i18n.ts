@@ -326,6 +326,11 @@ const EN = {
   'duel.handover':
     'You are on Android. If you have Broker Stars installed, the duel is better played there — your account and your wardrobe are in it.',
   'duel.inApp': 'OPEN IN THE APP',
+
+  // The tap on the shoulder, for a host who left the app to send the link and
+  // is now in a chat app while their match runs without them.
+  'duel.notifyTitle': 'YOUR DUEL HAS STARTED',
+  'duel.notifyBody': '{name} accepted. The market is already moving — come back.',
   'duel.here': 'PLAY HERE',
   'duel.waiting': 'WAITING FOR THEM TO ACCEPT',
   'duel.rivalIn': '{name} IS IN',
@@ -773,6 +778,9 @@ const RU: Record<Key, string> = {
   'duel.handover':
     'У тебя Андроид. Если Broker Stars установлен, дуэль лучше играть там — твой аккаунт и гардероб в нём.',
   'duel.inApp': 'ОТКРЫТЬ В ПРИЛОЖЕНИИ',
+
+  'duel.notifyTitle': 'ДУЭЛЬ НАЧАЛАСЬ',
+  'duel.notifyBody': '{name} принял вызов. Рынок уже идёт — возвращайся.',
   'duel.here': 'ИГРАТЬ ЗДЕСЬ',
   'duel.waiting': 'ЖДЁМ, ПОКА ОН ПРИМЕТ',
   'duel.rivalIn': '{name} НА МЕСТЕ',

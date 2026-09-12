@@ -1414,6 +1414,24 @@ export default function App() {
     (msg: ServerMsg) => {
       switch (msg.k) {
         case 'lobby':
+          /**
+           * The host's friend has turned up. If the host is looking at this
+           * screen they can see that for themselves; if they are not, they are
+           * almost certainly in the chat app they went to send the link from,
+           * and the match has already started without them -- the object begins
+           * the moment both seats are taken, whether or not either phone is
+           * watching (`worker/src/duel.ts`).
+           *
+           * So this is the one thing in the game worth interrupting somebody
+           * for, and only for the host: the guest arriving IS the guest, and
+           * has this screen in front of them.
+           */
+          if (msg.you === 0 && msg.rival && document.hidden) {
+            platform().notify?.(
+              t('duel.notifyTitle'),
+              t('duel.notifyBody', { name: msg.rival.name }),
+            );
+          }
           setDuel((d) =>
             d
               ? {
@@ -1601,6 +1619,10 @@ export default function App() {
       setScreen('duel');
       const invite = await createInvite(leagueRef.current, outfitRef.current, friend?.id);
       if (!invite) return duelRefusal('net');
+      // The invitation exists and the next thing the player does is leave the
+      // app to send it. Asking now is asking while the reason is on screen --
+      // and after this there is no screen to ask on (`askToNotify`).
+      platform().askToNotify?.();
       connect(invite.code, 'waiting', {
         code: invite.code,
         link: invite.link,

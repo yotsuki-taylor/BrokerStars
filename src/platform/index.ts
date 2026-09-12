@@ -108,6 +108,40 @@ export interface Platform {
   onLink(listener: (param: string) => void): () => void;
 
   /**
+   * Tap the player on the shoulder while they are looking at something else.
+   *
+   * There is exactly one thing worth interrupting somebody for: a duel they
+   * opened has been accepted, and it is already running. Sending the invitation
+   * is what takes them out of the game -- the share sheet hands them to a chat
+   * app -- so the moment they most need to be told is the moment they cannot
+   * see the screen.
+   *
+   * Absent everywhere but the Android app. A browser tab has the Notification
+   * API and deliberately does not use it: a page that asks permission to
+   * interrupt you is the reason that permission is usually refused. Inside
+   * Telegram the mini app cannot, and does not need to -- Telegram itself is
+   * already the thing the player is looking at.
+   *
+   * Best effort by nature. It runs in a backgrounded WebView, which Android may
+   * throttle or freeze at any time, so it is a courtesy rather than a promise:
+   * nothing may depend on it having arrived.
+   */
+  notify?(title: string, body: string): void;
+
+  /**
+   * Ask for permission to do that, if this host needs asking and has not been
+   * asked yet. Never awaited and never answered: a refusal is a player who does
+   * not want to be interrupted, which is a preference rather than an error.
+   *
+   * Separate from `notify` because of WHEN it has to happen. Android 13 raises
+   * a dialog, and a dialog cannot be raised over an app the player has already
+   * left -- so the asking belongs to the moment the invitation appears, and the
+   * notifying to the moment it is accepted, which may be minutes apart and in a
+   * different app.
+   */
+  askToNotify?(): void;
+
+  /**
    * Signing in, where signing in is a thing the player does.
    *
    * Absent on every host that already knows who is playing before the game

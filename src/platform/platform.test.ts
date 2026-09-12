@@ -34,6 +34,13 @@ describe('with no host to ask', () => {
     expect(() => p.haptic('heavy')).not.toThrow();
     expect(() => p.openLink('https://t.me/x')).not.toThrow();
   });
+
+  it('offers no way to interrupt the player, so nobody asks it to', () => {
+    // a page that asks a browser for permission to send notifications is the
+    // reason that permission is usually refused
+    expect(platform().notify).toBeUndefined();
+    expect(platform().askToNotify).toBeUndefined();
+  });
 });
 
 describe('inside Telegram', () => {
@@ -101,6 +108,27 @@ describe('inside the Android app', () => {
     expect(p.authToken()).toBe('');
     expect(p.userId()).toBeNull();
     expect(p.userName()).toBe('');
+  });
+
+  /**
+   * The tap on the shoulder, which only this host can give. What matters is not
+   * that it works -- that needs a phone -- but that it is OFFERED here and
+   * nowhere else, because every caller decides whether to bother by asking
+   * whether the method exists at all.
+   */
+  it('is the only host that can interrupt the player', () => {
+    fakeCapacitor('android');
+    expect(typeof platform().notify).toBe('function');
+    expect(typeof platform().askToNotify).toBe('function');
+  });
+
+  it('does not throw when there is no native plugin behind it', () => {
+    fakeCapacitor('android');
+    const p = platform();
+    // both swallow everything: an import that fails in a browser-run test is
+    // the same to them as a phone that has refused permission
+    expect(() => p.notify?.('a duel', 'come back')).not.toThrow();
+    expect(() => p.askToNotify?.()).not.toThrow();
   });
 
   it('wins over a Telegram SDK that somehow loaded anyway', () => {

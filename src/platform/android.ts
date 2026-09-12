@@ -182,6 +182,9 @@ export async function signIn(): Promise<SignInError | null> {
  * cost is that a link pasted into a chat is not clickable as an ordinary
  * address; the page it points at offers to open the app instead.
  */
+/** One duel to come back to, so one notification that keeps replacing itself. */
+const DUEL_NOTIFICATION_ID = 1;
+
 let launchParam = '';
 
 function paramFromUrl(url: string): string {
@@ -298,5 +301,51 @@ export const ANDROID: Platform = {
       dropped = true;
       stop?.();
     };
+  },
+
+  notify(title: string, body: string): void {
+    void (async () => {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        // Android 13 wants asking, older ones grant it with the install. An
+        // answer of no is an answer, and this is the last place that cares.
+        const asked = await LocalNotifications.checkPermissions();
+        if (asked.display !== 'granted') return;
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              // A fixed id, so a second one replaces the first rather than
+              // stacking: there is only ever one duel to come back to.
+              id: DUEL_NOTIFICATION_ID,
+              title,
+              body,
+            },
+          ],
+        });
+      } catch {
+        /* a phone that will not be interrupted is one we do not interrupt */
+      }
+    })();
+  },
+
+  /**
+   * Ask, once, at the moment the reason is obvious: the player has just opened
+   * a duel and the next thing they do is leave to send the invitation.
+   *
+   * Never awaited and never reported. A refusal costs the player nothing except
+   * the tap on the shoulder they declined.
+   */
+  askToNotify(): void {
+    void (async () => {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        const now = await LocalNotifications.checkPermissions();
+        if (now.display === 'prompt' || now.display === 'prompt-with-rationale') {
+          await LocalNotifications.requestPermissions();
+        }
+      } catch {
+        /* no plugin, no permission, no notification: all the same thing here */
+      }
+    })();
   },
 };

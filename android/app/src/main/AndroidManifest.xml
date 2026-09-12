@@ -50,4 +50,13 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        One notification, and only one: the duel you opened has been accepted
+        and is already running. Android 13 and up ask the player before any of
+        them are shown, which the game does at the moment the reason is on
+        screen rather than on the way in (see `askToNotify` in
+        src/platform/android.ts). Refusing it costs nothing but the reminder.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>
