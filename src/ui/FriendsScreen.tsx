@@ -23,7 +23,50 @@ const keepCodeChars = (raw: string): string =>
 import { copyText, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
-import type { Friend, FriendError, FriendList } from '../friends/protocol';
+import type { Friend, FriendError, FriendList, InviteStanding } from '../friends/protocol';
+
+/**
+ * What an invitation is worth, drawn like a thing on the shelf rather than like
+ * an advertisement.
+ *
+ * It sits directly above the button that sends one, because that is the moment
+ * it is worth knowing, and it borrows the archive's award row wholesale: the
+ * same box, mark, title and small print. A player has seen that shape before
+ * and knows what it means -- something with a condition on it and a number that
+ * fills up.
+ *
+ * The condition is on the card rather than in a footnote. Finding out that the
+ * coins wait for the friend's third match AFTER sending the link would be the
+ * kind of surprise that makes somebody think the game cheated them.
+ *
+ * Null standing -- a server too old to know about any of this -- draws nothing
+ * at all rather than a card with zeroes in it.
+ */
+function InviteCard({ standing }: { standing: InviteStanding | null }) {
+  if (!standing || standing.cap <= 0) return null;
+  const { paid, cap, coins, matches } = standing;
+  const done = paid >= cap;
+  return (
+    <div className={`award invite-card${done ? ' got' : ''}`}>
+      <span className="award-mark">{done ? '★' : <Coin size={15} />}</span>
+      <span className="award-text">
+        <b>{t('invite.title', { coins })}</b>
+        <i>{t(done ? 'invite.done' : 'invite.how', { matches })}</i>
+        {/* Five pips rather than a filled track: the number that matters is
+            how many invitations are left, and five things you can count beats
+            a bar you have to measure. */}
+        <span className="invite-pips" role="img" aria-label={`${paid}/${cap}`}>
+          {Array.from({ length: cap }, (_, i) => (
+            <i key={i} className={`invite-pip${i < paid ? ' lit' : ''}`} />
+          ))}
+        </span>
+      </span>
+      <span className="award-bar">
+        {paid}/{cap}
+      </span>
+    </div>
+  );
+}
 
 /**
  * Everybody the player knows, and the button that makes one more.
@@ -291,6 +334,8 @@ export default function FriendsScreen({
 
       {/* Under the list, where the player is already looking once they have
           read it — and the only thing on this screen that does anything. */}
+      <InviteCard standing={list?.invite ?? null} />
+
       <div className="friend-actions">
         <button className="big-btn" onClick={() => invite && shareInvite(invite, t('friends.inviteText'))} disabled={!invite}>
           {t('friends.add')}

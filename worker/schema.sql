@@ -153,6 +153,18 @@ CREATE INDEX IF NOT EXISTS friends_by_player ON friends (player_id, created_at D
 -- landed, and read only to work out whether they may ask again yet
 -- (worker/src/chat.ts). Deliberately not a column on a profile: what somebody
 -- has done to a room full of other people is not part of what they own.
+-- Who invited whom, and whether it has been paid for. See
+-- `worker/migrations/011-invites.sql` for why this is not a column on a
+-- friendship.
+CREATE TABLE IF NOT EXISTS invites (
+  friend_id  TEXT PRIMARY KEY,
+  host_id    TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  paid_at    INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS invites_by_host ON invites (host_id, paid_at);
+
 CREATE TABLE IF NOT EXISTS chat_shouts (
   player_id TEXT PRIMARY KEY,
   last_at   INTEGER NOT NULL

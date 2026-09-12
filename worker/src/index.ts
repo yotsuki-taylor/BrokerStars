@@ -45,6 +45,7 @@ import * as calls from './calls';
 import * as friends from './friends';
 import * as link from './link';
 import * as profiles from './profile';
+import * as invites from './invites';
 import {
   REWARDS,
   alreadyPaid,
@@ -247,6 +248,9 @@ async function submit(request: Request, env: Env) {
     await record(env, caller, { seed, league, outcome, netWorth, tradedWell, stars, token });
     // The welcome present, after the match is safely banked rather than before.
     await profiles.giftFirstHat(env, caller);
+    // And the pair of fifties, if this is the match that earns them. Here
+    // rather than where the code was redeemed: `invites.settle` says why.
+    await invites.settle(env, caller);
   } catch (err) {
     // Two retries in flight at once both got past the check above, and the
     // UNIQUE index caught the loser. The batch rolled back, so nothing was paid
@@ -959,7 +963,7 @@ async function addFriend(request: Request, env: Env) {
 
 /** The whole answer, every time: the client's job is to draw what comes back. */
 async function friendList(env: Env, caller: Caller) {
-  const [code, list, bot, call] = await Promise.all([
+  const [code, list, bot, call, invite] = await Promise.all([
     friends.codeFor(env, caller),
     friends.list(env, caller.id),
     // The link goes through the bot rather than straight at the game, for the
@@ -971,6 +975,8 @@ async function friendList(env: Env, caller: Caller) {
     // the caller used, and the one their friend is most likely to be looking
     // at when the invitation lands.
     calls.take(env, caller),
+    // What the invitation card on that screen draws itself from.
+    invites.standing(env, caller),
   ]);
   return {
     ok: true,
@@ -978,6 +984,7 @@ async function friendList(env: Env, caller: Caller) {
     link: bot ? `https://t.me/${bot}?start=friend_${code}` : null,
     webLink: webInvite(env, 'f', code),
     friends: list,
+    invite,
     ...(call ? { call } : {}),
   };
 }

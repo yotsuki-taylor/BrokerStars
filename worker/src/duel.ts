@@ -34,6 +34,7 @@ import { perksFor } from '../../src/ui/perks';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
 import { giftFirstHat, outfitOf, settle } from './profile';
+import { settle as settleInvite } from './invites';
 import {
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
@@ -547,6 +548,11 @@ export class Duel implements DurableObject {
         // a bot does: it is a finished match, and what the game is thanking
         // them for is finishing one (`profile.ts`).
         await giftFirstHat(this.env, { id: player.id, name: player.name });
+
+        // And the invitation, on the same footing: a duel is a finished match,
+        // and it is the third finished match that pays whoever brought this
+        // player in (`invites.ts`).
+        await settleInvite(this.env, { id: player.id, name: player.name });
 
         // And the shelf, which cares about different things than the board
         // does: the duel counter it keeps, the streak, and the companies that

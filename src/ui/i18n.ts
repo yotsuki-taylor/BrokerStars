@@ -417,6 +417,13 @@ const EN = {
   'friends.emptyTitle': 'NOBODY YET',
   'friends.empty': 'Send somebody the link below. When they tap it you will both be on each other’s list.',
   'friends.add': 'ADD A FRIEND',
+
+  // The card above that button. `{coins}` is what each side gets and
+  // `{matches}` how many the friend must finish first -- both come from the
+  // server, so neither is spelled out here.
+  'invite.title': 'INVITE A FRIEND — {coins} COINS EACH',
+  'invite.how': 'Paid to both of you once they have finished {matches} matches.',
+  'invite.done': 'All of them claimed. Friends still pay in duels.',
   'friends.added': 'YOU TWO ARE FRIENDS NOW',
   'friends.inviteText': 'Be my friend in Broker Stars — eighty seconds, three companies, and a table with both our names on it.',
   'friends.err.nosuch': 'THAT CODE DOES NOT BELONG TO ANYBODY.',
@@ -836,6 +843,10 @@ const RU: Record<Key, string> = {
   'friends.emptyTitle': 'ПОКА НИКОГО',
   'friends.empty': 'Отправь кому-нибудь ссылку снизу. Он нажмёт — и вы оба окажетесь в списках друг у друга.',
   'friends.add': 'ДОБАВИТЬ ДРУГА',
+
+  'invite.title': 'ПРИГЛАСИ ДРУГА — ПО {coins} МОНЕТ',
+  'invite.how': 'Оба получите, когда он доиграет {matches} матча.',
+  'invite.done': 'Все приглашения исчерпаны. Друзья всё ещё платят в дуэлях.',
   'friends.added': 'ТЕПЕРЬ ВЫ ДРУЗЬЯ',
   'friends.inviteText': 'Давай дружить в Broker Stars — восемьдесят секунд, три компании и таблица, где стоят оба наших имени.',
   'friends.err.nosuch': 'ТАКОГО КОДА НИ У КОГО НЕТ.',

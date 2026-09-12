@@ -67,6 +67,49 @@ export interface Friend {
 }
 
 /** Why an attempt to add somebody came to nothing. */
+/**
+ * What an invitation pays, and how many times.
+ *
+ * Fifty is exactly the first rung of any slot (`ui/wardrobe.ts`), which is what
+ * makes the offer nameable: a friend buys you a piece of clothing, not a
+ * number. It is about a day and a half of ordinary play -- worth sending a
+ * link for, and small enough not to compress the wardrobe's three-to-seven
+ * month horizon, which is deliberate and documented where the prices are.
+ *
+ * THE CAP IS THE REAL DEFENCE, not the threshold below it. Guest sessions are
+ * handed to anybody who asks, for free and without proof of anything -- that is
+ * what makes an invitation work outside Telegram at all -- so a reward for
+ * bringing somebody in can always be farmed by bringing in nobody. Five paid
+ * invitations is 250 coins, about three per cent of the wardrobe, which is a
+ * small enough ceiling that the farming is not worth the trouble. Nothing here
+ * pretends to make it impossible.
+ */
+export const INVITE_COINS = 50;
+export const INVITE_CAP = 5;
+
+/**
+ * How many matches the invited friend has to finish before either of them is
+ * paid.
+ *
+ * Not a wall, a toll: the server refuses two results from the same player
+ * inside forty-five seconds, so three of them is a minute and a half that
+ * cannot be scripted away. Three is also about the point where somebody has
+ * actually seen the game rather than opened it.
+ */
+export const INVITE_MATCHES = 3;
+
+/** How an invitation is going, for the screen that offers it. */
+export interface InviteStanding {
+  /** invitations paid for so far */
+  paid: number;
+  /** and the most that ever will be */
+  cap: number;
+  /** what each side gets, each time */
+  coins: number;
+  /** matches the friend must finish first */
+  matches: number;
+}
+
 export type FriendError = 'nosuch' | 'yourself' | 'full';
 
 /** The answer to every route here: the list as it stands afterwards. */
@@ -87,6 +130,11 @@ export interface FriendList {
    */
   webLink: string | null;
   friends: Friend[];
+  /**
+   * How the invitation offer stands. Null from a server that has not been
+   * redeployed yet, which is a screen that simply does not draw the card.
+   */
+  invite: InviteStanding | null;
 }
 
 const str = (v: unknown, max: number): string => String(v ?? '').slice(0, max);
@@ -127,5 +175,25 @@ export function cleanList(raw: unknown): FriendList | null {
   // A server that has not been redeployed yet sends no `webLink` at all, which
   // is null here and leaves the bot link as the only one there ever was.
   const webLink = typeof r?.webLink === 'string' && r.webLink ? r.webLink.slice(0, 200) : null;
-  return { code, link, webLink, friends: cleanFriends(r?.friends) };
+  return { code, link, webLink, friends: cleanFriends(r?.friends), invite: cleanInvite(r?.invite) };
+}
+
+/**
+ * The invitation standing, or null when the server said nothing about it.
+ *
+ * The numbers come back from the server rather than being read off the
+ * constants above, because the server is the one that pays and a client whose
+ * idea of the cap is out of date must not be the one drawing the bar. Clamped
+ * anyway: a bar past its own end is worse than a wrong number.
+ */
+export function cleanInvite(raw: unknown): InviteStanding | null {
+  const r = raw as Record<string, unknown> | null;
+  if (!r || typeof r !== 'object') return null;
+  const cap = Math.max(0, Math.min(99, num(r.cap)));
+  return {
+    cap,
+    paid: Math.max(0, Math.min(cap, num(r.paid))),
+    coins: Math.max(0, Math.min(10_000, num(r.coins))),
+    matches: Math.max(0, Math.min(99, num(r.matches))),
+  };
 }

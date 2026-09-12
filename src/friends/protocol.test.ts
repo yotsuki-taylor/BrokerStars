@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_FRIENDS, cleanCode, cleanFriends, cleanList } from './protocol';
+import {
+  INVITE_CAP,
+  INVITE_COINS,
+  INVITE_MATCHES,
+  MAX_FRIENDS,
+  cleanCode,
+  cleanFriends,
+  cleanInvite,
+  cleanList,
+} from './protocol';
+import { PRICES } from '../ui/wardrobe';
 import { ROOM_DONE } from '../ui/renovation';
 
 /**
@@ -81,6 +91,8 @@ describe('the whole answer', () => {
       link: null,
       webLink: null,
       friends: [{ id: '7', name: 'PLAYER', coins: 0, matches: 0, room: 0, outfit: {} }],
+      // a server too old to know about invitations says nothing about them
+      invite: null,
     });
   });
 
@@ -100,5 +112,51 @@ describe('the whole answer', () => {
     // "undefined" on a button somebody is about to send to a friend
     const list = cleanList({ code: 'BCDFGH2345', link: null, friends: [] });
     expect(list?.webLink).toBeNull();
+  });
+});
+
+/**
+ * What the invitation offer is worth, as numbers rather than as taste.
+ *
+ * These are not arbitrary: fifty is the first rung of a slot and the cap is
+ * what bounds the farming that free guest sessions make possible. If either
+ * moves, it should move because somebody decided to move it.
+ */
+describe('what an invitation pays', () => {
+  it('is exactly one common item, so the offer can be named', () => {
+    expect(INVITE_COINS).toBe(PRICES.common);
+  });
+
+  it('is capped low enough that farming it is not worth the trouble', () => {
+    // the whole wardrobe is 7750; five fifties is about three per cent of it
+    const whole = Object.values(PRICES).reduce((a, b) => a + b, 0) * 5;
+    expect((INVITE_COINS * INVITE_CAP) / whole).toBeLessThan(0.05);
+  });
+
+  it('asks for more than one match, so a single tap is not enough', () => {
+    expect(INVITE_MATCHES).toBeGreaterThan(1);
+  });
+});
+
+describe('reading the standing back', () => {
+  const full = { paid: 2, cap: 5, coins: 50, matches: 3 };
+
+  it('takes the server at its word for all four numbers', () => {
+    expect(cleanInvite(full)).toEqual(full);
+  });
+
+  it('is nothing at all from a server that has not been redeployed', () => {
+    expect(cleanInvite(undefined)).toBeNull();
+    expect(cleanInvite(null)).toBeNull();
+  });
+
+  it('never draws a bar past its own end', () => {
+    expect(cleanInvite({ ...full, paid: 99 })?.paid).toBe(5);
+    expect(cleanInvite({ ...full, paid: -4 })?.paid).toBe(0);
+  });
+
+  it('survives junk where the numbers should be', () => {
+    const out = cleanInvite({ paid: 'lots', cap: null, coins: NaN, matches: {} });
+    expect(out).toEqual({ paid: 0, cap: 0, coins: 0, matches: 0 });
   });
 });

@@ -2945,6 +2945,35 @@ a.big-btn {
   white-space: nowrap;
 }
 
+/* ---------- the invitation card ---------- */
+
+/* An award row on a screen that has no awards on it, so the two rules the
+   archive's list provides -- the group's gap and its width -- have to be said
+   here instead. */
+.invite-card {
+  flex: 0 0 auto;
+  margin: 4px 0 8px;
+}
+
+/* Five pips, one per invitation that can still be paid for. A count of five is
+   read at a glance; a bar of five would have to be measured. */
+.invite-pips {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.invite-pip {
+  width: 22px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(143, 168, 198, 0.28);
+}
+
+.invite-pip.lit {
+  background: #ffb020;
+}
+
 /* The hidden ones, as one row rather than a column of identical locks. */
 .award.secret {
   border-style: dashed;

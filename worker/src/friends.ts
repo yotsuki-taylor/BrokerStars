@@ -17,6 +17,7 @@
  * `src/friends/protocol.ts`, which says what that buys and what it costs.
  */
 
+import * as invites from './invites';
 import { FRIEND_CODE_LENGTH, MAX_FRIENDS, type Friend, type FriendError } from '../../src/friends/protocol';
 import { cleanOutfit, cleanRoom } from '../../src/profile/protocol';
 import type { Env } from './results';
@@ -180,5 +181,11 @@ export async function befriend(
     add(caller.id, owner.player_id, owner.name),
     add(owner.player_id, caller.id, caller.name),
   ]);
+
+  // Whose code it was, which the friendship above deliberately does not record:
+  // it is two symmetric rows and they are the same the moment they exist. The
+  // pair is not paid here -- see `invites.settle` for why the money waits for
+  // the friend to actually play.
+  await invites.invited(env, owner.player_id, caller.id);
   return null;
 }
