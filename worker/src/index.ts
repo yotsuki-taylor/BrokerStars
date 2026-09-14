@@ -40,7 +40,7 @@ import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
 import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate, chatShout, duelPush } from './bot';
-import { chatAvailable, markShout, waitLeft } from './chat';
+import { chatAvailable, markShout, mayShout, waitLeft } from './chat';
 import * as calls from './calls';
 import * as friends from './friends';
 import * as link from './link';
@@ -874,7 +874,10 @@ async function newDuel(request: Request, env: Env) {
     webLink: webInvite(env, 'd', code),
     expiresAt,
     sent,
-    chat: chatAvailable(env),
+    // Both halves of the same question: has this deployment a chat at all, and
+    // may THIS caller write into it. The screen is asking whether to draw a
+    // button, and a button that is only ever refused is worse than none.
+    chat: chatAvailable(env) && mayShout(caller.id),
     yourLeague: await topLeague(env, caller.id),
   });
 }
@@ -915,6 +918,11 @@ async function shoutDuel(request: Request, env: Env) {
 
   const code = normalizeCode(String(body.code ?? ''));
   if (!code) return bad(400, 'no such duel');
+
+  // Refused before the cooldown is even read: a guest has no turn to wait for.
+  // The button is not drawn for them either (`/duel/new` below), so reaching
+  // here means a client that has not been reloaded since this shipped.
+  if (!mayShout(caller.id)) return json({ ok: false, reason: 'guest' });
 
   const now = Date.now();
   const wait = await waitLeft(env, caller.id, now);

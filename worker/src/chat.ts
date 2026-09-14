@@ -28,6 +28,7 @@
  * client should be told, be able to claim, or carry to another device.
  */
 
+import { isGuest } from './auth';
 import type { Env } from './results';
 
 /** How long a player has to wait before the chat hears from them again. */
@@ -36,6 +37,38 @@ export const SHOUT_COOLDOWN = 10 * 60 * 1000;
 /** Whether this deployment has a chat to shout into at all. */
 export const chatAvailable = (env: Env): boolean =>
   Boolean(env.CHAT_ID && env.BOT_TOKEN);
+
+/**
+ * Who may make the bot speak in a room full of people: not a guest.
+ *
+ * WHY THE COOLDOWN BELOW WAS NEVER THE ANSWER. It counts per `player_id`, and
+ * a guest id costs one request to `/auth/guest` and nothing else -- so every
+ * shout came from an account that had never shouted, which is exactly the
+ * state the cooldown lets through. It has been running for months and has
+ * never once refused anybody.
+ *
+ * WHAT WAS ACTUALLY HAPPENING, because it was worth finding out before
+ * building a defence against the wrong thing: nobody was abusing this. Every
+ * one of those shouts was Google Play's pre-launch crawler, which installs the
+ * app on several devices for every upload and walks every button it can find.
+ * Caught in the act on 2026-09-14 -- `/duel/shout` from 66.249.84.138, an
+ * `https://localhost` origin and a OnePlus 8 Pro that Google's test fleet is
+ * made of. The signature fits every shout before it too: a brand new guest
+ * each time, one match with the starting cash untouched because a robot taps
+ * but does not trade, a shout ninety seconds to five minutes after the account
+ * was born, and three of them inside three minutes when a report ran several
+ * devices at once.
+ *
+ * So the rule is about identity rather than rate, and it closes the crawler out
+ * as a side effect of closing out anonymity. A robot never signs in.
+ *
+ * THE COST IS REAL AND IS ACCEPTED. This button was built for the player with
+ * nobody -- no friends on the list and no one to send a link to -- and a guest
+ * on Android who has not signed in is exactly that player. They lose it until
+ * they sign in. Writing into a room of real people under no name at all is the
+ * thing being given up, and it is worth more than the convenience.
+ */
+export const mayShout = (playerId: string): boolean => !isGuest(playerId);
 
 /**
  * The rule itself, with the database taken out of it: how long is left of the

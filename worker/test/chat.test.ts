@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SHOUT_COOLDOWN, chatAvailable, stillWaiting } from '../src/chat';
+import { SHOUT_COOLDOWN, chatAvailable, mayShout, stillWaiting } from '../src/chat';
 import type { Env } from '../src/results';
 
 /**
@@ -20,6 +20,19 @@ describe('shouting into the chat', () => {
     expect(chatAvailable(env({ BOT_TOKEN: 't' }))).toBe(false);
     expect(chatAvailable(env({ CHAT_ID: '-100123' }))).toBe(false);
     expect(chatAvailable(env())).toBe(false);
+  });
+
+  it('will not let a guest make the bot speak', () => {
+    // The rule the cooldown could never be: a guest id costs one request and
+    // arrives having never shouted, which is the state the cooldown lets
+    // through. Every shout this game has ever seen came from one.
+    expect(mayShout('a:912ffb5654681f349dd27d84')).toBe(false);
+    expect(mayShout('a:')).toBe(false);
+  });
+
+  it('lets a Telegram player and a signed-in one through', () => {
+    expect(mayShout('165233146')).toBe(true);
+    expect(mayShout('g:104729384710293847102')).toBe(true);
   });
 
   it('lets a player who has never shouted go straight ahead', () => {
