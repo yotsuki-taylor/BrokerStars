@@ -74,10 +74,26 @@ describe('offering the invitation to the app', () => {
     expect(canHandOver()).toBe(true);
   });
 
-  it('offers inside Telegram on Android, which is a browser like any other', () => {
+  it('says nothing inside Telegram, whose WebView cannot follow the link', () => {
+    // What this used to do, with a comment calling a mini app "a browser like
+    // any other". It is not: the scheme is loaded as an address rather than
+    // handed to the system, and the player gets Telegram's own error page. A
+    // player in Telegram also has no use for the offer -- they are signed in as
+    // their Telegram account, and the game in front of them is the one the
+    // invitation was addressed to.
     inTelegram();
     userAgent(PHONE);
-    expect(canHandOver()).toBe(true);
+    expect(canHandOver()).toBe(false);
+  });
+
+  it('says nothing in any other embedded browser either', () => {
+    // `wv` is what Android puts in an embedded browser's user agent and leaves
+    // out of Chrome's. Any chat app that keeps links in a browser of its own
+    // lands here, not only the one that was reported.
+    userAgent(
+      'Mozilla/5.0 (Linux; Android 14; Pixel 7; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126 Mobile Safari/537.36',
+    );
+    expect(canHandOver()).toBe(false);
   });
 
   it('says nothing in the app itself, where there is nowhere to hand it', () => {

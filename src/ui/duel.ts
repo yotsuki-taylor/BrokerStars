@@ -154,6 +154,9 @@ export const appLink = (code: string): string => `brokerstars://duel/${code}`;
 /** The same door, for an invitation to be somebody's friend rather than to a match. */
 export const friendAppLink = (code: string): string => `brokerstars://friend/${code}`;
 
+/** Android's own marker for an embedded browser, absent from Chrome's. */
+const WEBVIEW = /;\s*wv[)\s]/i;
+
 /**
  * Is this page worth offering the app to?
  *
@@ -175,11 +178,30 @@ export const friendAppLink = (code: string): string => `brokerstars://friend/${c
  * So the choice is made before anything is taken, which costs an Android player
  * one tap and costs everybody else nothing.
  *
- * Not offered inside the app itself, where there is nothing to hand over to.
+ * WHERE IT IS NOT OFFERED, and both of these were learned the hard way.
+ *
+ * Inside the app itself, obviously: there is nothing to hand over to.
+ *
+ * And inside somebody else's WebView, which is the one this got wrong. A mini
+ * app is a WebView Telegram owns, and an ordinary link tapped in a chat may open
+ * in one too. They look like Android browsers from in here -- same engine, same
+ * user agent but for one token -- and they are not: a custom scheme handed to
+ * one is not passed to the system, it is loaded as an address and fails. The
+ * player gets Telegram's own error page where they expected the game.
+ *
+ * The token is `wv`, which Android puts in a WebView's user agent and not in
+ * Chrome's. Conservative on purpose: an unknown browser keeps the offer, and
+ * only something that has said it is embedded loses it.
+ *
+ * A player in Telegram loses nothing by this. They are signed in as their
+ * Telegram account, which is not the account in the app, and the game they are
+ * already looking at is the one that invitation was addressed to.
  */
 export function canHandOver(): boolean {
-  if (platform().id === 'android') return false;
-  return /Android/i.test(String((globalThis as any).navigator?.userAgent ?? ''));
+  if (platform().id === 'android' || platform().id === 'telegram') return false;
+  const ua = String((globalThis as any).navigator?.userAgent ?? '');
+  if (WEBVIEW.test(ua)) return false;
+  return /Android/i.test(ua);
 }
 
 /**
