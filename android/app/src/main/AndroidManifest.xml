@@ -48,7 +48,10 @@
                 and the SHA-256 of the certificate this build was signed with.
                 The file to serve is `android/assetlinks.json`, and it has to sit
                 at the root of the HOST — the user site repository — not inside
-                this project's pages.
+                this project's pages. It names three certificates: Play's own,
+                which is what anybody installing from the store gets; the upload
+                key, for an APK handed round directly; and the debug key, so a
+                local build verifies too.
 
                 Until it verifies, nothing breaks: these links open in a browser
                 exactly as they do today, and the page there offers the app by
