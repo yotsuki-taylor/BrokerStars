@@ -200,6 +200,12 @@ interface DuelUi {
    * `worker/src/chat.ts` — and says so when the invitation is minted.
    */
   chat: boolean;
+  /**
+   * There is a chat, and this player has not signed in, which is why there is
+   * no button. Carried through so the screen can say that instead of showing
+   * nothing at all.
+   */
+  chatNeedsAccount?: boolean;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -1687,6 +1693,7 @@ export default function App() {
         expiresAt: invite.expiresAt,
         invited: friend ? { name: friend.name, sent: invite.sent } : null,
         chat: Boolean(invite.chat),
+        chatNeedsAccount: invite.chatNeedsAccount === true,
       });
     },
     [connect, duelRefusal],
@@ -2249,6 +2256,9 @@ export default function App() {
           onShout={
             duel.chat && duel.code ? () => shoutInvite(duel.code as string) : undefined
           }
+          // No button, but a reason for its absence. Only where signing in
+          // would actually produce one — see `chatNeedsAccount`.
+          shoutNeedsAccount={duel.chatNeedsAccount === true}
           onBack={leaveDuel}
         />
       </div>

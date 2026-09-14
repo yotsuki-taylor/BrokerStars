@@ -38,6 +38,7 @@ export default function DuelScreen({
   onSend,
   onCopy,
   onShout,
+  shoutNeedsAccount,
   onBack,
 }: {
   phase: DuelPhase;
@@ -78,6 +79,14 @@ export default function DuelScreen({
    * no chat to call it out in — the button is drawn from whether this is here.
    */
   onShout?: () => Promise<Shout>;
+  /**
+   * There is a chat to shout into and this player has not said who they are.
+   * Everywhere else in this game a button the host cannot honour is simply not
+   * drawn and nothing is said about it — but this one is the whole answer for
+   * a player with no friends to send a link to, so its absence is worth a line
+   * rather than a silence.
+   */
+  shoutNeedsAccount?: boolean;
   onBack: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -268,6 +277,12 @@ export default function DuelScreen({
           </button>
         )}
       </div>
+
+      {/* In place of the button rather than beside it: the two are never both
+          on screen, because one exists exactly when the other cannot. */}
+      {!onShout && shoutNeedsAccount && (
+        <div className="duel-note">{t('duel.shoutSignIn')}</div>
+      )}
 
       {shouted && shouted !== 'ok' && (
         <div className="duel-note bad">

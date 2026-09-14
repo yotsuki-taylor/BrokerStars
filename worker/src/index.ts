@@ -878,6 +878,11 @@ async function newDuel(request: Request, env: Env) {
     // may THIS caller write into it. The screen is asking whether to draw a
     // button, and a button that is only ever refused is worse than none.
     chat: chatAvailable(env) && mayShout(caller.id),
+    // ...and when the answer is no, whether signing in would change it. There
+    // is a chat here and this player simply has no name yet, which is a
+    // different thing from a deployment that has no chat at all -- the first
+    // is worth telling somebody about, the second is nobody's business.
+    chatNeedsAccount: chatAvailable(env) && !mayShout(caller.id),
     yourLeague: await topLeague(env, caller.id),
   });
 }

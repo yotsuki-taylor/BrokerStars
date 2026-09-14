@@ -198,6 +198,7 @@ const KEYS = [
   'shop.owned',
   'shop.wear',
   'shop.wearing',
+  'duel.shoutSignIn',
   'shop.today',
   'shop.cleanedOut',
   'shop.comeBack',

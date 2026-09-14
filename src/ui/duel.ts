@@ -52,6 +52,15 @@ export interface Invite {
    * no `CHAT_ID` set — see `worker/src/chat.ts`.
    */
   chat: boolean;
+  /**
+   * There is a chat, and the reason this player cannot shout into it is that
+   * they have not signed in. False both for a deployment with no chat and for
+   * a player who may already use it, because neither has anything to be told.
+   *
+   * Absent from an older server's answer, which reads as false — the screen
+   * then behaves exactly as it did before this existed.
+   */
+  chatNeedsAccount?: boolean;
 }
 
 /**

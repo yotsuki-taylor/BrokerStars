@@ -461,6 +461,8 @@ const EN = {
   'shop.owned': 'OWNED',
   'shop.wear': 'WEAR',
   'shop.wearing': 'WEARING',
+  'duel.shoutSignIn':
+    'Sign in under SETTINGS · ACCOUNT to have the bot call your duel out in the group chat.',
   'shop.today': 'FIVE A DAY · NEW STOCK AT MIDNIGHT',
   'shop.cleanedOut': 'BOUGHT THE LOT · NEW STOCK AT MIDNIGHT',
   'shop.comeBack': "Today's shelf is all yours. Come back tomorrow.",
@@ -890,6 +892,8 @@ const RU: Record<Key, string> = {
   'shop.owned': 'ЕСТЬ',
   'shop.wear': 'НАДЕТЬ',
   'shop.wearing': 'НАДЕТО',
+  'duel.shoutSignIn':
+    'Войди в НАСТРОЙКИ · АККАУНТ, и бот позовёт на твою дуэль в общий чат.',
   'shop.today': 'ПЯТЬ ВЕЩЕЙ В ДЕНЬ · НОВЫЙ ЗАВОЗ В ПОЛНОЧЬ',
   'shop.cleanedOut': 'ВСЁ РАСКУПЛЕНО · НОВЫЙ ЗАВОЗ В ПОЛНОЧЬ',
   'shop.comeBack': 'Сегодняшняя витрина уже твоя. Заходи завтра.',
