@@ -144,6 +144,7 @@ const KEYS = [
   'settings.title',
   'settings.help',
   'settings.language',
+  'settings.privacy',
   'settings.close',
   'help.title',
   'help.match',

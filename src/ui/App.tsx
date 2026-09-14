@@ -135,6 +135,7 @@ import {
 import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import { markTutorialSeen, tutorialSeen } from './tutorial';
+import { openPrivacy } from './legal';
 import {
   PRICES,
   highestOwned,
@@ -803,6 +804,15 @@ function SettingsOverlay({
               {t('settings.account')}
             </button>
           )}
+          {/* Last in the list because nobody comes to the settings for it, and
+              present at all because Google Play wants the policy reachable from
+              inside the app and not only from the store listing. It leaves the
+              game rather than opening a screen: the document is one page that
+              ships with the web build, and duplicating it in here would be two
+              texts to keep saying the same thing (`ui/legal.ts`). */}
+          <button className="big-btn ghost" onClick={openPrivacy}>
+            {t('settings.privacy')}
+          </button>
         </div>
       )}
       {/* One step up, whatever that is from here. Picking a language used to

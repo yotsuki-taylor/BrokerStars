@@ -174,6 +174,7 @@ const EN = {
   'settings.tutorial': 'WATCH THE TUTORIAL',
   'settings.language': 'LANGUAGE',
   'settings.account': 'ACCOUNT',
+  'settings.privacy': 'PRIVACY POLICY',
   'settings.close': 'CLOSE',
 
   // The Android build only. A mini app never asks any of this: Telegram has
@@ -635,6 +636,7 @@ const RU: Record<Key, string> = {
   'settings.tutorial': 'ПОСМОТРЕТЬ ТУТОРИАЛ',
   'settings.language': 'ЯЗЫК',
   'settings.account': 'АККАУНТ',
+  'settings.privacy': 'КОНФИДЕНЦИАЛЬНОСТЬ',
   'settings.close': 'ЗАКРЫТЬ',
 
   'account.title': 'АККАУНТ',
