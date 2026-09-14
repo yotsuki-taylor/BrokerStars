@@ -178,30 +178,94 @@ const WEBVIEW = /;\s*wv[)\s]/i;
  * So the choice is made before anything is taken, which costs an Android player
  * one tap and costs everybody else nothing.
  *
- * WHERE IT IS NOT OFFERED, and both of these were learned the hard way.
+ * WHERE IT IS NOT OFFERED. Inside the app itself, obviously -- there is nothing
+ * to hand over to. And inside an embedded browser that is nobody's mini app: a
+ * WebView does not pass a custom scheme to the system, it loads it as an address
+ * and fails, and the player gets that app's error page where they expected the
+ * game. `wv` is what Android puts in an embedded browser's user agent and leaves
+ * out of Chrome's. Conservative on purpose: an unknown browser keeps the offer,
+ * and only something that has said it is embedded loses it.
  *
- * Inside the app itself, obviously: there is nothing to hand over to.
+ * TELEGRAM IS THE EXCEPTION, and the reason is `handOff` below. A mini app is a
+ * WebView too and a link tapped in one fails exactly as described -- but it is
+ * the one embedded browser that has an opener of its own to ask, so the offer
+ * can stand there as long as nobody reaches for an `<a href>` to make it.
  *
- * And inside somebody else's WebView, which is the one this got wrong. A mini
- * app is a WebView Telegram owns, and an ordinary link tapped in a chat may open
- * in one too. They look like Android browsers from in here -- same engine, same
- * user agent but for one token -- and they are not: a custom scheme handed to
- * one is not passed to the system, it is loaded as an address and fails. The
- * player gets Telegram's own error page where they expected the game.
- *
- * The token is `wv`, which Android puts in a WebView's user agent and not in
- * Chrome's. Conservative on purpose: an unknown browser keeps the offer, and
- * only something that has said it is embedded loses it.
- *
- * A player in Telegram loses nothing by this. They are signed in as their
- * Telegram account, which is not the account in the app, and the game they are
- * already looking at is the one that invitation was addressed to.
+ * It has to stand there, too. An invitation sent from Telegram opens in the mini
+ * app now, and a player whose game lives in the Android app -- whose accounts
+ * are linked, so it is the same save -- would otherwise have no way across.
  */
 export function canHandOver(): boolean {
-  if (platform().id === 'android' || platform().id === 'telegram') return false;
+  if (platform().id === 'android') return false;
+  // No Android, no app to hand anything to -- which covers Telegram on a
+  // desktop and on an iPhone as much as it covers a laptop browser.
   const ua = String((globalThis as any).navigator?.userAgent ?? '');
-  if (WEBVIEW.test(ua)) return false;
-  return /Android/i.test(ua);
+  if (!/Android/i.test(ua)) return false;
+  // A mini app is an embedded browser and would fail the next test; it is let
+  // through because it is the one that can be asked instead of linked.
+  if (inAMiniApp()) return true;
+  return !WEBVIEW.test(ua);
+}
+
+/**
+ * Really inside Telegram, rather than merely holding its script.
+ *
+ * The difference is the whole of `src/platform/telegram.ts`'s long warning and
+ * it bites here: the published page carries the Telegram SDK on every host, so
+ * an ordinary Chrome tab reports the telegram platform and would take the mini
+ * app's route -- which, in a browser, is the SDK's own fallback of opening the
+ * same address again. A button that reopens the page it is on.
+ *
+ * A signed `initData` is the honest test, and only a real mini app has one.
+ */
+const inAMiniApp = (): boolean =>
+  platform().id === 'telegram' && platform().authToken() !== '';
+
+/**
+ * Whether this host wants asking rather than linking.
+ *
+ * The two ways across are not interchangeable. In a real browser the way in is
+ * a link and nothing else will do -- a tap on an anchor is what Android hands to
+ * the system, and that is measured, not assumed. In a mini app an anchor is the
+ * thing that fails, and the way across is to ask Telegram to open something for
+ * us, which is a method call and not a navigation.
+ */
+export const handsOffItself = (): boolean => inAMiniApp();
+
+/**
+ * Send the player to the app, from a host that will not follow a link there.
+ *
+ * The address handed over is the ORDINARY WEB ONE, not the scheme. Telegram
+ * opens http(s) outside itself and is entitled to refuse anything stranger, so
+ * this asks for the thing it cannot object to and lets the next stop do the rest
+ * -- a real browser, where the scheme works, or straight into the app once these
+ * links are registered as App Links and Android stops routing them through a
+ * browser at all.
+ */
+export function handOff(webLink: string): void {
+  platform().openLink(webLink);
+}
+
+/**
+ * The invitation, as an ordinary address, rebuilt from the page it is being
+ * read on.
+ *
+ * The code was taken off the address bar on the way in so that a reload does
+ * not rejoin something already over (`duelCodeFromLaunch`), and this puts it
+ * back. Rebuilt rather than remembered because the recipient never had the link
+ * -- they had the tap on it -- and rather than asked of the server because the
+ * page they are standing on IS the answer.
+ */
+export function selfLink(key: 'd' | 'f', code: string): string {
+  try {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    url.search = '';
+    url.searchParams.set(key, code);
+    return url.toString();
+  } catch {
+    return '';
+  }
 }
 
 /**

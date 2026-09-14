@@ -105,10 +105,15 @@ export const TELEGRAM: Platform = {
 
   openLink(url: string): void {
     const tg = webApp();
-    // Through Telegram's own opener when there is one, so a chat or a share
-    // sheet comes up inside the app the player is already in rather than in a
-    // browser tab that asks them to open Telegram.
-    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    // Two openers, and Telegram means different things by them. A `t.me`
+    // address belongs INSIDE Telegram -- a chat, a share sheet, the bot -- and
+    // `openTelegramLink` keeps it there. Anything else is somewhere else, and
+    // handing it to the same method either does nothing or bounces off, which
+    // is what made this worth splitting: everything went through the Telegram
+    // one because every link this game had was a t.me one.
+    const inside = /^(tg:|https?:\/\/(t\.me|telegram\.me)\/)/i.test(url);
+    if (inside && tg?.openTelegramLink) tg.openTelegramLink(url);
+    else if (tg?.openLink) tg.openLink(url);
     else (globalThis as any).window?.open(url, '_blank', 'noopener');
   },
 

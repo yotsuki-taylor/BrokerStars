@@ -102,6 +102,9 @@ import {
   buildMirror,
   canHandOver,
   copyText,
+  handOff,
+  handsOffItself,
+  selfLink,
   linkToShare,
   createInvite,
   duelCodeFromLaunch,
@@ -661,15 +664,31 @@ function AccountPanel({
  * browser with nothing to hand it to simply stays here, where the other button
  * still works.
  */
-function HandoverOverlay({ href, onHere }: { href: string; onHere: () => void }) {
+function HandoverOverlay({
+  href,
+  onOpenApp,
+  onHere,
+}: {
+  href: string;
+  onOpenApp: (() => void) | null;
+  onHere: () => void;
+}) {
   return (
     <div className="overlay handover">
       <h2>{t('friends.title')}</h2>
       <p>{t('invite.handover')}</p>
       <div className="settings-list">
-        <a className="big-btn" href={href}>
-          {t('duel.inApp')}
-        </a>
+        {/* A link in a browser, a button in a mini app: only one of the two
+            hosts follows an anchor to a scheme (`handsOffItself`). */}
+        {onOpenApp ? (
+          <button className="big-btn" onClick={onOpenApp}>
+            {t('duel.inApp')}
+          </button>
+        ) : (
+          <a className="big-btn" href={href}>
+            {t('duel.inApp')}
+          </a>
+        )}
         <button className="menu-btn" onClick={onHere}>
           {t('invite.here')}
         </button>
@@ -2179,6 +2198,11 @@ export default function App() {
           invited={duel.invited}
           error={duel.error}
           appHref={duel.phase === 'handover' && duel.code ? appLink(duel.code) : null}
+          onOpenApp={
+            duel.phase === 'handover' && duel.code && handsOffItself()
+              ? () => handOff(selfLink('d', duel.code as string))
+              : null
+          }
           startsBy={duel.startsBy}
           onPlayHere={() => {
             if (duel.code) connect(duel.code, 'joining', { code: duel.code });
@@ -2238,6 +2262,9 @@ export default function App() {
         {friendOffer && (
           <HandoverOverlay
             href={friendAppLink(friendOffer)}
+            onOpenApp={
+              handsOffItself() ? () => handOff(selfLink('f', friendOffer)) : null
+            }
             onHere={() => {
               setFriendCode(friendOffer);
               setFriendOffer(null);

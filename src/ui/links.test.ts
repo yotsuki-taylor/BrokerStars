@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { appLink, canHandOver, linkToShare } from './duel';
+import { appLink, canHandOver, handsOffItself, linkToShare, selfLink } from './duel';
 
 /**
  * Which link goes to a friend, and it matters more than it looks: a t.me
@@ -12,6 +12,14 @@ const WEB = 'https://example.test/BrokerStars/?d=ABCD';
 
 const inTelegram = () => {
   (globalThis as any).window = { Telegram: { WebApp: { initData: 'auth=x' } } };
+};
+
+/**
+ * The SDK loaded, but nobody signed in: the published page carries Telegram's
+ * script on every host, so this is what an ordinary Chrome tab looks like.
+ */
+const sdkOnly = () => {
+  (globalThis as any).window = { Telegram: { WebApp: { initData: '' } } };
 };
 const onAndroid = () => {
   (globalThis as any).window = { Capacitor: { getPlatform: () => 'android' } };
@@ -74,16 +82,48 @@ describe('offering the invitation to the app', () => {
     expect(canHandOver()).toBe(true);
   });
 
-  it('says nothing inside Telegram, whose WebView cannot follow the link', () => {
-    // What this used to do, with a comment calling a mini app "a browser like
-    // any other". It is not: the scheme is loaded as an address rather than
-    // handed to the system, and the player gets Telegram's own error page. A
-    // player in Telegram also has no use for the offer -- they are signed in as
-    // their Telegram account, and the game in front of them is the one the
-    // invitation was addressed to.
+  it('says nothing in Telegram anywhere there is no app to reach', () => {
+    // a desktop and an iPhone are both Telegram, and neither has an Android
+    // app behind them
+    inTelegram();
+    userAgent(DESKTOP);
+    expect(canHandOver()).toBe(false);
+    inTelegram();
+    userAgent(IPHONE);
+    expect(canHandOver()).toBe(false);
+  });
+
+  it('still offers inside Telegram on Android, which has an opener of its own', () => {
+    // An invitation sent from Telegram opens in the mini app, and a player
+    // whose game is in the Android app needs a way across from there.
     inTelegram();
     userAgent(PHONE);
-    expect(canHandOver()).toBe(false);
+    expect(canHandOver()).toBe(true);
+  });
+
+  it('links rather than asking in a browser that merely carries the SDK', () => {
+    // The published page loads Telegram's script everywhere, so an ordinary
+    // Chrome tab reports the telegram platform. Taking the mini app's route
+    // there would open the page it is already on -- a button that does nothing
+    // but reload. A signed initData is what tells the two apart.
+    sdkOnly();
+    userAgent(PHONE);
+    expect(canHandOver()).toBe(true);
+    expect(handsOffItself()).toBe(false);
+  });
+
+  it('asks Telegram to open it rather than linking, because linking failed', () => {
+    // The whole of the bug in one assertion. A mini app is a WebView: an
+    // anchor to a custom scheme is loaded as an address and lands on
+    // Telegram's error page. Everywhere else the anchor is the only thing that
+    // works, and that was measured on a phone.
+    inTelegram();
+    userAgent(PHONE);
+    expect(handsOffItself()).toBe(true);
+
+    delete (globalThis as any).window;
+    userAgent(PHONE);
+    expect(handsOffItself()).toBe(false);
   });
 
   it('says nothing in any other embedded browser either', () => {
@@ -116,5 +156,34 @@ describe('offering the invitation to the app', () => {
   it('builds the address the app answers to', () => {
     // the other end is paramFromUrl in src/platform/android.ts
     expect(appLink('ABC123')).toBe('brokerstars://duel/ABC123');
+  });
+});
+
+/**
+ * The invitation put back on the address it was read from, which is what a mini
+ * app hands to Telegram: the scheme is the thing Telegram may refuse, and an
+ * ordinary address is the thing it cannot.
+ */
+describe('rebuilding the invitation from the page it landed on', () => {
+  const href = (url: string) => {
+    (globalThis as any).window = { location: { href: url } };
+  };
+
+  it('puts the code back where the launch took it off', () => {
+    href('https://example.test/BrokerStars/');
+    expect(selfLink('d', 'abc123')).toBe('https://example.test/BrokerStars/?d=abc123');
+    expect(selfLink('f', 'abc123')).toBe('https://example.test/BrokerStars/?f=abc123');
+  });
+
+  it('drops whatever else was on the address, including the old code', () => {
+    // the launch wipes `?d=` as it reads it, but a reload or a second
+    // invitation must not leave two of them on one link
+    href('https://example.test/BrokerStars/?d=stale&x=1#frag');
+    expect(selfLink('d', 'fresh')).toBe('https://example.test/BrokerStars/?d=fresh');
+  });
+
+  it('answers nothing rather than throwing when there is no address to read', () => {
+    delete (globalThis as any).window;
+    expect(selfLink('d', 'abc123')).toBe('');
   });
 });

@@ -32,6 +32,7 @@ export default function DuelScreen({
   invited,
   error,
   appHref = null,
+  onOpenApp = null,
   onPlayHere,
   startsBy = null,
   onSend,
@@ -58,6 +59,11 @@ export default function DuelScreen({
    * app this page could hand it to — see `canHandOver`.
    */
   appHref?: string | null;
+  /**
+   * Cross over by asking the host to open something, rather than by following
+   * a link. Present only on a host that works that way.
+   */
+  onOpenApp?: (() => void) | null;
   /** Ignore the app and play the duel in this page, as a guest. */
   onPlayHere?: () => void;
   /**
@@ -133,16 +139,25 @@ export default function DuelScreen({
    * Android browser passes to the system, and a browser with nothing to pass it
    * to simply stays here, where PLAY HERE still works.
    */
-  if (phase === 'handover' && appHref) {
+  if (phase === 'handover' && (appHref || onOpenApp)) {
     return (
       <div className="overlay duel">
         <h2>{t('duel.title')}</h2>
         <p>{t('duel.handover')}</p>
         <div className="spacer" />
         <div className="duel-choice">
-          <a className="big-btn" href={appHref}>
-            {t('duel.inApp')}
-          </a>
+          {/* A link in a browser and a button in a mini app, because the two
+              hosts cross over differently and only one of them follows an
+              anchor -- see `handsOffItself`. */}
+          {onOpenApp ? (
+            <button className="big-btn" onClick={onOpenApp}>
+              {t('duel.inApp')}
+            </button>
+          ) : (
+            <a className="big-btn" href={appHref ?? undefined}>
+              {t('duel.inApp')}
+            </a>
+          )}
           <button className="menu-btn" onClick={onPlayHere}>
             {t('duel.here')}
           </button>
