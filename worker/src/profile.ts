@@ -40,10 +40,8 @@ import {
   type Daily,
 } from '../../src/daily/protocol';
 import {
-  ORDERS_A_DAY,
   buyShares,
   cleanPortfolio,
-  ordersLeft,
   priceOn,
   sellShares,
   type Portfolio,
@@ -109,7 +107,7 @@ export interface Held {
   dollars: number;
   /** shares held, by company — what the dollars are spent on */
   portfolio: Portfolio;
-  /** the bonus, the quests and the day's orders, for the day named inside it */
+  /** the bonus and the quests, for the day named inside it */
   daily: Daily;
 }
 
@@ -390,9 +388,6 @@ export function claimQuest(h: Held, id: string, now: number): Bought {
  *   perfectly reproducible on this side. Nothing is read out of the body but
  *   the company, the size, and which way round it is.
  *
- *   HOW MANY ORDERS ARE LEFT. Three a day (`ORDERS_A_DAY`), counted on the day
- *   itself so nothing has to clear it at midnight.
- *
  *   WHETHER THE PLAYER HAS MET THE COMPANY. The archive is the shop window: a
  *   company you have never had on a board is one you cannot buy a piece of.
  *   That is the same rule the archive tab already draws, and it keeps the
@@ -413,9 +408,6 @@ export function trade(
   if (!company) return { ok: false, error: 'no such company' };
   if (!h.seen.includes(id)) return { ok: false, error: 'not in the archive yet' };
 
-  const daily = rolled(h.daily, now);
-  if (ordersLeft(daily) <= 0) return { ok: false, error: 'no orders left today' };
-
   const today = dayOf(now);
   const price = priceOn(company, today, salt);
   const done = sell
@@ -429,7 +421,6 @@ export function trade(
       ...h,
       portfolio: done.portfolio,
       dollars: done.dollars,
-      daily: { ...daily, orders: Math.min(ORDERS_A_DAY, daily.orders + 1) },
     },
   };
 }

@@ -33,7 +33,7 @@ import {
   type DayFacts,
   type Quest,
 } from '../../src/daily/protocol';
-import { ORDERS_A_DAY, askOf, bidOf, priceOn } from '../../src/market/protocol';
+import { askOf, bidOf, priceOn } from '../../src/market/protocol';
 import { companyById } from '../../src/sim/companies';
 import type { MatchFacts } from '../src/awards';
 
@@ -578,7 +578,6 @@ describe('the share counter', () => {
     // dated by this server's day, so the overnight figure knows the player was
     // not holding it last night
     expect(out.held.portfolio.nova.day).toBe(TODAY);
-    expect(out.held.daily.orders).toBe(1);
   });
 
   it('pays the bid on the way out', () => {
@@ -614,30 +613,38 @@ describe('the share counter', () => {
     );
   });
 
-  it('allows three orders a day and no fourth', () => {
-    const spent = trader({ daily: { ...freshDay(TODAY), orders: ORDERS_A_DAY } });
-    expect(trade(spent, 'nova', 1, false, SALT, NOON)).toEqual({
-      ok: false,
-      error: 'no orders left today',
-    });
+  /**
+   * There used to be three orders a day and no fourth. The counter is gone: a
+   * position was meant to be a decision rather than a habit, and what it
+   * actually did was leave dollars sitting unspent, which is the opposite of
+   * what the counter is for.
+   *
+   * Nothing needs to hold the line in its place. The spread is charged on both
+   * sides of every order, so churning is a way of losing money rather than a
+   * way of making it, and the price moves once a day for everybody -- there is
+   * nothing inside one day to trade against.
+   */
+  it('takes as many orders in a day as somebody cares to place', () => {
+    let book = trader();
+    for (let i = 0; i < 25; i++) {
+      const out = trade(book, 'nova', 1, false, SALT, NOON);
+      expect(out.ok).toBe(true);
+      if (!out.ok) return;
+      book = out.held;
+    }
+    expect(book.portfolio.nova.shares).toBe(25);
   });
 
-  /**
-   * Yesterday's count is not today's. Nothing sweeps it — the day simply stops
-   * matching, exactly as it does for the bonus and the quests.
-   */
-  it('starts the count again the moment the day turns', () => {
-    const yesterday = trader({
-      daily: { ...freshDay(TODAY - 1), orders: ORDERS_A_DAY },
-    });
-    const out = trade(yesterday, 'nova', 1, false, SALT, NOON);
+  it('leaves nothing on the day to be run down', () => {
+    const out = trade(trader(), 'nova', 1, false, SALT, NOON);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
+    // the day still rolls, it just has nothing to count any more
     expect(out.held.daily.day).toBe(TODAY);
-    expect(out.held.daily.orders).toBe(1);
+    expect('orders' in out.held.daily).toBe(false);
   });
 
-  it('refuses what the balance will not cover, and spends no order doing it', () => {
+  it('refuses what the balance will not cover', () => {
     const broke = trader({ dollars: 1 });
     const out = trade(broke, 'nova', 1, false, SALT, NOON);
     expect(out).toEqual({ ok: false, error: 'not enough dollars' });

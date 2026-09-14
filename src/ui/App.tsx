@@ -80,9 +80,7 @@ import {
 } from '../daily/protocol';
 import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
 import {
-  ORDERS_A_DAY,
   buyShares,
-  ordersLeft,
   priceIn,
   sellShares,
   type Market,
@@ -1096,8 +1094,6 @@ export default function App() {
    */
   const tradeAtCounter = useCallback(
     (id: string, shares: number, sell: boolean) => {
-      const today = rolled(daily, Date.now());
-      if (ordersLeft(today) <= 0) return;
       const price = priceIn(market, id);
       if (price === null) return;
 
@@ -1110,13 +1106,10 @@ export default function App() {
       savePortfolio(done.portfolio);
       setDollars(done.dollars);
       saveDollars(done.dollars);
-      const next = { ...today, orders: Math.min(ORDERS_A_DAY, today.orders + 1) };
-      setDaily(next);
-      saveDaily(next);
       haptic('heavy');
       reconcile(tradeShares(id, shares, sell));
     },
-    [daily, dollars, market, portfolio, reconcile],
+    [dollars, market, portfolio, reconcile],
   );
 
   /* ------------------------------------------------- simulation + render loop */
@@ -2236,7 +2229,6 @@ export default function App() {
             market,
             portfolio,
             dollars,
-            daily: rolled(daily, Date.now()),
             onTrade: tradeAtCounter,
           }}
           onBack={() => setScreen('menu')}

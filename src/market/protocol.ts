@@ -77,9 +77,6 @@ export const BAND = 1.6;
 /** What the house takes on each side of a trade. */
 export const SPREAD = 0.01;
 
-/** Orders — buys and sells alike — one player may place in one day. */
-export const ORDERS_A_DAY = 3;
-
 /** How much of a chart the archive draws, today included. */
 export const HISTORY_DAYS = 14;
 
@@ -392,9 +389,6 @@ export function overnight(p: Portfolio, m: Market): number {
 export type Traded =
   | { ok: true; portfolio: Portfolio; dollars: number; paid: number }
   | { ok: false; error: string };
-
-/** Orders already placed today, and how many are left. */
-export const ordersLeft = (d: Daily): number => Math.max(0, ORDERS_A_DAY - (d.orders ?? 0));
 
 /**
  * Buy whole shares at today's price plus the spread.

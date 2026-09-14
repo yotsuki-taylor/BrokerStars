@@ -4,7 +4,6 @@ import { dayOf } from '../daily/protocol';
 import {
   BAND,
   HISTORY_DAYS,
-  ORDERS_A_DAY,
   SPREAD,
   affordable,
   askOf,
@@ -15,7 +14,6 @@ import {
   costOf,
   marketFor,
   NEVER_TRADED,
-  ordersLeft,
   overnight,
   prevPriceIn,
   priceIn,
@@ -269,19 +267,5 @@ describe('a book off the wire', () => {
     const old = cleanPortfolio({ nova: { shares: 2, cost: 500 } });
     expect(old.nova.day).toBe(NEVER_TRADED);
     expect(tradedOn(old, 'nova', DAY)).toBe(false);
-  });
-});
-
-describe('the day’s orders', () => {
-  const day = { day: DAY, bonus: false, progress: {}, taken: [], orders: 0 };
-
-  it('starts at three and runs out', () => {
-    expect(ordersLeft(day)).toBe(ORDERS_A_DAY);
-    expect(ordersLeft({ ...day, orders: 2 })).toBe(1);
-    expect(ordersLeft({ ...day, orders: ORDERS_A_DAY })).toBe(0);
-  });
-
-  it('never goes below zero, whatever a stored row claims', () => {
-    expect(ordersLeft({ ...day, orders: 99 })).toBe(0);
   });
 });

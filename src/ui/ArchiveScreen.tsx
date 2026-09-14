@@ -3,12 +3,10 @@ import { COMPANIES, TRAIT_LABEL, companyById, type Company } from '../sim/compan
 import { AWARDS, GROUPS, type Award, type AwardGroup } from '../awards/catalogue';
 import type { Daily } from '../daily/protocol';
 import {
-  ORDERS_A_DAY,
   affordable,
   askOf,
   bidOf,
   costOf,
-  ordersLeft,
   overnight,
   prevPriceIn,
   priceIn,
@@ -64,14 +62,12 @@ const TABS: { id: Tab; label: () => string }[] = [
 
 /**
  * Everything the share counter needs, handed down rather than fetched: the
- * prices as the server last sent them, the book, the balance, and the day the
- * order count lives on.
+ * prices as the server last sent them, the book, and the balance.
  */
 export interface CounterProps {
   market: Market;
   portfolio: Portfolio;
   dollars: number;
-  daily: Daily;
   onTrade: (id: string, shares: number, sell: boolean) => void;
 }
 
@@ -116,15 +112,14 @@ function Spark({ series, color }: { series: number[]; color: string }) {
  * what is held, and the two buttons.
  *
  * The size is this end's own state and nothing else is. Whether the order goes
- * through, at what price, and how many are left today are all settled on the
- * other side (`worker/src/profile.ts`) — everything here is drawing.
+ * through and at what price are settled on the other side
+ * (`worker/src/profile.ts`) — everything here is drawing.
  */
 function TradeRow({
   company,
   market,
   portfolio,
   dollars,
-  daily,
   onTrade,
 }: { company: Company } & CounterProps) {
   const [size, setSize] = useState(1);
@@ -134,7 +129,6 @@ function TradeRow({
 
   const price = priceIn(market, company.id);
   const held = sharesOf(portfolio, company.id);
-  const left = ordersLeft(daily);
 
   if (price === null) return <p className="arch-empty">{t('market.noPrices')}</p>;
 
@@ -142,8 +136,8 @@ function TradeRow({
   const ask = askOf(price);
   const bid = bidOf(price);
   const most = Math.max(affordable(dollars, price), held, 1);
-  const canBuy = left > 0 && ask * size <= dollars;
-  const canSell = left > 0 && held >= size;
+  const canBuy = ask * size <= dollars;
+  const canSell = held >= size;
   const avg = held > 0 ? Math.round((portfolio[company.id]?.cost ?? 0) / held) : 0;
 
   return (
@@ -208,11 +202,6 @@ function TradeRow({
         </button>
       </div>
 
-      <div className="trade-note">
-        {left > 0
-          ? t('market.ordersLeft', { n: left, of: ORDERS_A_DAY })
-          : t('market.ordersDone')}
-      </div>
     </div>
   );
 }
@@ -305,7 +294,7 @@ function CompaniesTab({ seen, counter }: { seen: Set<string>; counter: CounterPr
  * did my portfolio do since yesterday" — and it is exactly the loop the counter
  * was built for: buy today, come back tomorrow and look.
  */
-function PortfolioTab({ market, portfolio, dollars, daily }: CounterProps) {
+function PortfolioTab({ market, portfolio, dollars }: CounterProps) {
   const rows = Object.entries(portfolio)
     .map(([id, held]) => ({ id, held, company: companyById(id) }))
     .filter((r): r is { id: string; held: Holding; company: Company } => Boolean(r.company));
@@ -313,7 +302,6 @@ function PortfolioTab({ market, portfolio, dollars, daily }: CounterProps) {
   const value = valueOf(portfolio, (id) => priceIn(market, id));
   const cost = costOf(portfolio);
   const since = overnight(portfolio, market);
-  const left = ordersLeft(daily);
 
   return (
     <div className="folio">
@@ -333,11 +321,6 @@ function PortfolioTab({ market, portfolio, dollars, daily }: CounterProps) {
       <div className="folio-cash">
         <span>
           {t('market.cash')} <b>{money(dollars)}</b>
-        </span>
-        <span>
-          {left > 0
-            ? t('market.ordersLeft', { n: left, of: ORDERS_A_DAY })
-            : t('market.ordersDone')}
         </span>
       </div>
 

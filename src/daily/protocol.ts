@@ -262,16 +262,6 @@ export interface Daily {
   progress: Record<string, number>;
   /** quests whose reward has already been handed over today */
   taken: string[];
-  /**
-   * Orders placed at the share counter today — buys and sells alike, capped by
-   * `ORDERS_A_DAY` in `src/market/protocol.ts`.
-   *
-   * It lives on the day rather than beside the portfolio for one reason: this
-   * is the object that already rolls over at midnight, and a counter kept
-   * anywhere else would need something to clear it. Nothing clears this. The
-   * day stops matching and it is gone with the rest.
-   */
-  orders: number;
 }
 
 /** A day nobody has played: earlier than any real one, so it rolls at once. */
@@ -282,7 +272,6 @@ export const freshDay = (day: number): Daily => ({
   bonus: false,
   progress: {},
   taken: [],
-  orders: 0,
 });
 
 export const EMPTY_DAILY: Daily = freshDay(NO_DAY);
@@ -434,6 +423,5 @@ export function cleanDaily(raw: unknown): Daily {
     taken,
     // A row written before the share counter existed has none, which reads as
     // a day on which nobody has traded yet — the friendly way round.
-    orders: count(src.orders),
   };
 }

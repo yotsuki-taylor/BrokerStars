@@ -267,7 +267,7 @@ const EN = {
 
   'tut.shares.title': 'THE SHARE COUNTER',
   'tut.shares.body':
-    'The second tab of the archive is a market of its own, and the reason dollars exist. They buy real shares in any company you have met — one price a day for everybody, drawn at midnight, so you buy today and look tomorrow. Three orders a day, which makes a position a decision rather than a habit, and the DOLLARS ladder ranks everyone by what their book is worth.',
+    'The second tab of the archive is a market of its own, and the reason dollars exist. They buy real shares in any company you have met — one price a day for everybody, drawn at midnight, so you buy today and look tomorrow. Trade as often as you like; the house takes its cut on both sides, so churning is its own punishment. The DOLLARS ladder ranks everyone by what their book is worth.',
 
   'tut.shop.title': 'SHOP',
   'tut.shop.body':
@@ -388,8 +388,6 @@ const EN = {
   'market.max': 'MAX',
   'market.buy': 'BUY',
   'market.sell': 'SELL',
-  'market.ordersLeft': '{n} of {of} orders left today',
-  'market.ordersDone': 'That is the last of today’s orders. Three more tomorrow.',
   'market.bookValue': 'YOUR BOOK',
   'market.sinceYesterday': 'SINCE YESTERDAY',
   'market.cash': 'CASH',
@@ -727,7 +725,7 @@ const RU: Record<Key, string> = {
 
   'tut.shares.title': 'БИРЖА · ПОКУПКА АКЦИЙ',
   'tut.shares.body':
-    'Вторая вкладка архива — отдельный рынок, ради которого доллары и придуманы. На них покупаются настоящие акции любой встреченной компании: одна цена в день на всех, новая в полночь, — купил сегодня, посмотрел завтра. Три заявки в сутки, поэтому позиция — это решение, а не привычка. А рейтинг ДОЛЛАРЫ считает, сколько стоит твой портфель.',
+    'Вторая вкладка архива — отдельный рынок, ради которого доллары и придуманы. На них покупаются настоящие акции любой встреченной компании: одна цена в день на всех, новая в полночь, — купил сегодня, посмотрел завтра. Торгуй сколько хочешь: дом берёт своё с обеих сторон, так что метание наказывает себя само. А рейтинг ДОЛЛАРЫ считает, сколько стоит твой портфель.',
 
   'tut.shop.title': 'МАГАЗИН',
   'tut.shop.body':
@@ -837,8 +835,6 @@ const RU: Record<Key, string> = {
   'market.max': 'МАКС',
   'market.buy': 'КУПИТЬ',
   'market.sell': 'ПРОДАТЬ',
-  'market.ordersLeft': 'Сегодня осталось заявок: {n} из {of}',
-  'market.ordersDone': 'Заявки на сегодня кончились. Завтра будет ещё три.',
   'market.bookValue': 'ВАШ ПОРТФЕЛЬ',
   'market.sinceYesterday': 'СО ВЧЕРА',
   'market.cash': 'НАЛИЧНЫЕ',

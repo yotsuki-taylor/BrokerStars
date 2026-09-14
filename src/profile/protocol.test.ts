@@ -180,12 +180,14 @@ describe('a profile coming back', () => {
       portfolio: { [COMPANIES[0].id]: { shares: 4, cost: 3000, day: 19_990 } },
       // a quest this build does not have goes the way the award did, out of
       // the progress AND out of what has been cashed in
+      // `orders` went in and does not come out: the day counted them until the
+      // counter was removed, and a stored row that still carries one is not a
+      // reason to keep drawing it
       daily: {
         day: 20_000,
         bonus: true,
         progress: { 'win-1': 1 },
         taken: [],
-        orders: 2,
       },
       bestNetWorth: 31_000,
       topLeague: 1,
