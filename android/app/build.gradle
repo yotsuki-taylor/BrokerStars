@@ -29,7 +29,7 @@ android {
         // one it accepted, so this goes up by one for every bundle that leaves
         // this machine -- including a rebuild of the same code. versionName is
         // what a person reads and moves when the game does.
-        versionCode 15
+        versionCode 16
         versionName "1.0.14"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
