@@ -1,0 +1,27 @@
+-- The five garments the shop is showing today.
+--
+-- Only for a database whose `profiles` was created before the shop stopped
+-- being a price list. On a newer one `schema.sql` has already made the column
+-- and this file fails with "duplicate column name", which breaks nothing.
+--
+-- Run it BEFORE `npm run schema`, like the others: see
+-- `migrations/001-results-token.sql` for why that order and not the reverse.
+--
+--   npm run migrate -- ./migrations/012-profiles-offer.sql
+--   npm run migrate:local -- ./migrations/012-profiles-offer.sql
+--
+-- Nothing is backfilled and nothing needs to be. '{}' is deliberately NOT a
+-- valid shelf -- it has no `day` -- so it reads as a shelf from before every
+-- real day and the first request of anybody's rolls today's for them
+-- (`rolledOffer`, and `daily` above it does the same trick for the same
+-- reason).
+--
+-- Note what is NOT migrated, and could have been: `owned`. Every row written
+-- before this change holds one rarity per slot, `{"hat":"rare"}`, which back
+-- then meant the rungs under it had been paid for too; the reader expands that
+-- into the whole prefix it stood for and the next write puts the row into the
+-- new shape (`cleanOwned` in src/profile/protocol.ts). An UPDATE over every row
+-- would buy nothing that the reader does not already do, and would have to be
+-- got exactly right on live data to buy it.
+
+ALTER TABLE profiles ADD COLUMN offer TEXT NOT NULL DEFAULT '{}';

@@ -21,7 +21,8 @@ import {
 } from '../src/profile';
 import { ROOM_DONE, ROOM_STEPS } from '../../src/ui/renovation';
 import { PRICES, RARITIES } from '../../src/ui/wardrobe';
-import { cleanClaim, setOf, topsOf } from '../../src/profile/protocol';
+import { cleanClaim } from '../../src/profile/protocol';
+import { rollOffer, type Offer } from '../../src/shop/protocol';
 import {
   DAILY_BONUS,
   MS_PER_DAY,
@@ -49,6 +50,17 @@ import type { MatchFacts } from '../src/awards';
 
 const held = (over: Partial<Held> = {}): Held => ({ ...EMPTY, ...over });
 
+/**
+ * A shelf with these garments on it, for today.
+ *
+ * Every purchase has to come off a shelf now, so a test that buys something has
+ * to say what the shop was showing — which is the whole of the new rule, and
+ * the reason there is no `shopping()` helper that quietly puts the thing being
+ * bought on sale.
+ */
+const TODAY = 20_000;
+const shelf = (...items: string[]): Offer => ({ day: TODAY, items });
+
 describe('what is in hand', () => {
   it('is earned minus spent', () => {
     expect(balance(held({ spent: 12 }), 30)).toBe(18);
@@ -63,56 +75,71 @@ describe('what is in hand', () => {
   });
 });
 
-describe('buying a rung', () => {
-  it('sells the next one up and wears it', () => {
-    const out = buyItem(EMPTY, 100, 'torso', 'common', false);
+describe('buying off the shelf', () => {
+  it('sells what is on it and wears it', () => {
+    const out = buyItem(held({ offer: shelf('torso-common') }), 100, 'torso', 'common', false);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.owned.torso).toBe('common');
+    expect(out.held.owned).toEqual(['torso-common']);
     expect(out.held.outfit.torso).toBe('common');
     expect(out.held.spent).toBe(PRICES.common);
   });
 
-  it('refuses a rung that is not next, however rich the caller', () => {
-    expect(buyItem(EMPTY, 10_000, 'torso', 'legend', false)).toEqual({
-      ok: false,
-      error: 'not the next rung',
-    });
+  it('sells a legend to somebody who owns nothing under it', () => {
+    // the whole of the change: there is no rung below this one to buy first
+    const out = buyItem(held({ offer: shelf('torso-legend') }), 10_000, 'torso', 'legend', false);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.owned).toEqual(['torso-legend']);
+    expect(out.held.spent).toBe(PRICES.legend);
+  });
+
+  it('refuses what today is not showing, however rich the caller', () => {
+    expect(buyItem(held({ offer: shelf('hat-common') }), 10_000, 'torso', 'legend', false)).toEqual(
+      { ok: false, error: 'not on sale today' },
+    );
   });
 
   it('refuses one that is already owned', () => {
-    const owned = held({ owned: { torso: 'common' }, spent: PRICES.common });
-    expect(buyItem(owned, 100, 'torso', 'common', false).ok).toBe(false);
-  });
-
-  it('refuses what the balance does not cover', () => {
-    expect(buyItem(EMPTY, PRICES.common - 1, 'torso', 'common', false)).toEqual({
+    const owned = held({
+      owned: ['torso-common'],
+      offer: shelf('torso-common'),
+      spent: PRICES.common,
+    });
+    expect(buyItem(owned, 100, 'torso', 'common', false)).toEqual({
       ok: false,
-      error: 'not enough coins',
+      error: 'already owned',
     });
   });
 
+  it('refuses what the balance does not cover', () => {
+    expect(
+      buyItem(held({ offer: shelf('torso-common') }), PRICES.common - 1, 'torso', 'common', false),
+    ).toEqual({ ok: false, error: 'not enough coins' });
+  });
+
   it('charges nothing in free mode, and still hands the item over', () => {
-    const out = buyItem(EMPTY, 0, 'torso', 'common', true);
+    const out = buyItem(held({ offer: shelf('torso-common') }), 0, 'torso', 'common', true);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.held.spent).toBe(0);
-    expect(out.held.owned.torso).toBe('common');
+    expect(out.held.owned).toEqual(['torso-common']);
   });
 
-  it('climbs a whole slot for what the ladder says it costs', () => {
+  it('takes a whole shelf for the sum of its prices, and adds nothing to it', () => {
+    const items = RARITIES.map((r) => `hat-${r}`);
     const whole = RARITIES.reduce((n, r) => n + PRICES[r], 0);
-    let h = EMPTY;
+    let h = held({ offer: { day: TODAY, items } });
     for (const r of RARITIES) {
       const out = buyItem(h, whole, 'hat', r, false);
       expect(out.ok, `could not buy ${r}`).toBe(true);
       if (!out.ok) return;
       h = out.held;
     }
-    // the sum of the rungs and nothing else: no discount for going the long
-    // way and no penalty for it either
     expect(h.spent).toBe(whole);
-    expect(h.owned.hat).toBe('legend');
+    // buying does not restock: the shelf is still the five it was drawn with
+    expect(h.offer.items).toEqual(items);
+    expect(h.owned).toHaveLength(RARITIES.length);
   });
 });
 
@@ -135,35 +162,52 @@ describe('renovating', () => {
 });
 
 describe('the developer handing things back', () => {
-  it('takes the top rung and refunds it', () => {
+  it('takes the garment and puts on the best of what is left', () => {
     const spent = PRICES.common + PRICES.uncommon;
-    const h = held({ owned: { hat: 'uncommon' }, outfit: { hat: 'uncommon' }, spent });
+    const h = held({
+      owned: ['hat-common', 'hat-uncommon'],
+      outfit: { hat: 'uncommon' },
+      spent,
+    });
     const out = refundItem(h, 'hat', 'uncommon');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    // dropped a rung, and wearing what is left rather than what is gone
-    expect(out.held.owned.hat).toBe('common');
+    expect(out.held.owned).toEqual(['hat-common']);
     expect(out.held.outfit.hat).toBe('common');
     expect(out.held.spent).toBe(spent - PRICES.uncommon);
   });
 
-  it('leaves the slot bare and bare-headed at the bottom of the ladder', () => {
-    const h = held({ owned: { hat: 'common' }, outfit: { hat: 'common' }, spent: PRICES.common });
+  it('leaves the slot bare and bare-headed when it was the only thing in it', () => {
+    const h = held({ owned: ['hat-common'], outfit: { hat: 'common' }, spent: PRICES.common });
     const out = refundItem(h, 'hat', 'common');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.owned.hat).toBeUndefined();
+    expect(out.held.owned).toEqual([]);
     expect(out.held.outfit.hat).toBeUndefined();
   });
 
-  it('refuses anything but the top rung — a ladder cannot have a hole in it', () => {
-    const h = held({ owned: { hat: 'rare' } });
-    expect(refundItem(h, 'hat', 'common').ok).toBe(false);
+  it('takes one out of the middle and leaves the hole where it is', () => {
+    // the rule used to be "the top rung only", so that no slot ever ended up
+    // with a gap; a wardrobe is a list now and a gap is nothing special
+    const h = held({ owned: ['hat-common', 'hat-legend'], outfit: { hat: 'legend' } });
+    const out = refundItem(h, 'hat', 'common');
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.held.owned).toEqual(['hat-legend']);
+    // and what was on the trader stays on it
+    expect(out.held.outfit.hat).toBe('legend');
+  });
+
+  it('refuses what was never owned', () => {
+    expect(refundItem(held({ owned: ['hat-rare'] }), 'hat', 'common')).toEqual({
+      ok: false,
+      error: 'does not own it',
+    });
   });
 
   it('cannot mint coins by refunding what was never paid for', () => {
     // bought in free mode: spent never went up, so it must not come down
-    const free = buyItem(EMPTY, 0, 'hat', 'common', true);
+    const free = buyItem(held({ offer: shelf('hat-common') }), 0, 'hat', 'common', true);
     expect(free.ok).toBe(true);
     if (!free.ok) return;
     const back = refundItem(free.held, 'hat', 'common');
@@ -184,13 +228,14 @@ describe('the developer handing things back', () => {
 
 describe('getting dressed', () => {
   it('puts on what is owned', () => {
-    const h = held({ owned: { torso: 'rare' } });
-    expect(wear(h, { torso: 'uncommon' }).outfit).toEqual({ torso: 'uncommon' });
+    const h = held({ owned: ['torso-rare'] });
+    expect(wear(h, { torso: 'rare' }).outfit).toEqual({ torso: 'rare' });
   });
 
   it('trims what is not, rather than refusing the lot', () => {
-    const h = held({ owned: { torso: 'common' } });
-    expect(wear(h, { torso: 'legend', hat: 'mythic' }).outfit).toEqual({ torso: 'common' });
+    const h = held({ owned: ['torso-common'] });
+    expect(wear(h, { torso: 'legend', hat: 'mythic' }).outfit).toEqual({});
+    expect(wear(h, { torso: 'common', hat: 'mythic' }).outfit).toEqual({ torso: 'common' });
   });
 });
 
@@ -199,7 +244,7 @@ describe('the welcome present', () => {
     const out = giftHat(EMPTY);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.owned.hat).toBe('common');
+    expect(out.held.owned).toEqual(['hat-common']);
     expect(out.held.outfit.hat).toBe('common');
   });
 
@@ -213,7 +258,7 @@ describe('the welcome present', () => {
 
   it('refuses anybody who already owns a hat, however humble', () => {
     for (const r of RARITIES) {
-      expect(giftHat(held({ owned: { hat: r } })).ok).toBe(false);
+      expect(giftHat(held({ owned: [`hat-${r}`] })).ok).toBe(false);
     }
   });
 
@@ -226,11 +271,11 @@ describe('the welcome present', () => {
   });
 
   it('leaves the rest of the wardrobe where it was', () => {
-    const h = held({ owned: { torso: 'rare' }, outfit: { torso: 'rare' }, room: 2, spent: 7 });
+    const h = held({ owned: ['torso-rare'], outfit: { torso: 'rare' }, room: 2, spent: 7 });
     const out = giftHat(h);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.owned.torso).toBe('rare');
+    expect(out.held.owned).toContain('torso-rare');
     expect(out.held.outfit.torso).toBe('rare');
     expect(out.held.room).toBe(2);
     expect(out.held.spent).toBe(7);
@@ -249,28 +294,28 @@ describe('the welcome present', () => {
 
 describe('the migration', () => {
   const claim = (over: Record<string, unknown> = {}) =>
-    cleanClaim({ coins: 0, room: 0, owned: {}, outfit: {}, wins: [], ...over }, LEAGUES);
+    cleanClaim({ coins: 0, room: 0, owned: [], outfit: {}, wins: [], ...over }, LEAGUES);
 
   it('takes a save at its word while the server has nothing of its own', () => {
     expect(untouched(EMPTY)).toBe(true);
-    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: { hat: 'rare' } }));
+    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: ['hat-rare'] }));
     expect(h.room).toBe(3);
-    expect(h.owned.hat).toBe('rare');
+    expect(h.owned).toEqual(['hat-rare']);
     // and the coins the player could see are still there afterwards
     expect(balance(h, 0)).toBe(7);
   });
 
   it('books the purchases as spent, so the board is not paying for them twice', () => {
-    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: { hat: 'rare' } }));
-    expect(h.spent).toBe(priceOf({ hat: 'rare' }, 3));
+    const h = claimInto(EMPTY, 0, claim({ coins: 7, room: 3, owned: ['hat-rare'] }));
+    expect(h.spent).toBe(priceOf(['hat-rare'], 3));
   });
 
   it('leaves a player who really did earn it all with exactly what they had', () => {
     // everything they own was paid for out of what the board already says they
     // earned, with some left over: nothing has to be granted to make it add up
-    const spent = priceOf({ hat: 'uncommon' }, 1);
+    const spent = priceOf(['hat-uncommon'], 1);
     const earned = spent + 17;
-    const h = claimInto(EMPTY, earned, claim({ coins: 17, room: 1, owned: { hat: 'uncommon' } }));
+    const h = claimInto(EMPTY, earned, claim({ coins: 17, room: 1, owned: ['hat-uncommon'] }));
     expect(h.granted).toBe(0);
     expect(balance(h, earned)).toBe(17);
   });
@@ -291,13 +336,32 @@ describe('the migration', () => {
     expect(balance(h, 55)).toBe(55);
   });
 
-  it('repairs a save with a hole in it rather than dropping the rungs', () => {
-    // an early build let a slot be climbed out of order; the shop cannot draw
-    // that, so the skipped rungs come across as bought
-    const patchy = new Set(['hat-common', 'hat-rare']);
-    const h = claimInto(EMPTY, 0, claim({ owned: topsOf(patchy) }));
-    expect(h.owned.hat).toBe('rare');
-    expect([...setOf(h.owned)].sort()).toEqual(['hat-common', 'hat-rare', 'hat-uncommon']);
+  it('takes a save with a hole in it exactly as it stands', () => {
+    // this used to be repaired — an early build let a slot be climbed out of
+    // order and the shop could not draw the result, so the skipped rungs were
+    // handed over. Nothing is climbed any more and a gap is just a gap.
+    const h = claimInto(EMPTY, 0, claim({ owned: ['hat-common', 'hat-rare'] }));
+    expect([...h.owned].sort()).toEqual(['hat-common', 'hat-rare']);
+  });
+
+  it('reads a save from before the shop stopped being a ladder', () => {
+    // one rarity per slot meant the rungs under it had been paid for too
+    const h = claimInto(EMPTY, 0, claim({ owned: { hat: 'uncommon' } }));
+    expect([...h.owned].sort()).toEqual(['hat-common', 'hat-uncommon']);
+    expect(h.spent).toBe(PRICES.common + PRICES.uncommon);
+  });
+
+  it('draws a shelf the claimed wardrobe cannot already be wearing', () => {
+    // the row was empty when today's shelf was rolled, so a claim that walks in
+    // holding half the catalogue would otherwise be offered its own clothes
+    const owned = rollOffer(TODAY, new Set()).items;
+    const h = claimInto(
+      { ...EMPTY, offer: rollOffer(TODAY, new Set()) },
+      0,
+      claim({ owned }),
+    );
+    expect(h.offer.day).toBe(TODAY);
+    expect(h.offer.items.filter((id) => owned.includes(id))).toEqual([]);
   });
 
   it('brings the ladder across, which nothing else could reconstruct', () => {
@@ -379,8 +443,36 @@ describe("the day's bonus", () => {
   });
 
   it('hands back the very same row when the day has not moved', () => {
-    const today = { ...EMPTY, daily: freshDay(dayOf(NOON)) };
+    const today = {
+      ...EMPTY,
+      daily: freshDay(dayOf(NOON)),
+      offer: rollOffer(dayOf(NOON), new Set()),
+    };
     expect(withToday(today, NOON)).toBe(today);
+  });
+
+  it('draws a new shelf at midnight, and only then', () => {
+    const yesterday = {
+      ...EMPTY,
+      daily: freshDay(dayOf(NOON)),
+      offer: { day: dayOf(NOON) - 1, items: ['torso-common'] },
+    };
+    const rolled = withToday(yesterday, NOON);
+    expect(rolled.offer.day).toBe(dayOf(NOON));
+    expect(rolled.offer).toEqual(rollOffer(dayOf(NOON), new Set()));
+    // which is what makes yesterday's shelf unbuyable: `buyItem` is only ever
+    // handed a row this has been through
+    expect(buyItem(rolled, 10_000, 'torso', 'common', false).ok).toBe(
+      rolled.offer.items.includes('torso-common'),
+    );
+  });
+
+  it('leaves a shelf alone when the wardrobe changes under it', () => {
+    // the day is what redraws it, never a purchase — otherwise buying one
+    // garment would put a sixth on a five-garment shelf
+    const h = { ...EMPTY, daily: freshDay(dayOf(NOON)), offer: rollOffer(dayOf(NOON), new Set()) };
+    const bought = { ...h, owned: [h.offer.items[0]] };
+    expect(withToday(bought, NOON).offer).toBe(bought.offer);
   });
 
   it('rolls a day held over from yesterday rather than reading it as today', () => {

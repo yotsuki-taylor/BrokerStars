@@ -24,14 +24,13 @@ export const SLOT_LABEL: Record<Slot, string> = {
 };
 
 /**
- * What one step up a slot costs.
+ * What one garment costs, by how rare it is.
  *
- * Rarities inside a slot are a ladder, bought in order, so these are step
- * prices rather than the price of an item standing alone: taking a slot from
- * bare to legend is 50+200+300+400+600 = 1550 coins whichever way you come at
- * it. Skipping used to be strictly better — buy the rare and the two rungs you
- * passed over were coins thrown away — which meant the shop punished you for
- * buying what you could afford today.
+ * These used to be STEP prices on a ladder: a slot was climbed in order, so the
+ * legend at the top really cost 1550 coins because the four rungs under it had
+ * to be bought first. Nothing is climbed any more — every garment on today's
+ * shelf may be bought on its own, in any order — so a legend costs 600 and the
+ * whole catalogue costs 7750 rather than the old 7750-with-no-choice-in-it.
  *
  * WHY THEY ARE THIS BIG. The old curve was 4/7/12/20/40, and the trouble with
  * it was the size rather than the shape: at what a league pays, every single
@@ -45,19 +44,18 @@ export const SLOT_LABEL: Record<Slot, string> = {
  * and 12.2 under the crown, and the day's quests add about 7.5 on top of
  * whatever gets played (`src/daily/protocol.ts`). Against that, at eight
  * matches an evening, these prices come to 2 / 5.6 / 5.9 / 5.5 / 5.7 days per
- * item in the league where each tier actually gets bought — which is the
- * property worth having and the one the old numbers only claimed: a rung costs
- * about the same number of evenings wherever you stand on the ladder, because
- * the prices climb at the rate the payouts do.
+ * item in the league where each tier actually gets bought.
  *
  * THE COMMON IS THE ODD ONE, DELIBERATELY. At two days it is half the price in
  * evenings of everything above it. The first purchase is not a reward for a
  * grind, it is the lesson that the shop exists and that what is in it decides
- * matches — and at 200 the player spent five days being told NOTHING TO USE ·
- * BUY A NECK ITEM before owning anything at all. It is cheap on purpose.
+ * matches, so it is cheap on purpose — and the shelf puts a common out two
+ * draws in five (`src/shop/protocol.ts`), so a new player meets one quickly.
  *
- * The whole wardrobe is 7750 coins, or three to seven months depending on how
- * much somebody plays. That is the horizon, and it is meant to be one.
+ * What a price no longer has to do is gate anything. A player who saves for
+ * three weeks and spends the lot on the first legend the shelf offers is
+ * playing the game as intended; the price is the wait, and the shelf is the
+ * luck.
  */
 export const PRICES: Record<Rarity, number> = {
   common: 50,
@@ -110,6 +108,16 @@ export const SLOT_THEME: Record<Slot, string> = {
  * Names describe the sprite the player is looking at, not the effect: the
  * preview shows a red bandana, so the card cannot call it a flat cap. The
  * effect is the line underneath, and that is where the plain language goes.
+ *
+ * EVERY LINE STANDS ALONE. They used to be written as a ladder — the FLOOR SUIT
+ * said "that, and once a match...", because the shop only ever showed it to
+ * somebody who was already wearing the shirt under it and had just read what
+ * the shirt does. The shop draws five unrelated garments now
+ * (`src/shop/protocol.ts`), so a card is as likely as not the first thing its
+ * slot has ever shown the player, and "the same again" names nothing. Each line
+ * says the whole of what wearing that one garment does, lower rungs included —
+ * which is the truth anyway, since `ui/perks.ts` reads one rank per slot and a
+ * higher rank carries everything under it.
  */
 export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
   hat: {
@@ -119,19 +127,19 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
     uncommon: {
       name: 'BALL CAP',
-      text: 'Once a match you can ask for a different three.',
+      text: 'You see the three companies before the match, and once you can send them back for a different three.',
     },
     rare: {
       name: 'PIT CAP',
-      text: 'Twice a match, and you can bar one company from this league for good.',
+      text: 'You see the three, can send them back twice a match, and can bar one company from this league for good.',
     },
     mythic: {
       name: 'BLACK BRIM',
-      text: 'Name one company you always want on the board, and it is always there.',
+      text: 'Name one company you always want on the board and it is always there — plus two goes at the rest, and a company barred for good.',
     },
     legend: {
       name: 'TEN GALLON',
-      text: 'You choose all three companies yourself.',
+      text: 'You choose all three companies yourself, every match.',
     },
   },
   neck: {
@@ -167,15 +175,15 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
     rare: {
       name: 'FLOOR SUIT',
-      text: 'That, and once a match a position 15% under water gets out on its own.',
+      text: 'You cannot be wiped out, and once a match a position 15% under water gets out on its own.',
     },
     mythic: {
       name: 'HOUSE TUXEDO',
-      text: 'Twice a match, and the first losing trade you close hands half of it back.',
+      text: 'You cannot be wiped out, two sinking positions a match get out on their own, and your first losing trade hands half of it back.',
     },
     legend: {
       name: 'EARLY RETIREMENT',
-      text: 'Once a match you can take back your last trade, at the price you paid.',
+      text: 'Everything a bad day can be spared, and once a match you can take back your last trade at the price you paid.',
     },
   },
   hand: {
@@ -205,18 +213,27 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
     rare: {
       name: 'TRADING HEADSET',
-      text: 'Three seconds before a headline lands, you hear which company it lands on.',
+      text: 'The board is spelled out before you agree to it, and three seconds before a headline lands you hear which company it hits.',
     },
     mythic: {
       name: 'EARPIECE',
-      text: 'The company you are holding tells you which way it is about to go.',
+      text: 'The board is spelled out, headlines come with warning, and the company you are holding tells you which way it is about to go.',
     },
     legend: {
       name: 'ORACLE LENS',
-      text: 'The next two seconds of the company you hold are drawn ahead of the line.',
+      text: 'Everything the market will admit to, and the next two seconds of the company you hold drawn ahead of the line.',
     },
   },
 };
+
+/**
+ * Every garment there is, flat — the shop's pool, and the only place that
+ * wants the catalogue as a list rather than as a table
+ * (`src/shop/protocol.ts`).
+ */
+export const ALL_ITEMS: { slot: Slot; rarity: Rarity; id: string }[] = SLOTS.flatMap((slot) =>
+  RARITIES.map((rarity) => ({ slot, rarity, id: itemId(slot, rarity) })),
+);
 
 export const SPRITE_W = 474;
 export const SPRITE_H = 732;
@@ -283,11 +300,16 @@ export function thumbPiece(slot: Slot, rarity: Rarity): Piece {
   return slot === 'torso' ? 'down' : 'up';
 }
 
-/* ------------------------------------------------------------- the ladder */
+/* ---------------------------------------------------------- what is owned */
 
 /**
- * A slot is climbed in order, so what a player owns in it is a prefix of
- * RARITIES and one number describes the whole slot.
+ * The best garment owned in a slot, or null for a bare one.
+ *
+ * There is no longer a ladder under this: a wardrobe is any twenty-five-way
+ * subset now, holes and all, so "highest" is the best thing in the drawer
+ * rather than the top of an unbroken run. It is what the menu asks in order to
+ * know whether a slot has anything in it at all, and what a refund falls back
+ * to when the garment being worn is handed in.
  */
 export function highestOwned(owned: Set<string>, slot: Slot): Rarity | null {
   for (let i = RARITIES.length - 1; i >= 0; i--) {
@@ -296,22 +318,8 @@ export function highestOwned(owned: Set<string>, slot: Slot): Rarity | null {
   return null;
 }
 
-/** The one rarity a slot can buy next, or null once it is finished. */
-export function nextRarity(owned: Set<string>, slot: Slot): Rarity | null {
-  const top = highestOwned(owned, slot);
-  const i = top === null ? 0 : RARITIES.indexOf(top) + 1;
-  return RARITIES[i] ?? null;
-}
-
-/** True only for the single rung a slot is standing in front of. */
-export function isBuyable(owned: Set<string>, slot: Slot, rarity: Rarity): boolean {
-  return nextRarity(owned, slot) === rarity;
-}
-
-/** The rung under this one, or null at the bottom of the ladder. */
-export function rarityBelow(rarity: Rarity): Rarity | null {
-  return RARITIES[RARITIES.indexOf(rarity) - 1] ?? null;
-}
+/** Rarity as a number, cheapest first — the one order the shelf is sorted in. */
+export const rankOf = (rarity: Rarity): number => RARITIES.indexOf(rarity);
 
 export type Outfit = Partial<Record<Slot, Rarity>>;
 

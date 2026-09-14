@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanClaim,
+  cleanOwned,
   cleanProfile,
-  cleanTops,
-  mergeTops,
+  listOf,
+  mergeOwned,
   mergeWins,
-  nextRung,
   setOf,
-  topsOf,
+  topOf,
   wearable,
 } from './protocol';
+import { NO_OFFER } from '../shop/protocol';
 import { ROOM_DONE } from '../ui/renovation';
 import { LEAGUE_COUNT } from '../ui/leagues';
 import { COMPANIES } from '../sim/companies';
@@ -22,71 +23,77 @@ import { COMPANIES } from '../sim/companies';
  */
 
 describe('reading a wardrobe off the wire', () => {
-  it('keeps the five known slots and drops everything else', () => {
-    expect(cleanTops({ torso: 'rare', pockets: 'legend', hat: 'nonsense' })).toEqual({
-      torso: 'rare',
-    });
+  it('keeps the garments this build knows and drops everything else', () => {
+    expect(cleanOwned(['torso-rare', 'pockets-legend', 'hat-nonsense', 7])).toEqual(['torso-rare']);
+  });
+
+  it('says the same garment once however many times it was sent', () => {
+    expect(cleanOwned(['hat-common', 'hat-common'])).toEqual(['hat-common']);
   });
 
   it('answers with an empty wardrobe for anything that is not one', () => {
-    expect(cleanTops(null)).toEqual({});
-    expect(cleanTops('legend')).toEqual({});
-    expect(cleanTops(7)).toEqual({});
+    expect(cleanOwned(null)).toEqual([]);
+    expect(cleanOwned('legend')).toEqual([]);
+    expect(cleanOwned(7)).toEqual([]);
+  });
+
+  it('reads a row from before the shop stopped being a ladder', () => {
+    // one rarity per slot used to mean the rungs under it were paid for too,
+    // so an old save is expanded into the whole prefix it stood for
+    expect(cleanOwned({ neck: 'rare', torso: 'common' }).sort()).toEqual([
+      'neck-common',
+      'neck-rare',
+      'neck-uncommon',
+      'torso-common',
+    ]);
+    expect(cleanOwned({ hat: 'nonsense', pockets: 'legend' })).toEqual([]);
   });
 });
 
-describe('a set of item ids and one rarity a slot', () => {
-  it('goes round the loop unchanged when the ladder is whole', () => {
-    const owned = new Set(['torso-common', 'torso-uncommon', 'hat-common']);
-    expect(topsOf(owned)).toEqual({ torso: 'uncommon', hat: 'common' });
-    expect(setOf(topsOf(owned))).toEqual(owned);
-  });
-
-  it('fills in the rungs an old save skipped rather than taking anything away', () => {
-    // the shop used to let a slot be climbed out of order, and cannot draw it
-    expect([...setOf(topsOf(new Set(['neck-mythic'])))].sort()).toEqual([
-      'neck-common',
-      'neck-mythic',
-      'neck-rare',
-      'neck-uncommon',
-    ]);
+describe('a Set here and a list on the wire', () => {
+  it('goes round the loop unchanged, holes and all', () => {
+    const owned = new Set(['torso-legend', 'hat-common']);
+    expect(setOf(listOf(owned))).toEqual(owned);
   });
 
   it('has nothing to say about a bare wardrobe', () => {
-    expect(topsOf(new Set())).toEqual({});
-    expect(setOf({})).toEqual(new Set());
+    expect(listOf(new Set())).toEqual([]);
+    expect(setOf([])).toEqual(new Set());
   });
 });
 
 describe('what may be worn', () => {
   it('drops a slot that is not owned at all', () => {
-    expect(wearable({}, { hat: 'common' })).toEqual({});
+    expect(wearable([], { hat: 'common' })).toEqual({});
   });
 
-  it('comes down to the top rung rather than refusing the outfit', () => {
-    expect(wearable({ hat: 'uncommon' }, { hat: 'legend' })).toEqual({ hat: 'uncommon' });
+  it('drops a garment that is not in the wardrobe rather than rounding it down', () => {
+    // the ladder used to make this a legitimate outfit trimmed to the top rung;
+    // a wardrobe with holes in it has no rung to come down to
+    expect(wearable(['hat-uncommon'], { hat: 'legend' })).toEqual({});
   });
 
-  it('leaves a legitimate outfit alone', () => {
-    expect(wearable({ hat: 'legend' }, { hat: 'rare' })).toEqual({ hat: 'rare' });
+  it('leaves a legitimate outfit alone, however it was arrived at', () => {
+    expect(wearable(['hat-legend'], { hat: 'legend' })).toEqual({ hat: 'legend' });
   });
 });
 
-describe('the next rung of a slot', () => {
-  it('is the bottom one on a bare slot and nothing on a finished one', () => {
-    expect(nextRung({}, 'hat')).toBe('common');
-    expect(nextRung({ hat: 'mythic' }, 'hat')).toBe('legend');
-    expect(nextRung({ hat: 'legend' }, 'hat')).toBeNull();
+describe('the best of a slot', () => {
+  it('is the dearest thing in it, with or without anything under it', () => {
+    expect(topOf([], 'hat')).toBeNull();
+    expect(topOf(['hat-common', 'hat-mythic'], 'hat')).toBe('mythic');
+    expect(topOf(['hat-legend'], 'hat')).toBe('legend');
+    expect(topOf(['neck-legend'], 'hat')).toBeNull();
   });
 });
 
 describe('merging two wardrobes', () => {
-  it('keeps the better rung of each slot', () => {
-    expect(mergeTops({ hat: 'rare', neck: 'common' }, { hat: 'common', torso: 'legend' })).toEqual({
-      hat: 'rare',
-      neck: 'common',
-      torso: 'legend',
-    });
+  it('keeps everything either of them bought', () => {
+    expect(mergeOwned(['hat-rare', 'neck-common'], ['hat-rare', 'torso-legend']).sort()).toEqual([
+      'hat-rare',
+      'neck-common',
+      'torso-legend',
+    ]);
   });
 });
 
@@ -99,7 +106,7 @@ describe('a claim, before the server is asked to believe it', () => {
   });
 
   it('cannot claim to be wearing what it does not claim to own', () => {
-    expect(claim({ owned: {}, outfit: { hat: 'legend' } }).outfit).toEqual({});
+    expect(claim({ owned: [], outfit: { hat: 'legend' } }).outfit).toEqual({});
   });
 
   it('pads a ladder from a shorter one and cuts a longer one down', () => {
@@ -116,7 +123,7 @@ describe('a claim, before the server is asked to believe it', () => {
     expect(claim(undefined)).toEqual({
       coins: 0,
       room: 0,
-      owned: {},
+      owned: [],
       outfit: {},
       wins: Array(LEAGUE_COUNT).fill(0),
       seen: [],
@@ -137,7 +144,7 @@ describe('a profile coming back', () => {
         earned: 9,
         spent: 4,
         room: 2,
-        owned: { hat: 'common' },
+        owned: ['hat-common'],
         outfit: { hat: 'legend' },
         wins: [3],
         awards: { bust: 1700, 'not-an-award': 1700 },
@@ -166,8 +173,11 @@ describe('a profile coming back', () => {
       earned: 9,
       spent: 4,
       room: 2,
-      owned: { hat: 'common' },
-      outfit: { hat: 'common' },
+      owned: ['hat-common'],
+      outfit: {},
+      // A deployment from before the shop had a shelf sends none, which reads
+      // as a shelf from before every real day and rolls on the next request.
+      offer: NO_OFFER,
       wins: [3, ...Array(LEAGUE_COUNT - 1).fill(0)],
       // an award this build does not have is dropped rather than drawn as a
       // blank row, and so is a company it does not have

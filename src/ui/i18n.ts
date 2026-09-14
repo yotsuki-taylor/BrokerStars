@@ -271,7 +271,7 @@ const EN = {
 
   'tut.shop.title': 'SHOP',
   'tut.shop.body':
-    'Coins buy clothes: five slots, five grades each, from common up to legend. A slot has to be climbed in order, so the cheap thing is never wasted — it is the way to the dear one.',
+    'Coins buy clothes: five slots, five grades each, from common up to legend. The shop puts out five garments a day and no more, drawn at midnight — anything on the shelf can be bought in any order, and what you already own is never offered again. A legend turns up about one shelf in three, so the day it does, the coins want to be there.',
 
   'tut.equip.title': 'EQUIP · CLOTHES ARE PERKS',
   'tut.equip.body':
@@ -460,8 +460,10 @@ const EN = {
   'shop.owned': 'OWNED',
   'shop.wear': 'WEAR',
   'shop.wearing': 'WEARING',
-  'shop.buyFirst': 'BUY {rarity} FIRST',
-  'shop.emptySlot': 'Nothing owned in this slot yet.',
+  'shop.today': 'FIVE A DAY · NEW STOCK AT MIDNIGHT',
+  'shop.cleanedOut': 'BOUGHT THE LOT · NEW STOCK AT MIDNIGHT',
+  'shop.comeBack': "Today's shelf is all yours. Come back tomorrow.",
+  'shop.nothingOwned': 'Nothing bought yet. The shop has five things a day.',
   'shop.buyFree': 'BUY FREE',
   'shop.buy': 'BUY',
   'shop.need': 'NEED',
@@ -724,7 +726,7 @@ const RU: Record<Key, string> = {
 
   'tut.shop.title': 'МАГАЗИН',
   'tut.shop.body':
-    'На монеты покупается одежда: пять слотов, в каждом пять ступеней — от обычной до легендарной. Слот идёт только по порядку, так что дешёвая вещь не выброшенные деньги, а дорога к дорогой.',
+    'На монеты покупается одежда: пять слотов, в каждом пять ступеней — от обычной до легендарной. Магазин выкладывает пять вещей в день, не больше, и меняет их в полночь: бери в любом порядке, а то, что уже куплено, больше не появится. Легендарное выпадает примерно на каждой третьей витрине — так что к этому дню монеты лучше иметь при себе.',
 
   'tut.equip.title': 'НАДЕТЬ · ОДЕЖДА ДАЁТ ПЕРКИ',
   'tut.equip.body':
@@ -886,8 +888,10 @@ const RU: Record<Key, string> = {
   'shop.owned': 'ЕСТЬ',
   'shop.wear': 'НАДЕТЬ',
   'shop.wearing': 'НАДЕТО',
-  'shop.buyFirst': 'СНАЧАЛА КУПИ {rarity}',
-  'shop.emptySlot': 'В этом слоте пока ничего нет.',
+  'shop.today': 'ПЯТЬ ВЕЩЕЙ В ДЕНЬ · НОВЫЙ ЗАВОЗ В ПОЛНОЧЬ',
+  'shop.cleanedOut': 'ВСЁ РАСКУПЛЕНО · НОВЫЙ ЗАВОЗ В ПОЛНОЧЬ',
+  'shop.comeBack': 'Сегодняшняя витрина уже твоя. Заходи завтра.',
+  'shop.nothingOwned': 'Пока ничего не куплено. В магазине пять вещей в день.',
   'shop.buyFree': 'ВЗЯТЬ ДАРОМ',
   'shop.buy': 'КУПИТЬ',
   'shop.need': 'НУЖНО ЕЩЁ',
@@ -1132,13 +1136,16 @@ const RU_DATA: Record<string, string> = {
   'item.hat.common.name': 'БАНДАНА',
   'item.hat.common.text': 'Видно, какие три компании тебе достались, и можно отказаться.',
   'item.hat.uncommon.name': 'КЕПКА',
-  'item.hat.uncommon.text': 'Раз за матч можно попросить другую тройку.',
+  'item.hat.uncommon.text':
+    'Три компании видно до матча, и один раз можно отправить их обратно и попросить другие.',
   'item.hat.rare.name': 'КЕПКА ЯМЫ',
-  'item.hat.rare.text': 'Дважды за матч. И одну компанию можно навсегда убрать из этой лиги.',
+  'item.hat.rare.text':
+    'Три компании видно до матча, дважды можно попросить другие, и одну компанию можно навсегда убрать из этой лиги.',
   'item.hat.mythic.name': 'КОЗЫРЁК',
-  'item.hat.mythic.text': 'Назови компанию, которую хочешь видеть всегда, — она будет на доске.',
+  'item.hat.mythic.text':
+    'Назови компанию, которую хочешь видеть всегда, — она будет на доске. Плюс две замены тройки и одна компания в бане навсегда.',
   'item.hat.legend.name': 'СТЕТСОН',
-  'item.hat.legend.text': 'Все три компании выбираешь сам.',
+  'item.hat.legend.text': 'Все три компании выбираешь сам, каждый матч.',
 
   'item.neck.common.name': 'БЕЙДЖ',
   'item.neck.common.text': 'STATIC — пять секунд соперник не может открыть ничего нового.',
@@ -1159,12 +1166,14 @@ const RU_DATA: Record<string, string> = {
   'item.torso.uncommon.text':
     'Обнулиться нельзя. Как бы плохо ни стало, десятая часть денег остаётся.',
   'item.torso.rare.name': 'КОСТЮМ',
-  'item.torso.rare.text': 'То же самое, и раз за матч позиция в минусе на 15 % закрывается сама.',
+  'item.torso.rare.text':
+    'Обнулиться нельзя, и раз за матч позиция, ушедшая в минус на 15 %, закрывается сама.',
   'item.torso.mythic.name': 'СМОКИНГ',
-  'item.torso.mythic.text': 'Дважды за матч. И первая закрытая в убыток сделка возвращает половину.',
+  'item.torso.mythic.text':
+    'Обнулиться нельзя, дважды за матч тонущая позиция закрывается сама, и первая закрытая в убыток сделка возвращает половину.',
   'item.torso.legend.name': 'ПЕНСИЯ',
   'item.torso.legend.text':
-    'Раз за матч можно отменить последнюю сделку по цене, по которой она прошла.',
+    'Всё, чем можно смягчить плохой день, и раз за матч можно отменить последнюю сделку по её же цене.',
 
   'item.hand.common.name': 'БЛОКНОТ',
   'item.hand.common.text': 'Торговля обходится на 15 % дешевле.',
@@ -1186,12 +1195,14 @@ const RU_DATA: Record<string, string> = {
   'item.access.uncommon.text':
     'Все три компании и что каждая делает — видно до того, как согласиться на матч.',
   'item.access.rare.name': 'ГАРНИТУРА',
-  'item.access.rare.text': 'За три секунды до новости слышно, на какую компанию она выйдет.',
+  'item.access.rare.text':
+    'Доска расписана до матча, и за три секунды до новости слышно, на какую компанию она выйдет.',
   'item.access.mythic.name': 'НАУШНИК',
-  'item.access.mythic.text': 'Компания, которую держишь, подсказывает, куда собирается пойти.',
+  'item.access.mythic.text':
+    'Доска расписана, новости приходят с предупреждением, а компания, которую держишь, подсказывает, куда собирается пойти.',
   'item.access.legend.name': 'ОРАКУЛ',
   'item.access.legend.text':
-    'Следующие две секунды компании, которую держишь, дорисованы впереди линии.',
+    'Всё, в чём рынок готов признаться, и следующие две секунды компании, которую держишь, дорисованы впереди линии.',
 };
 
 /**

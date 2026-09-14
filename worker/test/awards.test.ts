@@ -111,16 +111,21 @@ describe('the ladder', () => {
 
 describe('the wardrobe and the room', () => {
   it('wants all five slots for DRESSED, not four', () => {
-    const four = held({ owned: { hat: 'common', neck: 'common', torso: 'common', hand: 'common' } });
+    const four = held({ owned: ['hat-common', 'neck-common', 'torso-common', 'hand-common'] });
     expect(satisfied(four, at())).not.toContain('dressed');
-    expect(satisfied(held({ owned: { ...four.owned, access: 'common' } }), at())).toContain(
-      'dressed',
-    );
+    expect(satisfied(held({ owned: [...four.owned, 'access-common'] }), at())).toContain('dressed');
+  });
+
+  it('does not mind which garment fills a slot, now that they can be bought in any order', () => {
+    const mixed = held({
+      owned: ['hat-legend', 'neck-common', 'torso-mythic', 'hand-common', 'access-rare'],
+    });
+    expect(satisfied(mixed, at())).toContain('dressed');
   });
 
   it('wants a legend in some slot, whichever', () => {
-    expect(satisfied(held({ owned: { hand: 'mythic' } }), at())).not.toContain('legend-item');
-    expect(satisfied(held({ owned: { hand: 'legend' } }), at())).toContain('legend-item');
+    expect(satisfied(held({ owned: ['hand-mythic'] }), at())).not.toContain('legend-item');
+    expect(satisfied(held({ owned: ['hand-legend'] }), at())).toContain('legend-item');
   });
 
   it('wants the room finished, not merely started', () => {
@@ -202,14 +207,16 @@ describe('once earned, never lost', () => {
   it('survives the state that earned it going backwards', () => {
     // the developer refunds the legend, and DRESSED does not evaporate with it
     const dressed = afterChange(
-      held({ owned: { hat: 'legend', neck: 'common', torso: 'common', hand: 'common', access: 'common' } }),
+      held({
+        owned: ['hat-legend', 'neck-common', 'torso-common', 'hand-common', 'access-common'],
+      }),
       at(),
       NOW,
     );
     expect(dressed.awards.dressed).toBe(NOW);
     expect(dressed.awards['legend-item']).toBe(NOW);
 
-    const stripped = afterChange({ ...dressed, owned: { hat: 'common' } }, at(), NOW);
+    const stripped = afterChange({ ...dressed, owned: ['hat-common'] }, at(), NOW);
     expect(stripped.awards.dressed).toBe(NOW);
     expect(stripped.awards['legend-item']).toBe(NOW);
   });

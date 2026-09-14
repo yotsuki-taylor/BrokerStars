@@ -21,13 +21,23 @@
 
 import { ROOM_DONE, ROOM_STEPS } from '../../src/ui/renovation';
 import {
+  ALL_ITEMS,
   PRICES,
   RARITIES,
   SLOTS,
+  itemId,
   type Outfit,
   type Rarity,
   type Slot,
 } from '../../src/ui/wardrobe';
+import {
+  NO_OFFER,
+  cleanOffer,
+  onOffer,
+  rollOffer,
+  rolledOffer,
+  type Offer,
+} from '../../src/shop/protocol';
 import {
   DAILY_BONUS,
   EMPTY_DAILY,
@@ -49,17 +59,16 @@ import {
 import { companyById } from '../../src/sim/companies';
 import {
   cleanOutfit,
-  cleanTops,
+  cleanOwned,
   cleanWins,
-  mergeTops,
+  mergeOwned,
   mergeWins,
-  nextRung,
-  rankOf,
-  rungBelow,
+  setOf,
+  topOf,
   wearable,
   type Claim,
+  type Owned,
   type Profile,
-  type Tops,
   type Wins,
 } from '../../src/profile/protocol';
 import { REWARDS, type Env } from './results';
@@ -84,8 +93,10 @@ export const LEAGUES = REWARDS.length;
 /** The row, unpacked. Every rule below works on one of these and returns another. */
 export interface Held {
   room: number;
-  owned: Tops;
+  owned: Owned;
   outfit: Outfit;
+  /** the garments on sale today, for the day named inside it — see `withToday` */
+  offer: Offer;
   /** coins handed over the counter, ever */
   spent: number;
   /** coins from somewhere other than a match: the migration, and free purchases */
@@ -113,8 +124,9 @@ export interface Held {
 
 export const EMPTY: Held = {
   room: 0,
-  owned: {},
+  owned: [],
   outfit: {},
+  offer: NO_OFFER,
   spent: 0,
   granted: 0,
   wins: cleanWins([], LEAGUES),
@@ -136,7 +148,7 @@ export const untouched = (h: Held): boolean =>
   h.room === 0 &&
   h.spent === 0 &&
   h.granted === 0 &&
-  Object.keys(h.owned).length === 0 &&
+  h.owned.length === 0 &&
   h.wins.every((n) => n === 0) &&
   h.seen.length === 0 &&
   h.dollars === 0 &&
@@ -171,6 +183,9 @@ export const view = (h: Held, earned: number, at: Standing): Profile => ({
   room: h.room,
   owned: h.owned,
   outfit: h.outfit,
+  // Already today's, like `daily` below and for the same reason: `change` rolls
+  // the shelf before anything is decided against it or drawn from it.
+  offer: h.offer,
   wins: h.wins,
   awards: h.awards,
   duelWins: h.duelWins,
@@ -185,16 +200,20 @@ export const view = (h: Held, earned: number, at: Standing): Profile => ({
   topLeague: at.topLeague,
 });
 
-/** What this wardrobe and this much room would have cost, at today's prices. */
-export function priceOf(owned: Tops, room: number): number {
+/** What one garment costs, by its id — the wardrobe is a list of those now. */
+const PRICE_BY_ID = new Map(ALL_ITEMS.map((it) => [it.id, PRICES[it.rarity]]));
+
+/**
+ * What this wardrobe and this much room would have cost, at today's prices.
+ *
+ * One garment, one price. It used to have to walk down a slot's ladder adding
+ * up the rungs under the top one, because owning the top meant having bought
+ * them all; now nothing is implied by anything else and the wardrobe is
+ * simply the list.
+ */
+export function priceOf(owned: Owned, room: number): number {
   let sum = 0;
-  for (const slot of SLOTS) {
-    const top = owned[slot];
-    if (!top) continue;
-    // a slot is a ladder, so owning the top rung means having paid for every
-    // rung under it as well
-    for (let i = 0; i <= rankOf(top); i++) sum += PRICES[RARITIES[i]];
-  }
+  for (const id of owned) sum += PRICE_BY_ID.get(id) ?? 0;
   for (let i = 0; i < Math.min(room, ROOM_DONE); i++) sum += ROOM_STEPS[i].price;
   return sum;
 }
@@ -205,11 +224,22 @@ export function priceOf(owned: Tops, room: number): number {
 export type Bought = { ok: true; held: Held } | { ok: false; error: string };
 
 /**
- * One rung of one slot. A slot is climbed in order, so there is exactly one
- * rarity it can buy next, and asking for any other is refused rather than
- * rounded to the right one — a client out of step should be put right by the
- * profile that comes back, not quietly charged for something it never asked
- * for.
+ * One garment off today's shelf.
+ *
+ * THE SHELF IS THE WHOLE GATE NOW. There used to be a ladder — a slot could buy
+ * exactly one rarity next, and anything else was 'not the next rung'. Nothing
+ * is climbed any more, so the only two questions are whether the garment is on
+ * sale today and whether it has already been bought. Both are asked here rather
+ * than trusted from the body, and for the same reason the price is: a client
+ * that names a garment the shop is not showing is a client that has been
+ * edited, or one whose idea of the day is stale.
+ *
+ * The shelf it is checked against is TODAY'S, and that is not this function's
+ * doing: `change` puts every row through `withToday` before anything decides
+ * anything about it, so a row that reaches here with yesterday's shelf on it
+ * cannot exist. The player who left the app open across midnight taps a garment
+ * that is no longer on sale, is refused, and gets today's shelf back with the
+ * refusal.
  *
  * Buying wears it, the same way the shop does: nobody buys a hat for the box.
  */
@@ -220,14 +250,16 @@ export function buyItem(
   rarity: Rarity,
   free: boolean,
 ): Bought {
-  if (nextRung(h.owned, slot) !== rarity) return { ok: false, error: 'not the next rung' };
+  const id = itemId(slot, rarity);
+  if (h.owned.includes(id)) return { ok: false, error: 'already owned' };
+  if (!onOffer(h.offer, id)) return { ok: false, error: 'not on sale today' };
   const price = free ? 0 : PRICES[rarity];
   if (balance(h, earned) < price) return { ok: false, error: 'not enough coins' };
   return {
     ok: true,
     held: {
       ...h,
-      owned: { ...h.owned, [slot]: rarity },
+      owned: [...h.owned, id],
       outfit: { ...h.outfit, [slot]: rarity },
       spent: h.spent + price,
     },
@@ -243,25 +275,30 @@ export function buyRoom(h: Held, earned: number, free: boolean): Bought {
 }
 
 /**
- * Developer only: hand the top rung back and refund it. Only the top, or the
- * ladder ends up with a hole in it that nothing can fill.
+ * Developer only: hand one garment back and refund it. Any of them — the rule
+ * used to be "only the top one", so that a slot's ladder never ended up with a
+ * hole in it that nothing could fill, and holes are the normal case now.
  *
- * `spent` is floored at zero because a rung bought in free mode cost nothing,
- * and refunding it would otherwise mint coins. The game's own dev panel has
- * always had that asymmetry; the floor is what stops it compounding.
+ * If the garment was on the trader it comes off with the refund, and the best
+ * of what is left in that slot goes on in its place — a dev handing back the
+ * stetson should end up in the bandana, not bare-headed.
+ *
+ * `spent` is floored at zero because a garment bought in free mode cost
+ * nothing, and refunding it would otherwise mint coins. The game's own dev
+ * panel has always had that asymmetry; the floor is what stops it compounding.
  */
 export function refundItem(h: Held, slot: Slot, rarity: Rarity): Bought {
-  if (h.owned[slot] !== rarity) return { ok: false, error: 'not the top rung' };
-  const below = rungBelow(rarity);
-  const owned = { ...h.owned };
-  if (below) owned[slot] = below;
-  else delete owned[slot];
+  const id = itemId(slot, rarity);
+  if (!h.owned.includes(id)) return { ok: false, error: 'does not own it' };
+  const owned = h.owned.filter((x) => x !== id);
+  const outfit = wearable(owned, h.outfit);
+  const fallback = h.outfit[slot] === rarity ? topOf(owned, slot) : null;
   return {
     ok: true,
     held: {
       ...h,
       owned,
-      outfit: wearable(owned, h.outfit),
+      outfit: fallback ? { ...outfit, [slot]: fallback } : outfit,
       spent: Math.max(0, h.spent - PRICES[rarity]),
     },
   };
@@ -322,7 +359,14 @@ export function wear(h: Held, outfit: Outfit): Held {
  */
 export function withToday(h: Held, now: number): Held {
   const daily = rolled(h.daily, now);
-  return daily === h.daily ? h : { ...h, daily };
+  // The shelf rolls on the same clock and in the same place, and it is drawn
+  // from the wardrobe as it stands at that moment — so a garment bought
+  // yesterday is never offered again today. Buying does NOT redraw it: once
+  // today's day is on it, this hands the same object back untouched, which is
+  // what keeps a five-garment shelf from growing a sixth the moment one is sold
+  // (`src/shop/protocol.ts`).
+  const offer = rolledOffer(h.offer, setOf(h.owned), now);
+  return daily === h.daily && offer === h.offer ? h : { ...h, daily, offer };
 }
 
 export function claimBonus(h: Held, now: number): Bought {
@@ -468,13 +512,19 @@ export function bankWin(h: Held, league: number): Held {
  * still walk in from another phone afterwards.
  */
 export function claimInto(h: Held, earned: number, claim: Claim): Held {
-  const owned = mergeTops(h.owned, claim.owned);
+  const owned = mergeOwned(h.owned, claim.owned);
   const room = Math.max(h.room, claim.room);
   const spent = priceOf(owned, room);
   return {
     room,
     owned,
     outfit: wearable(owned, claim.outfit),
+    // Redrawn, because the wardrobe underneath it just changed. `withToday`
+    // rolled today's shelf a moment ago against a row with nothing in it — this
+    // only ever runs on such a row (`untouched`) — and a claim can arrive
+    // holding half the catalogue, which would leave the shop offering garments
+    // the player walked in wearing. Same day, same seed, new pool.
+    offer: rollOffer(h.offer.day, setOf(owned)),
     spent,
     granted: Math.max(0, claim.coins + spent - earned),
     // The ladder is the one thing here the server would otherwise have no way
@@ -517,6 +567,7 @@ interface StoredRow {
   room: number;
   owned: string;
   outfit: string;
+  offer: string;
   wins: string;
   awards: string;
   seen: string;
@@ -572,20 +623,23 @@ export async function standingOf(env: Env, id: string): Promise<Standing> {
 
 export async function read(env: Env, id: string): Promise<Stored | null> {
   const row = await env.DB.prepare(
-    `SELECT room, owned, outfit, wins, awards, seen, duel_wins, streak,
+    `SELECT room, owned, outfit, offer, wins, awards, seen, duel_wins, streak,
             spent, granted, dollars, portfolio, daily, updated_at
        FROM profiles WHERE id = ?1`,
   )
     .bind(id)
     .first<StoredRow>();
   if (!row) return null;
-  const owned = cleanTops(parse(row.owned));
+  const owned = cleanOwned(parse(row.owned));
   return {
     version: row.updated_at,
     held: {
       room: Math.min(ROOM_DONE, Math.max(0, row.room)),
       owned,
       outfit: wearable(owned, cleanOutfit(parse(row.outfit))),
+      // Exactly what is stored, yesterday's draw included, for the reason
+      // `daily` is: `withToday` rolls both, once, where the clock is read.
+      offer: cleanOffer(parse(row.offer)),
       spent: Math.max(0, row.spent),
       granted: Math.max(0, row.granted),
       wins: cleanWins(parse(row.wins), LEAGUES),
@@ -627,6 +681,7 @@ export async function write(
   const now = Date.now();
   const owned = JSON.stringify(h.owned);
   const outfit = JSON.stringify(h.outfit);
+  const offer = JSON.stringify(h.offer);
   const wins = JSON.stringify(h.wins);
   const awards = JSON.stringify(h.awards);
   const seen = JSON.stringify(h.seen);
@@ -638,14 +693,14 @@ export async function write(
       ? // A row that was not there. If one appeared in the meantime this does
         // nothing, and the caller starts again knowing about it.
         await env.DB.prepare(
-          `INSERT INTO profiles (id, room, owned, outfit, wins, awards, seen,
+          `INSERT INTO profiles (id, room, owned, outfit, offer, wins, awards, seen,
                                  duel_wins, streak, spent, granted,
                                  dollars, portfolio, daily, first_seen, updated_at)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16)
            ON CONFLICT (id) DO NOTHING`,
         )
           .bind(
-            id, h.room, owned, outfit, wins, awards, seen,
+            id, h.room, owned, outfit, offer, wins, awards, seen,
             h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now,
           )
           .run()
@@ -654,21 +709,22 @@ export async function write(
               SET room       = ?2,
                   owned      = ?3,
                   outfit     = ?4,
-                  wins       = ?5,
-                  awards     = ?6,
-                  seen       = ?7,
-                  duel_wins  = ?8,
-                  streak     = ?9,
-                  spent      = ?10,
-                  granted    = ?11,
-                  dollars    = ?12,
-                  portfolio  = ?13,
-                  daily      = ?14,
-                  updated_at = MAX(updated_at + 1, ?15)
-            WHERE id = ?1 AND updated_at = ?16`,
+                  offer      = ?5,
+                  wins       = ?6,
+                  awards     = ?7,
+                  seen       = ?8,
+                  duel_wins  = ?9,
+                  streak     = ?10,
+                  spent      = ?11,
+                  granted    = ?12,
+                  dollars    = ?13,
+                  portfolio  = ?14,
+                  daily      = ?15,
+                  updated_at = MAX(updated_at + 1, ?16)
+            WHERE id = ?1 AND updated_at = ?17`,
         )
           .bind(
-            id, h.room, owned, outfit, wins, awards, seen,
+            id, h.room, owned, outfit, offer, wins, awards, seen,
             h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now, version,
           )
           .run();
@@ -713,12 +769,13 @@ export type Change = (h: Held, earned: number, at: Standing) => Bought;
  * not a present, and `spent` is what the shop charges against.
  */
 export function giftHat(held: Held): Bought {
-  if (held.owned.hat) return { ok: false, error: 'already has one' };
+  if (topOf(held.owned, 'hat')) return { ok: false, error: 'already has one' };
+  const id = itemId('hat', 'common');
   return {
     ok: true,
     held: {
       ...held,
-      owned: { ...held.owned, hat: 'common' },
+      owned: [...held.owned, id],
       // Worn as well as owned: an item in a drawer teaches nothing, and the
       // next board is the first place it does anything.
       outfit: { ...held.outfit, hat: 'common' },
@@ -744,7 +801,7 @@ export async function giftFirstHat(env: Env, caller: Caller): Promise<void> {
  * Read, change, write — and if the row moved underneath, read it again and work
  * the change out afresh rather than writing a decision made about the past.
  *
- * The refusals come back rather than throwing: "not the next rung" is an answer
+ * The refusals come back rather than throwing: "not on sale today" is an answer
  * about a real profile and the caller sends that profile back with it.
  */
 export async function change(env: Env, caller: Caller, apply: Change): Promise<Applied> {

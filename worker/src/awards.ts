@@ -26,7 +26,7 @@
 
 import { AWARDS, cleanAwards, type Award } from '../../src/awards/catalogue';
 import { COMPANIES } from '../../src/sim/companies';
-import { RARITIES, SLOTS } from '../../src/ui/wardrobe';
+import { RARITIES, SLOTS, itemId } from '../../src/ui/wardrobe';
 import { ROOM_DONE } from '../../src/ui/renovation';
 import type { Held } from './profile';
 
@@ -79,11 +79,17 @@ export function satisfied(held: Held, at: Standing, match?: MatchFacts): string[
         if (at.topLeague >= (a.league ?? Infinity)) yes(a);
         break;
 
-      case 'style':
-        if (a.id === 'dressed' && SLOTS.every((s) => held.owned[s])) yes(a);
-        if (a.id === 'legend-item' && SLOTS.some((s) => held.owned[s] === 'legend')) yes(a);
+      case 'style': {
+        // A wardrobe is a list of garment ids now rather than one rarity per
+        // slot, so both of these ask the list rather than reading a top rung
+        // off it (`src/profile/protocol.ts`).
+        const owns = new Set(held.owned);
+        if (a.id === 'dressed' && SLOTS.every((s) => RARITIES.some((r) => owns.has(itemId(s, r)))))
+          yes(a);
+        if (a.id === 'legend-item' && SLOTS.some((s) => owns.has(itemId(s, 'legend')))) yes(a);
         if (a.id === 'room-done' && held.room >= ROOM_DONE) yes(a);
         break;
+      }
 
       case 'secret':
         if (a.id === 'streak-3' && held.streak >= (a.goal ?? Infinity)) yes(a);

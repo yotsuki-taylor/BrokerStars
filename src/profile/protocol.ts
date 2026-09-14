@@ -38,16 +38,31 @@ import { cleanDaily, type Daily } from '../daily/protocol';
 import { cleanPortfolio, type Portfolio } from '../market/protocol';
 import { COMPANIES } from '../sim/companies';
 import { ROOM_DONE } from '../ui/renovation';
-import { RARITIES, SLOTS, itemId, type Outfit, type Rarity, type Slot } from '../ui/wardrobe';
+import { cleanOffer, type Offer } from '../shop/protocol';
+import {
+  ALL_ITEMS,
+  RARITIES,
+  SLOTS,
+  itemId,
+  rankOf,
+  type Outfit,
+  type Rarity,
+  type Slot,
+} from '../ui/wardrobe';
 
 /**
- * What a wardrobe is, at rest: the top rung owned in each slot, or nothing.
+ * What a wardrobe is, at rest: the ids of the garments owned, in no order.
  *
- * A slot is climbed in order — `wardrobe.ts` says a player's holdings in it are
- * a prefix of RARITIES — so one rarity per slot describes the whole thing, and
- * it is the same shape as an outfit for the same reason.
+ * It used to be one rarity per slot, because a slot was climbed in order and a
+ * player's holdings in it were therefore a prefix of RARITIES — the top rung
+ * described the whole thing. The shop sells any garment on today's shelf to
+ * anybody who can pay for it (`src/shop/protocol.ts`), so a wardrobe is now any
+ * subset of the twenty-five, holes and all, and only the list says which.
+ *
+ * `cleanOwned` still reads the old shape off the wire and off the database, and
+ * will for as long as there are rows written before this changed.
  */
-export type Tops = Partial<Record<Slot, Rarity>>;
+export type Owned = string[];
 
 /**
  * Wins banked in each league, lowest first — the ladder, and the only thing on
@@ -95,8 +110,10 @@ export interface Profile {
   daily: Daily;
   /** renovation steps finished, 0..ROOM_DONE */
   room: number;
-  owned: Tops;
+  owned: Owned;
   outfit: Outfit;
+  /** the five garments on sale today, and the day they were drawn for */
+  offer: Offer;
   wins: Wins;
   /** the shelf: award id to when it was earned. See `src/awards/catalogue.ts`. */
   awards: Record<string, number>;
@@ -117,7 +134,7 @@ export interface Profile {
 export interface Claim {
   coins: number;
   room: number;
-  owned: Tops;
+  owned: Owned;
   outfit: Outfit;
   wins: Wins;
   /**
@@ -136,11 +153,41 @@ export interface Claim {
  */
 export const MAX_CLAIM_COINS = 100_000;
 
-export const rankOf = (rarity: Rarity): number => RARITIES.indexOf(rarity);
+const KNOWN_ITEMS = new Set(ALL_ITEMS.map((it) => it.id));
 
-/** Five known slots, five known rarities, nothing else — from an untrusted message. */
-export function cleanTops(raw: unknown): Tops {
-  const out: Tops = {};
+/**
+ * A wardrobe off the wire, or out of the database: garment ids this build
+ * knows, deduplicated, in a stable order.
+ *
+ * TWO SHAPES ARE READ, and the second one is history. Every row written before
+ * the shop stopped being a ladder holds `{"hat":"rare"}` — the top rung of each
+ * slot — and back then that meant the rungs under it had been paid for too. So
+ * an object is expanded into the whole prefix it stood for, which is what the
+ * player actually owned. An array is the shape written today and is taken as it
+ * comes. Nothing has to be migrated in the database: the next write puts the
+ * row into the new shape, and until then it reads correctly either way.
+ */
+export function cleanOwned(raw: unknown): Owned {
+  const out = new Set<string>();
+  if (Array.isArray(raw)) {
+    for (const id of raw) if (typeof id === 'string' && KNOWN_ITEMS.has(id)) out.add(id);
+  } else if (raw && typeof raw === 'object') {
+    const src = raw as Record<string, unknown>;
+    for (const slot of SLOTS) {
+      const top = src[slot];
+      if (typeof top !== 'string' || !(RARITIES as readonly string[]).includes(top)) continue;
+      for (let i = 0; i <= rankOf(top as Rarity); i++) out.add(itemId(slot, RARITIES[i]));
+    }
+  }
+  return [...out];
+}
+
+/**
+ * An outfit is still one rarity per slot — you wear one hat — so it keeps the
+ * shape the wardrobe used to share with it, and is cleaned on its own.
+ */
+export function cleanOutfit(raw: unknown): Outfit {
+  const out: Outfit = {};
   if (!raw || typeof raw !== 'object') return out;
   const src = raw as Record<string, unknown>;
   for (const slot of SLOTS) {
@@ -151,9 +198,6 @@ export function cleanTops(raw: unknown): Tops {
   }
   return out;
 }
-
-/** An outfit is the same shape as a wardrobe, and cleaned the same way. */
-export const cleanOutfit = (raw: unknown): Outfit => cleanTops(raw);
 
 export function cleanRoom(raw: unknown): number {
   const n = Math.floor(Number(raw));
@@ -197,7 +241,7 @@ export function cleanSeen(raw: unknown): string[] {
 
 export function cleanClaim(raw: unknown, leagues: number): Claim {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const owned = cleanTops(src.owned);
+  const owned = cleanOwned(src.owned);
   return {
     // `coins` from a client that has been renamed, `stars` from one that has
     // not yet loaded the new bundle. Both are read for a release or two; see
@@ -215,44 +259,38 @@ export function cleanClaim(raw: unknown, leagues: number): Claim {
 export const emptyClaim = (c: Claim): boolean =>
   c.coins === 0 &&
   c.room === 0 &&
-  Object.keys(c.owned).length === 0 &&
+  c.owned.length === 0 &&
   c.wins.every((n) => n === 0) &&
   c.seen.length === 0;
 
-/** You cannot wear what you do not own, and you cannot wear above what you do. */
-export function wearable(owned: Tops, outfit: Outfit): Outfit {
+/**
+ * You cannot wear what you do not own. That is now the whole of the rule: it
+ * used to also trim a worn rarity down to the top one owned, because a hole in
+ * a slot was impossible and anything above the top was a lie. Holes are the
+ * normal case now — a player may own the legend hat and nothing else on their
+ * head — so a garment is either in the wardrobe or it is not.
+ */
+export function wearable(owned: Owned, outfit: Outfit): Outfit {
+  const has = new Set(owned);
   const out: Outfit = {};
   for (const slot of SLOTS) {
     const worn = outfit[slot];
-    const top = owned[slot];
-    if (!worn || !top) continue;
-    out[slot] = rankOf(worn) <= rankOf(top) ? worn : top;
+    if (worn && has.has(itemId(slot, worn))) out[slot] = worn;
   }
   return out;
 }
 
-/** The one rarity a slot can buy next, or null once it is finished. */
-export function nextRung(owned: Tops, slot: Slot): Rarity | null {
-  const top = owned[slot];
-  return RARITIES[top ? rankOf(top) + 1 : 0] ?? null;
-}
-
-/** The rung under the top one, or null once the slot is bare again. */
-export function rungBelow(rarity: Rarity): Rarity | null {
-  return RARITIES[rankOf(rarity) - 1] ?? null;
-}
-
-/** The better of two wardrobes, slot by slot. */
-export function mergeTops(a: Tops, b: Tops): Tops {
-  const out: Tops = {};
-  for (const slot of SLOTS) {
-    const x = a[slot];
-    const y = b[slot];
-    if (x && y) out[slot] = rankOf(x) >= rankOf(y) ? x : y;
-    else if (x || y) out[slot] = (x ?? y) as Rarity;
+/** The best garment owned in a slot, or null — the fallback after a refund. */
+export function topOf(owned: Owned, slot: Slot): Rarity | null {
+  const has = new Set(owned);
+  for (let i = RARITIES.length - 1; i >= 0; i--) {
+    if (has.has(itemId(slot, RARITIES[i]))) return RARITIES[i];
   }
-  return out;
+  return null;
 }
+
+/** Everything in either wardrobe: two devices' worth of shopping, kept whole. */
+export const mergeOwned = (a: Owned, b: Owned): Owned => [...new Set([...a, ...b])];
 
 /**
  * A profile as it comes back off the wire. The server is not an attacker, but
@@ -268,7 +306,7 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
   // would read no balance at all and fall back to `localStorage` for everyone.
   const balance = src.coins ?? src.stars;
   if (typeof balance !== 'number' || !Number.isFinite(balance)) return null;
-  const owned = cleanTops(src.owned);
+  const owned = cleanOwned(src.owned);
   return {
     coins: Math.max(0, Math.floor(balance)),
     earned: cleanCount(src.earned),
@@ -276,6 +314,7 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
     room: cleanRoom(src.room),
     owned,
     outfit: wearable(owned, cleanOutfit(src.outfit)),
+    offer: cleanOffer(src.offer),
     wins: cleanWins(src.wins, leagues),
     awards: cleanAwards(src.awards),
     dollars: cleanCount(src.dollars),
@@ -295,37 +334,12 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
 /* --------------------------------------------- the browser's own shape */
 
 /**
- * The game keeps a wardrobe as a flat set of item ids, because that is what
- * the shop asks it (`owned.has(itemId(slot, rarity))`). These two turn it into
- * the one-rarity-per-slot shape that goes on the wire and back.
- *
- * `topsOf` reads the highest rung of each slot and forgets the rest, which
- * repairs a save with a hole in it: an early build let a player buy the rare
- * while skipping the common and uncommon under it, and the ladder has not
- * allowed that for a while. Coming back the other way through `setOf`, those
- * skipped rungs are handed over — a migration should round in the player's
- * favour, and a wardrobe that is a proper prefix is the only one the shop can
- * draw honestly.
+ * The game keeps a wardrobe as a Set of garment ids, because that is what the
+ * shop asks it (`owned.has(itemId(slot, rarity))`). The wire carries the same
+ * thing as an array, so these two are only the conversion — they used to be the
+ * place a set was flattened to one rung per slot and blown back up again, and
+ * the rounding that went on in there is now `cleanOwned`'s business.
  */
-export function topsOf(owned: Set<string>): Tops {
-  const out: Tops = {};
-  for (const slot of SLOTS) {
-    for (let i = RARITIES.length - 1; i >= 0; i--) {
-      if (owned.has(itemId(slot, RARITIES[i]))) {
-        out[slot] = RARITIES[i];
-        break;
-      }
-    }
-  }
-  return out;
-}
+export const listOf = (owned: Set<string>): Owned => [...owned];
 
-export function setOf(tops: Tops): Set<string> {
-  const out = new Set<string>();
-  for (const slot of SLOTS) {
-    const top = tops[slot];
-    if (!top) continue;
-    for (let i = 0; i <= rankOf(top); i++) out.add(itemId(slot, RARITIES[i]));
-  }
-  return out;
-}
+export const setOf = (owned: Owned): Set<string> => new Set(owned);

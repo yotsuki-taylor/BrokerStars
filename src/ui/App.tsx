@@ -66,7 +66,7 @@ import {
   tradeShares,
   wearOutfit,
 } from './api';
-import { setOf, topsOf, type Profile } from '../profile/protocol';
+import { listOf, setOf, type Profile } from '../profile/protocol';
 import {
   DAILY_BONUS,
   bonusReady,
@@ -138,12 +138,10 @@ import { markTutorialSeen, tutorialSeen } from './tutorial';
 import {
   PRICES,
   highestOwned,
-  isBuyable,
   itemId,
   CATALOGUE,
   loadOutfit,
   loadOwned,
-  rarityBelow,
   saveOutfit,
   randomOutfit,
   saveOwned,
@@ -151,6 +149,13 @@ import {
   type Rarity,
   type Slot,
 } from './wardrobe';
+import {
+  loadOffer,
+  onOffer,
+  rolledOffer,
+  saveOffer,
+  type Offer,
+} from '../shop/protocol';
 
 const HUMAN = 0;
 
@@ -892,6 +897,19 @@ export default function App() {
   /** companies the player has met — filed by the match that put them up */
   const [seenCompanies, setSeenCompanies] = useState<Set<string>>(loadSeen);
   const [owned, setOwned] = useState<Set<string>>(loadOwned);
+  /**
+   * The shop's shelf for today.
+   *
+   * Rolled here as well as on the server, because a build with no server behind
+   * it still has a shop — and kept, rather than worked out on every render,
+   * because a shelf redrawn from a wardrobe that just gained a garment is a
+   * shelf that restocks itself when you buy something (`src/shop/protocol.ts`).
+   */
+  const [offer, setOffer] = useState<Offer>(() => {
+    const today = rolledOffer(loadOffer(), loadOwned(), Date.now());
+    saveOffer(today);
+    return today;
+  });
   /** the last thing the server said about this player, for the shelf to draw */
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roomDone, setRoomDone] = useState(loadRoom);
@@ -994,7 +1012,7 @@ export default function App() {
      * one the server gave away. Otherwise somebody buying their first hat over
      * the counter would be congratulated for finishing a match.
      */
-    const hasHat = Boolean(p.owned.hat);
+    const hasHat = p.owned.some((id) => id.startsWith('hat-'));
     const before = hadHat.current;
     if (before && !before.hat && hasHat && p.spent <= before.spent) setGifted(true);
     hadHat.current = { hat: hasHat, spent: p.spent };
@@ -1004,6 +1022,14 @@ export default function App() {
     saveOwned(bought);
     setOutfit(p.outfit);
     saveOutfit(p.outfit);
+    // The shelf the server drew is the one the counter will charge against, so
+    // it replaces whatever this end rolled for itself. An answer from a
+    // deployment that predates the shop change has no shelf at all and is left
+    // alone rather than believed into an empty shop.
+    if (p.offer.day >= 0) {
+      setOffer(p.offer);
+      saveOffer(p.offer);
+    }
     saveWins(p.wins);
     winsRef.current = p.wins;
     setLeagueWins(p.wins);
@@ -1047,7 +1073,7 @@ export default function App() {
         openProfile({
           coins: loadStars(),
           room: loadRoom(),
-          owned: topsOf(loadOwned()),
+          owned: listOf(loadOwned()),
           outfit: loadOutfit(),
           wins: loadWins(),
           seen: [...loadSeen()],
@@ -1055,6 +1081,25 @@ export default function App() {
       ),
     );
   }, [reconcile]);
+
+  /**
+   * A game left open past midnight is holding yesterday's shelf, and the server
+   * would refuse every garment on it. The bonus and the quests are rolled where
+   * they are drawn for the same reason; this is the shop's half of it, and it
+   * runs on opening the shop rather than on a timer — nobody has to be told the
+   * stock changed while they were looking at the menu.
+   *
+   * `rolledOffer` hands the same object back when the day has not moved, so the
+   * purchase that changed `owned` a moment ago does not redraw anything.
+   */
+  useEffect(() => {
+    if (screen !== 'shop') return;
+    setOffer((prev) => {
+      const today = rolledOffer(prev, owned, Date.now());
+      if (today !== prev) saveOffer(today);
+      return today;
+    });
+  }, [screen, owned]);
 
   /**
    * Today's prices, asked for once on the way in.
@@ -1872,44 +1917,47 @@ export default function App() {
     haptic();
   };
 
-  /** A slot is climbed a rung at a time, so only one rarity is ever for sale. */
+  /** Anything on today's shelf, in any order, as long as the coins are there. */
   const buy = (slot: Slot, rarity: Rarity) => {
-    if (!isBuyable(owned, slot, rarity)) return;
+    const id = itemId(slot, rarity);
+    if (owned.has(id) || !onOffer(offer, id)) return;
     const price = freeMode ? 0 : PRICES[rarity];
     if (coins < price) return;
     addStars(-price);
     setOwned((prev) => {
-      const next = new Set(prev).add(itemId(slot, rarity));
+      const next = new Set(prev).add(id);
       saveOwned(next);
       return next;
     });
     putOn(slot, rarity);
     haptic('heavy');
     // The sale itself is the server's: it holds the balance, it knows what a
-    // rung costs, and it decides whether this one was next. Everything above is
-    // what this end expects to be told, drawn early so the shop feels instant.
+    // garment costs, and it holds the shelf this one has to be on. Everything
+    // above is what this end expects to be told, drawn early so the shop feels
+    // instant. The shelf is NOT touched here — the bought garment drops off it
+    // by being owned, and nothing takes its place until tomorrow.
     reconcile(buyItemOnServer(slot, rarity, freeMode));
   };
 
-  /**
-   * Dev only: hand the top item of a slot back and refund it. Only the top,
-   * or the ladder would end up with a hole in it that nothing could fill.
-   */
+  /** Dev only: hand any owned garment back and refund it. */
   const refund = (slot: Slot, rarity: Rarity) => {
-    if (!admin || highestOwned(owned, slot) !== rarity) return;
+    if (!admin || !owned.has(itemId(slot, rarity))) return;
     addStars(PRICES[rarity]);
-    setOwned((prev) => {
-      const next = new Set(prev);
-      next.delete(itemId(slot, rarity));
-      saveOwned(next);
-      return next;
+    const left = new Set(owned);
+    left.delete(itemId(slot, rarity));
+    setOwned(() => {
+      saveOwned(left);
+      return left;
     });
     reconcile(refundItemOnServer(slot, rarity));
     if (outfit[slot] !== rarity) return;
-    const below = rarityBelow(rarity);
+    // Wearing what was just handed in is not a state any screen draws, so the
+    // best of what is left in the slot goes on instead — the same fallback the
+    // server works out for itself (`refundItem`).
+    const instead = highestOwned(left, slot);
     setOutfit((prev) => {
       const next = { ...prev };
-      if (below) next[slot] = below;
+      if (instead) next[slot] = instead;
       else delete next[slot];
       saveOutfit(next);
       return next;
@@ -2281,6 +2329,7 @@ export default function App() {
           mode={screen}
           coins={coins}
           owned={owned}
+          offer={offer}
           outfit={outfit}
           admin={admin}
           freeMode={freeMode}

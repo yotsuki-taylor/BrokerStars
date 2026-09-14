@@ -76,8 +76,16 @@ CREATE TABLE IF NOT EXISTS profiles (
   -- a player can open the game and dress up before ever finishing a match
   id         TEXT PRIMARY KEY,
   room       INTEGER NOT NULL DEFAULT 0,
-  owned      TEXT NOT NULL DEFAULT '{}',
+  -- JSON array of garment ids: what has been bought, in no order. Rows written
+  -- before the shop stopped being a ladder hold one rarity per slot instead,
+  -- and are read either way (src/profile/protocol.ts).
+  owned      TEXT NOT NULL DEFAULT '[]',
   outfit     TEXT NOT NULL DEFAULT '{}',
+  -- The day's shelf: JSON of the day it was drawn for and the garment ids on
+  -- it. Stored rather than worked out on demand, because buying changes what
+  -- is owned and a shelf redrawn from that would restock itself mid-purchase
+  -- (src/shop/protocol.ts). '{}' has no day, so the first read rolls one.
+  offer      TEXT NOT NULL DEFAULT '{}',
   -- JSON array of wins per league, lowest first: the ladder. Counted here as
   -- matches are handed in, never read off what the client claims to have won.
   wins       TEXT NOT NULL DEFAULT '[]',

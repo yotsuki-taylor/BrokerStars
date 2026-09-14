@@ -1274,13 +1274,8 @@ a.big-btn {
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
 }
 
-.slot-tabs {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-
+/* The shop's own slot tabs are gone — everything is on one shelf now. This is
+   what the archive and the rating screens still pick their tabs with. */
 .slot-tab {
   height: 30px;
   border: 2px solid var(--ink);
@@ -1300,11 +1295,36 @@ a.big-btn {
   color: var(--ink);
 }
 
+/* The columns are set in Shop.tsx so the shelf and the wardrobe can share this:
+   a shelf is never more than five wide, and a full wardrobe is five rows of it.
+   The wardrobe is the only one that can outgrow the screen, so this is the one
+   part of the shop that scrolls. */
 .item-grid {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
   gap: 5px;
+  align-content: start;
+}
+
+/* What slot a garment goes in. It used to be the tab you had to be standing on
+   to see the card at all, so the card never had to say. */
+.slot-tag {
+  font-size: 8px;
+  letter-spacing: 0.6px;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+/* One line over the shelf: how long what is on it is there for. */
+.shelf-note {
+  flex: 0 0 auto;
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  opacity: 0.6;
 }
 
 .item {
@@ -1327,19 +1347,6 @@ a.big-btn {
 
 .item.owned {
   opacity: 1;
-}
-
-/* a rung you cannot reach yet: still readable, still tappable, plainly shut */
-.item.locked {
-  opacity: 0.42;
-}
-
-.item.locked i {
-  filter: grayscale(1);
-}
-
-.item.locked.picked {
-  opacity: 0.85;
 }
 
 .item.picked {
@@ -1390,12 +1397,12 @@ a.big-btn {
 
 /* ---------- what the item does ---------- */
 
-/* Fixed height: stepping along the ladder must not shuffle the buttons under
-   the player's thumb, and the longest line in the catalogue runs to two rows
-   on a 320pt screen with room for a third. */
+/* Fixed height: stepping along the shelf must not shuffle the buttons under
+   the player's thumb, and the longest line in the catalogue runs to three rows
+   on a 320pt screen. */
 .item-desc {
   flex: 0 0 auto;
-  height: 80px;
+  height: 92px;
   overflow: hidden;
   border: var(--outline) solid var(--ink);
   border-radius: var(--radius);
