@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { platform } from './index';
+import { __paramFromUrl as paramFromUrl } from './android';
 
 /**
  * Put a fake Telegram on the window, the way the script tag in index.html puts
@@ -150,5 +151,46 @@ describe('the choice itself', () => {
     fakeTelegram({ initData: 'auth=late' });
     expect(platform().id).toBe('telegram');
     expect(platform().authToken()).toBe('auth=late');
+  });
+});
+
+/**
+ * Every way an invitation can arrive at the app, flattened to the one string the
+ * game reads. Telegram's `start_param` is the shape; the other two doors are
+ * made to match it so that nothing downstream knows which was used.
+ */
+describe('an invitation arriving at the Android app', () => {
+  it('reads the scheme it has always read', () => {
+    expect(paramFromUrl('brokerstars://duel/abc123')).toBe('duel_abc123');
+    expect(paramFromUrl('brokerstars://friend/xyz789')).toBe('friend_xyz789');
+  });
+
+  it('reads an ordinary web invitation, which is what an App Link delivers', () => {
+    // exactly what `webInvite` builds, and exactly what goes in a chat
+    expect(paramFromUrl('https://yotsuki-taylor.github.io/BrokerStars/?d=abc123')).toBe(
+      'duel_abc123',
+    );
+    expect(paramFromUrl('https://yotsuki-taylor.github.io/BrokerStars/?f=xyz789')).toBe(
+      'friend_xyz789',
+    );
+  });
+
+  it('does not mind what else is on the address', () => {
+    expect(
+      paramFromUrl('https://yotsuki-taylor.github.io/BrokerStars/?utm=x&d=abc123#top'),
+    ).toBe('duel_abc123');
+  });
+
+  it('says nothing about a visit that is not an invitation', () => {
+    // the bare game address opens the app, and there is nothing to join
+    expect(paramFromUrl('https://yotsuki-taylor.github.io/BrokerStars/')).toBe('');
+  });
+
+  it('refuses a scheme that is not ours and rubbish that is not a url', () => {
+    expect(paramFromUrl('brokerstars://nonsense/abc')).toBe('');
+    expect(paramFromUrl('brokerstars://duel/')).toBe('');
+    expect(paramFromUrl('tel:+1234')).toBe('');
+    expect(paramFromUrl('not a url at all')).toBe('');
+    expect(paramFromUrl('')).toBe('');
   });
 });

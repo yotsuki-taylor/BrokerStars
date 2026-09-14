@@ -169,37 +169,69 @@ export async function signIn(): Promise<SignInError | null> {
 
 /* ------------------------------------------------------------- the launch url */
 
-/**
- * The link the app was opened on, already reshaped into what the game expects.
- *
- * `brokerstars://duel/ABC123` becomes `duel_ABC123` and `brokerstars://friend/X`
- * becomes `friend_X` — the same strings Telegram's `start_param` carries, so
- * `duelCodeFromLaunch` and `friendCodeFromLaunch` read them without knowing
- * which host they came from.
- *
- * A custom scheme rather than an https App Link because App Links need a domain
- * whose root we control, and the game is served from a path on github.io. The
- * cost is that a link pasted into a chat is not clickable as an ordinary
- * address; the page it points at offers to open the app instead.
- */
 /** One duel to come back to, so one notification that keeps replacing itself. */
 const DUEL_NOTIFICATION_ID = 1;
 
 let launchParam = '';
 
+/**
+ * The link the app was opened on, already reshaped into what the game expects.
+ *
+ * Both shapes turn into the same thing, and the same thing Telegram's
+ * `start_param` carries, so `duelCodeFromLaunch` and `friendCodeFromLaunch`
+ * read them without knowing which door they came through:
+ *
+ *     brokerstars://duel/ABC123                    -> duel_ABC123
+ *     https://host/BrokerStars/?d=ABC123           -> duel_ABC123
+ *     brokerstars://friend/XYZ                     -> friend_XYZ
+ *     https://host/BrokerStars/?f=XYZ              -> friend_XYZ
+ *
+ * THE SCHEME came first, because an App Link needs a file served from the root
+ * of a host and the game lives on a path inside somebody else's. The cost was
+ * that a link in a chat is not an ordinary address: it is not tappable, and a
+ * browser handed one loads it and fails.
+ *
+ * THE HTTPS ONE is that file finally being served (`android/assetlinks.json`).
+ * It is the invitation exactly as it is sent -- one address that opens the app
+ * where the app is installed and the web game where it is not, with nobody
+ * asked to choose. The scheme stays because it is what the page falls back to
+ * when verification has not happened, and because links already sent still use
+ * it.
+ *
+ * The host is not checked here. Android has already checked it, against a
+ * signature, before this process was started -- that is what the verification
+ * IS -- and re-deciding it off a string would only be a second, worse answer.
+ */
 function paramFromUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'brokerstars:') return '';
-    // `brokerstars://duel/ABC` parses with host `duel` and pathname `/ABC`
-    const kind = parsed.host;
-    const code = parsed.pathname.replace(/^\/+/, '').split('/')[0] ?? '';
-    if (!code) return '';
-    return kind === 'duel' || kind === 'friend' ? `${kind}_${code}` : '';
+
+    if (parsed.protocol === 'brokerstars:') {
+      // `brokerstars://duel/ABC` parses with host `duel` and pathname `/ABC`
+      const kind = parsed.host;
+      const code = parsed.pathname.replace(/^\/+/, '').split('/')[0] ?? '';
+      if (!code) return '';
+      return kind === 'duel' || kind === 'friend' ? `${kind}_${code}` : '';
+    }
+
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      // the same two keys `webInvite` puts on a link (worker/src/index.ts)
+      const duel = parsed.searchParams.get('d');
+      if (duel) return `duel_${duel}`;
+      const friend = parsed.searchParams.get('f');
+      if (friend) return `friend_${friend}`;
+      // an ordinary visit to the game, which is a launch and not an invitation
+      return '';
+    }
+
+    return '';
   } catch {
     return '';
   }
 }
+
+/** Exported for the tests, which are the only thing that may call it. */
+export const __paramFromUrl = paramFromUrl;
 
 /** The three questions the settings screen asks, and nothing else. */
 const ACCOUNT: Account = { signedIn, signIn, signOut };

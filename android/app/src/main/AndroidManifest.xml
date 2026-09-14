@@ -24,17 +24,48 @@
                 Reshaped into the `duel_<code>` and `friend_<code>` strings the game
                 already reads out of a Telegram launch - see src/platform/android.ts.
 
-                A scheme of our own rather than an https App Link, because App Links
-                need a file served from the root of a domain we own and the game is
-                served from a path on github.io. Buy a domain and this becomes an
-                ordinary link that opens the app; until then a link in a chat opens
-                the web page, which offers to hand over to the app.
+                A scheme of our own, which is what the page falls back to when the
+                App Link below has not verified, and what every invitation sent
+                before it existed still uses.
             -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="brokerstars" />
+            </intent-filter>
+
+            <!--
+                The same invitations as ordinary web addresses, which is what an
+                invitation should have been all along: one link that opens the
+                app where it is installed and the web game where it is not, with
+                nobody asked to choose between them.
+
+                `autoVerify` is what makes that happen without a chooser, and it
+                is not a claim this file can make on its own. Android fetches
+                https://yotsuki-taylor.github.io/.well-known/assetlinks.json and
+                will only route these links here if that file names this package
+                and the SHA-256 of the certificate this build was signed with.
+                The file to serve is `android/assetlinks.json`, and it has to sit
+                at the root of the HOST — the user site repository — not inside
+                this project's pages.
+
+                Until it verifies, nothing breaks: these links open in a browser
+                exactly as they do today, and the page there offers the app by
+                the custom scheme above.
+
+                Narrowed by path on purpose. Verification is granted for a whole
+                host, and that host carries every other page of that GitHub
+                account; the prefix is what keeps this app from claiming them.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="yotsuki-taylor.github.io"
+                    android:pathPrefix="/BrokerStars/" />
             </intent-filter>
         </activity>
 

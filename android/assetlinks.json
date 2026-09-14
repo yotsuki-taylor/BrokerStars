@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.brokerstars.game",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256",
+        "53:DC:8F:11:56:5D:0A:0B:15:DF:DE:8F:B3:0A:24:0A:B9:51:11:2A:55:82:75:1E:F7:F5:1D:41:E0:E9:64:93",
+        "BA:AF:91:C3:A6:A6:4D:C1:1D:57:BE:51:1F:C3:84:E5:88:26:CB:77:20:8D:2D:C6:1E:2F:85:05:CF:9D:2E:EB"
+      ]
+    }
+  }
+]
