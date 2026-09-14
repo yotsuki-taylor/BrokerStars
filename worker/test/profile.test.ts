@@ -9,6 +9,7 @@ import {
   claimBonus,
   claimInto,
   claimQuest,
+  countOpen,
   giftHat,
   priceOf,
   refundItem,
@@ -760,5 +761,74 @@ describe('the share counter', () => {
     expect(salted.ok && bare.ok).toBe(true);
     if (!salted.ok || !bare.ok) return;
     expect(salted.held.dollars).not.toBe(bare.held.dollars);
+  });
+});
+
+/**
+ * Counting opens. The only thing here that touches a database, so it gets the
+ * smallest one that can answer: a `prepare` that remembers the statement and a
+ * `run` that either works or does not.
+ *
+ * What is worth pinning is not that the number goes up — that is SQLite's job
+ * — but the two promises the comment on `countOpen` makes about what the
+ * statement must never do.
+ */
+interface Recorded {
+  sql: string;
+  args: unknown[];
+}
+
+const fakeDb = (fail = false) => {
+  const seen: Recorded[] = [];
+  const env = {
+    DB: {
+      prepare(sql: string) {
+        const rec: Recorded = { sql, args: [] };
+        return {
+          bind(...args: unknown[]) {
+            rec.args = args;
+            return this;
+          },
+          async run() {
+            if (fail) throw new Error('D1_ERROR: no such table');
+            seen.push(rec);
+            return { meta: { changes: 1 } };
+          },
+        };
+      },
+    },
+  } as unknown as Parameters<typeof countOpen>[0];
+  return { env, seen };
+};
+
+describe('counting an open', () => {
+  it('adds one and stamps the clock, in a single statement', async () => {
+    const { env, seen } = fakeDb();
+    await countOpen(env, 'a:beef', 1_700_000_000_000);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].sql.replace(/\s+/g, ' ')).toContain(
+      'UPDATE profiles SET opens = opens + 1, last_open = ?2 WHERE id = ?1',
+    );
+    expect(seen[0].args).toEqual(['a:beef', 1_700_000_000_000]);
+  });
+
+  it('leaves `updated_at` alone, which is what stops it losing somebody a race', () => {
+    // That column is the version every write compares against, so a counter
+    // that moved it would make a purchase in flight fail for no reason.
+    const { env, seen } = fakeDb();
+    return countOpen(env, 'a:beef', 1).then(() => {
+      expect(seen[0].sql).not.toContain('updated_at');
+    });
+  });
+
+  it('reads nothing first, so two opens at once cannot write the same number', async () => {
+    const { env, seen } = fakeDb();
+    await countOpen(env, 'a:beef', 1);
+    expect(seen[0].sql).not.toMatch(/SELECT/i);
+  });
+
+  it('swallows a database that says no rather than failing the handshake', async () => {
+    const { env } = fakeDb(true);
+    await expect(countOpen(env, 'a:beef', 1)).resolves.toBeUndefined();
   });
 });

@@ -487,6 +487,17 @@ async function openProfile(request: Request, env: Env) {
     profiles.open(env, caller, claim),
     calls.take(env, caller),
   ]);
+  // An open is a handshake WITH A CLAIM, and that is not a detail. This route
+  // is asked twice over in a session: once when the game starts, carrying the
+  // browser's own save as `claim` (`openProfile` in src/ui/api.ts), and again
+  // after every match handed in and every duel paid out, carrying nothing
+  // (`refreshProfile`). Counting the route would count matches; counting the
+  // claim counts arrivals, which is the question being asked.
+  //
+  // Afterwards rather than alongside: `profiles.open` is what creates the row
+  // on somebody's first ever open, and a counter racing it would miss exactly
+  // the open worth having. It cannot fail the handshake -- see `countOpen`.
+  if (claim) await profiles.countOpen(env, caller.id, Date.now());
   return sent(applied, call);
 }
 

@@ -119,7 +119,25 @@ CREATE TABLE IF NOT EXISTS profiles (
   -- matching and the rest is discarded on the next read (src/daily/protocol.ts).
   daily      TEXT NOT NULL DEFAULT '{}',
   first_seen INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  -- How many times the game has been opened, and when it last was.
+  --
+  -- Neither is progress and neither is ever sent to the client: nothing here
+  -- is something a player should be told, be able to claim, or carry to
+  -- another device, which is the same rule `chat_shouts` is kept under. They
+  -- are written by one statement in `countOpen` and read by nobody but
+  -- whoever is asking how the game is doing.
+  --
+  -- WHY THEY ARE HERE AND NOT IN A TABLE OF THEIR OWN. `first_seen` is already
+  -- an analytics column on this row and these two are the questions it cannot
+  -- answer on its own -- when somebody was last about, and whether they ever
+  -- came back. One row per player either way, and beside `first_seen` they can
+  -- be asked for in one scan.
+  --
+  -- WHAT THEY CANNOT ANSWER: which particular days somebody was about. That
+  -- needs a row per player per day, and these two are deliberately not it.
+  opens      INTEGER NOT NULL DEFAULT 0,
+  last_open  INTEGER NOT NULL DEFAULT 0
 );
 
 -- Friends: a code that stands for one player, and a list of pairs.

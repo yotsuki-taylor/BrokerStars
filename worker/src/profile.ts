@@ -733,6 +733,53 @@ export async function write(
 }
 
 /**
+ * One more open, on the clock.
+ *
+ * This is the one number the rest of the file cannot produce. Everything else
+ * here is a record of what a player OWNS, and somebody who opens the game, has
+ * a look and leaves owns nothing new at the end of it: `results` knew who
+ * finished a match, and nothing at all knew who turned up.
+ *
+ * The caller decides what counts, and it is not "a request to `/profile`" --
+ * that route is also how the game refetches after a match, so counting it would
+ * count matches over again. See the call in `index.ts`, which counts only the
+ * handshake that carries a claim.
+ *
+ * NOT PART OF `Held`, AND THAT IS THE POINT. Every other column on the row is
+ * something the player has, and goes out to the browser in `view`. These two
+ * are about the player rather than theirs: they are never sent, never claimed,
+ * and never carried to another device -- the same rule `chat_shouts` is kept
+ * under, and for the same reason.
+ *
+ * THREE THINGS IT DELIBERATELY DOES NOT DO:
+ *
+ *   - It does not read first. One statement, and `opens + 1` is computed by
+ *     the database, so two opens at once cannot both write the same number.
+ *   - It does not touch `updated_at`. That column is the version every write
+ *     compares against (`write`), and a counter that moved it would make a
+ *     purchase in flight lose a race it had already won.
+ *   - It does not throw. A counter is not worth failing a handshake for, so a
+ *     database that says no here is simply a number that did not go up. The
+ *     precedent is `giftFirstHat`, where the match is banked either way.
+ *
+ * It also does not INSERT. On a first ever open the row is made by the
+ * handshake itself, so this is called after that and finds one; if the
+ * handshake somehow made none, the UPDATE matches nothing and the day's first
+ * open goes uncounted, which is the right way round for a counter to be wrong.
+ */
+export async function countOpen(env: Env, id: string, now: number): Promise<void> {
+  try {
+    await env.DB.prepare(
+      `UPDATE profiles SET opens = opens + 1, last_open = ?2 WHERE id = ?1`,
+    )
+      .bind(id, now)
+      .run();
+  } catch {
+    /* a number that did not go up is not a reason to fail the request */
+  }
+}
+
+/**
  * How many times a change may be worked out again after losing the race. Two
  * requests from one player is already the unusual case and a third is not a
  * thing a pair of thumbs can do; this is a guard against spinning, not a queue.

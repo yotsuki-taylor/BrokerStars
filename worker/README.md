@@ -515,6 +515,7 @@ npm run migrate -- ./migrations/006-friends.sql          # новые табли
 npm run migrate -- ./migrations/007-office-room.sql      # необязателен, чинится и сам
 npm run migrate -- ./migrations/008-chat-shouts.sql      # новая таблица; хватит и schema
 npm run migrate -- ./migrations/012-profiles-offer.sql   # если profiles уже была
+npm run migrate -- ./migrations/013-profiles-opens.sql   # если profiles уже была
 npm run schema                                          # таблицы; безопасно повторять
 ```
 
