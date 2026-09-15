@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import SCHEMA from '../schema.sql?raw';
+import INDEX from '../src/index.ts?raw';
 
 /**
  * Does deleting an account actually empty it?
@@ -21,10 +21,6 @@ import { describe, expect, it } from 'vitest';
  * is named below with a reason — a new table is a failing test until somebody
  * decides which it is, rather than a silent omission.
  */
-
-const here = (f: string) => readFileSync(fileURLToPath(new URL(f, import.meta.url)), 'utf8');
-const SCHEMA = here('../schema.sql');
-const INDEX = here('../src/index.ts');
 
 /** The statements `deleteAccount` runs, and nothing else in the file. */
 const DELETE_BATCH = (() => {
