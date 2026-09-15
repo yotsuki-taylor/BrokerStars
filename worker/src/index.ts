@@ -650,6 +650,11 @@ async function deleteAccount(request: Request, env: Env) {
     env.DB.prepare(`DELETE FROM friend_codes WHERE player_id = ?1`).bind(id),
     env.DB.prepare(`DELETE FROM friends WHERE player_id = ?1 OR friend_id = ?1`).bind(id),
     env.DB.prepare(`DELETE FROM chat_shouts WHERE player_id = ?1`).bind(id),
+    // The feedback cooldown. It holds an id and a timestamp and not one word
+    // anybody wrote (`feedback.ts`), but "deleted" has to mean the row is gone
+    // rather than mostly gone -- and a stale cooldown would otherwise be the
+    // one thing a deleted account left behind to be counted against the next.
+    env.DB.prepare(`DELETE FROM feedback_sent WHERE player_id = ?1`).bind(id),
   ]);
 
   // The session the request arrived on still verifies — it is signed, not
