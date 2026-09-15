@@ -41,6 +41,15 @@ import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate, chatShout, duelPush } from './bot';
 import { chatAvailable, markShout, mayShout, waitLeft } from './chat';
+import { cleanFeedback } from '../../src/feedback/protocol';
+import {
+  cleanAbout,
+  deliver,
+  feedbackAvailable,
+  markWrite,
+  mayWrite,
+  waitLeft as feedbackWaitLeft,
+} from './feedback';
 import * as calls from './calls';
 import * as friends from './friends';
 import * as link from './link';
@@ -947,6 +956,49 @@ async function shoutDuel(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+/**
+ * Something a player wanted to say.
+ *
+ * Signed like everything else that writes, and that costs nobody a sign-in
+ * screen: a Telegram player arrives with `initData` and everybody else with a
+ * guest session the client mints on its own (`src/ui/guest.ts`). So the box is
+ * open to whoever is playing, which is the point -- see `mayWrite` for why this
+ * does NOT copy the chat's rule of refusing guests.
+ *
+ * Nothing is written down but the cooldown. The text goes into a Telegram
+ * message and out of memory; if delivery fails the player is told so while
+ * their words are still in the box, rather than having them queued into a
+ * table of everybody's complaints.
+ */
+async function feedback(request: Request, env: Env) {
+  if (!feedbackAvailable(env)) return json({ ok: false, reason: 'noserver' });
+
+  let body: { initData?: unknown; text?: unknown; replyTo?: unknown; about?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return bad(400, 'not json');
+  }
+
+  const token = typeof body.initData === 'string' ? body.initData : '';
+  const caller = await identify(token, env);
+  if (!caller) return bad(401, 'bad signature');
+  if (!mayWrite()) return json({ ok: false, reason: 'refused' });
+
+  const cleaned = cleanFeedback(body.text, body.replyTo);
+  if (!cleaned.ok) return json({ ok: false, reason: cleaned.reason });
+
+  const now = Date.now();
+  const wait = await feedbackWaitLeft(env, caller.id, now);
+  if (wait > 0) return json({ ok: false, reason: 'wait', wait });
+
+  const sent = await deliver(env, caller, cleaned.text, cleaned.replyTo, cleanAbout(body.about));
+  if (!sent) return json({ ok: false, reason: 'failed' });
+
+  await markWrite(env, caller.id, now);
+  return json({ ok: true });
+}
+
 /* --------------------------------------------------------------- friends */
 
 /**
@@ -1119,6 +1171,7 @@ export default {
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);
 
     if (url.pathname === '/duel/shout' && request.method === 'POST') return shoutDuel(request, env);
+    if (url.pathname === '/feedback' && request.method === 'POST') return feedback(request, env);
 
     if (url.pathname === '/tg' && request.method === 'POST') return telegramUpdate(request, env);
 

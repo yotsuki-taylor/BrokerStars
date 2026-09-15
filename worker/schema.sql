@@ -196,6 +196,15 @@ CREATE TABLE IF NOT EXISTS chat_shouts (
   last_at   INTEGER NOT NULL
 );
 
+-- The feedback cooldown, and the same shape for the same reason. One row per
+-- player, one timestamp, and NOT ONE WORD anybody wrote: a report is carried
+-- straight to the developer and forgotten, so there is no table of complaints
+-- here to leak or to forget to delete (worker/src/feedback.ts).
+CREATE TABLE IF NOT EXISTS feedback_sent (
+  player_id TEXT PRIMARY KEY,
+  last_at   INTEGER NOT NULL
+);
+
 -- Being called out to a duel by name, for a friend the bot cannot reach.
 --
 -- One row per player and the PRIMARY KEY is what makes that true: a second call

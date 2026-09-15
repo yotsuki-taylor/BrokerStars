@@ -112,7 +112,13 @@ import {
   shoutInvite,
   type Link,
 } from './duel';
-import { apiBase, deleteAccount } from './api';
+import { apiBase, deleteAccount, feedbackAvailable, sendFeedback } from './api';
+import {
+  MAX_FEEDBACK,
+  MAX_REPLY_TO,
+  MIN_FEEDBACK,
+  type FeedbackError,
+} from '../feedback/protocol';
 import { platform, type Account } from '../platform';
 import { friendAppLink, friendCodeFromLaunch, friendCodeIn } from './friends';
 import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../duel/protocol';
@@ -755,6 +761,109 @@ function GiftOverlay({ onShop, onClose }: { onShop: () => void; onClose: () => v
   );
 }
 
+/**
+ * The box a player says something in, and the far end of `/feedback`.
+ *
+ * WHAT IT DOES NOT SAY: where the message goes. Today the server carries it to
+ * the developer over Telegram because that is what this deployment already has;
+ * the stated address is `brokerstarsupport@gmail.com` and it will be, the day
+ * there is a sender for it (`worker/src/feedback.ts`). Naming a channel here
+ * would mean either a lie now or a string to change later, and the player does
+ * not care which inbox it lands in — they care that somebody reads it. So the
+ * row says OBRATNAYA SVYAZ and the panel says "we read all of it", both of
+ * which stay true through the change.
+ *
+ * THE ADDRESS FIELD IS OPTIONAL AND IS THE WHOLE OF THE REPLY PATH. The game
+ * has never known anybody's email and is not about to start asking; without one
+ * this is a message in one direction, and the placeholder says so rather than
+ * letting somebody write a question and wait for an answer that was never
+ * possible.
+ *
+ * The text is kept in state until the server says it landed, and only then
+ * cleared. Every failure leaves it exactly where it was — somebody who has just
+ * typed four sentences about a crash must not lose them to a dropped
+ * connection, and "it did not go, the text is still here" is the one behaviour
+ * that makes a retry button honest.
+ */
+function FeedbackPanel({ onOwnFooter, onDone }: { onOwnFooter: (own: boolean) => void; onDone: () => void }) {
+  const [text, setText] = useState('');
+  const [replyTo, setReplyTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<FeedbackError | null>(null);
+  const [wait, setWait] = useState(0);
+
+  // The panel owns its footer while there is something in the box: CLOSE under
+  // a half-written complaint is a way to lose it by tapping the wrong button.
+  useEffect(() => {
+    onOwnFooter(!sent);
+    return () => onOwnFooter(false);
+  }, [onOwnFooter, sent]);
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    const answer = await sendFeedback(text, replyTo);
+    setBusy(false);
+    if (answer.error === null) {
+      setSent(true);
+      setText('');
+      setReplyTo('');
+      return;
+    }
+    setError(answer.error);
+    setWait(Math.ceil((answer.wait ?? 0) / 1000));
+  };
+
+  if (sent) {
+    return (
+      <div className="settings-list feedback">
+        <p className="feedback-note">{t('feedback.sent')}</p>
+        <button className="big-btn" onClick={onDone}>
+          {t('common.back')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="settings-list feedback">
+      <p className="feedback-note">{t('feedback.lead')}</p>
+      <textarea
+        className="feedback-text"
+        value={text}
+        maxLength={MAX_FEEDBACK}
+        rows={6}
+        placeholder={t('feedback.placeholder')}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <input
+        className="feedback-mail"
+        value={replyTo}
+        maxLength={MAX_REPLY_TO}
+        inputMode="email"
+        placeholder={t('feedback.replyTo')}
+        onChange={(e) => setReplyTo(e.target.value)}
+      />
+      {error && (
+        <p className="feedback-error">
+          {error === 'wait' ? t('feedback.err.wait', { n: wait }) : t(`feedback.err.${error}`)}
+        </p>
+      )}
+      <button
+        className="big-btn"
+        disabled={busy || text.trim().length < MIN_FEEDBACK}
+        onClick={send}
+      >
+        {busy ? t('feedback.sending') : t('feedback.send')}
+      </button>
+      <button className="big-btn ghost" onClick={onDone}>
+        {t('common.back')}
+      </button>
+    </div>
+  );
+}
+
 function SettingsOverlay({
   onHelp,
   onTutorial,
@@ -769,18 +878,21 @@ function SettingsOverlay({
   onPickLang: (l: Lang) => void;
   onClose: () => void;
 }) {
-  const [view, setView] = useState<'menu' | 'lang' | 'account'>('menu');
+  const [view, setView] = useState<'menu' | 'lang' | 'account' | 'feedback'>('menu');
   const [ownFooter, setOwnFooter] = useState(false);
   const account = platform().account;
   // Drawn for a host where signing in happens, and also for one where it does
   // not but a second way in can still be arranged — which is Telegram.
   const hasAccount = Boolean(account) || linkAvailable();
+  const canFeedback = feedbackAvailable();
   const title =
     view === 'lang'
       ? t('settings.language')
       : view === 'account'
         ? t('account.title')
-        : t('settings.title');
+        : view === 'feedback'
+          ? t('settings.feedback')
+          : t('settings.title');
   return (
     <div className="overlay settings">
       <h2>{title}</h2>
@@ -798,6 +910,8 @@ function SettingsOverlay({
         </div>
       ) : view === 'account' && hasAccount ? (
         <AccountPanel account={account} onOwnFooter={setOwnFooter} onSignedIn={onSignedIn} />
+      ) : view === 'feedback' ? (
+        <FeedbackPanel onOwnFooter={setOwnFooter} onDone={() => setView('menu')} />
       ) : (
         <div className="settings-list">
           <button className="big-btn ghost" onClick={onHelp}>
@@ -815,6 +929,20 @@ function SettingsOverlay({
           {hasAccount && (
             <button className="big-btn ghost" onClick={() => setView('account')}>
               {t('settings.account')}
+            </button>
+          )}
+          {/* Above the policy and below everything a player opened the settings
+              FOR. Both of these are the game talking to somebody outside it,
+              and they belong together at the bottom rather than between the
+              language and the account.
+
+              Drawn only where there is a server to send to and something to
+              sign with — which is every real build, and no local `npm run dev`.
+              A row that opens a box and then cannot post it is worse than no
+              row, the same bargain the duel button makes about its chat. */}
+          {canFeedback && (
+            <button className="big-btn ghost" onClick={() => setView('feedback')}>
+              {t('settings.feedback')}
             </button>
           )}
           {/* Last in the list because nobody comes to the settings for it, and

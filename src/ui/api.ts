@@ -20,17 +20,22 @@
  */
 
 import { cleanCall, type DuelCall } from '../duel/protocol';
+import type { FeedbackError } from '../feedback/protocol';
 import { cleanLinkState, type LinkError, type LinkState } from '../link/protocol';
 import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
 import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
 import { platform } from '../platform';
 import { guestId, guestToken } from './guest';
+import { lang } from './i18n';
 import { LEAGUE_COUNT } from './leagues';
 import { read, write } from './store';
 import type { Outfit, Rarity, Slot } from './wardrobe';
 
 const BASE = String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+
+/** The build, put there by Vite out of `build.gradle`. See vite.config.ts. */
+const BUILD_VERSION = typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : '';
 
 /**
  * The signed one. `platform().userId()` is the forgeable one — see admin.ts.
@@ -550,6 +555,47 @@ export async function fetchMarket(): Promise<Market | null> {
 export async function deleteAccount(): Promise<boolean> {
   const answer = await post('/profile/delete', { confirm: 'delete' });
   return answer?.status === 200;
+}
+
+/* ---------------------------------------------- something to say about it */
+
+/**
+ * Can this build send a report at all? A server to send it to, and something
+ * to sign with -- the same two conditions linking has, and for a related
+ * reason: the far end refuses anything unsigned.
+ *
+ * Nobody is asked to sign in for it. A Telegram player arrives already signed
+ * by Telegram and everybody else by the guest session the game mints on the
+ * way in (`ui/guest.ts`), so this is false only for a build with no
+ * `VITE_API_URL` -- and then the settings row is simply not drawn, the way
+ * RATING says there is no board rather than spinning at one.
+ */
+export const feedbackAvailable = (): boolean => BASE !== '' && initData() !== '';
+
+/**
+ * Send it. Null means it went; anything else is why it did not, and `wait` also
+ * carries how much of the cooldown is left so the panel can say so in seconds.
+ *
+ * WHAT TRAVELS WITH IT: the text, an optional address to answer at, and three
+ * facts about the build -- which host, which version, which language. None of
+ * it is guessed at the far end because none of it can be: the server knows the
+ * player's id and nothing whatever about the phone in their hand, and a bug
+ * report without a platform on it is a bug report nobody can reproduce.
+ */
+export async function sendFeedback(
+  text: string,
+  replyTo: string,
+): Promise<{ error: FeedbackError | null; wait?: number }> {
+  const answer = ok(
+    await post('/feedback', {
+      text,
+      replyTo,
+      about: { platform: platform().id, version: BUILD_VERSION, lang: lang() },
+    }),
+  ) as { ok?: boolean; reason?: FeedbackError; wait?: number } | null;
+  if (!answer) return { error: 'noserver' };
+  if (answer.ok === true) return { error: null };
+  return { error: answer.reason ?? 'failed', wait: answer.wait };
 }
 
 /* ------------------------------------------------ one person, two ways in */

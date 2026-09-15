@@ -697,6 +697,17 @@ body {
   cursor: default;
 }
 
+/* Same for the big one, which had no disabled state at all and so stayed gold
+   and inviting while it did nothing: SEND under an empty feedback box, INVITE
+   before the link is minted, SIGN IN while a sign-in is already running. Eight
+   buttons in the app are rendered disabled and every one of them was lying
+   about it. Not `:disabled` on the shared rule but a rule of its own, so the
+   ghost variant dims from its own colour rather than from the gold. */
+.big-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* ---------- dev panel ---------- */
 
 .dev {
@@ -2848,6 +2859,72 @@ a.big-btn {
   font-weight: 700;
   letter-spacing: 0.04em;
   opacity: 1;
+}
+
+/* ---------- the feedback box ---------- */
+
+/* The lead line and the error, both prose in a list of buttons, so both borrow
+   the note treatment above rather than inventing a second one. */
+.overlay.settings .feedback .feedback-note {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* The one line here that has to be noticed: something went wrong and the text
+   is still in the box. Red, centred, and no heavier than that -- it is an
+   explanation, not an alarm. */
+.overlay.settings .feedback .feedback-error {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--down, #ff6b6b);
+}
+
+/* Same field as the friend code wears, minus the monospace and the tracking:
+   that one is a code being copied and these are sentences being written. The
+   16px floor stays, and for the same reason -- anything under it and iOS zooms
+   the whole page the moment the field is focused, which on a game that fills
+   the viewport is a layout nobody gets back. */
+.overlay.settings .feedback-text,
+.overlay.settings .feedback-mail {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.overlay.settings .feedback-text {
+  /* Grows nowhere. A textarea a player can drag wider than the overlay is a
+     textarea that breaks the screen it is on. */
+  resize: none;
+}
+
+.overlay.settings .feedback-text::placeholder,
+.overlay.settings .feedback-mail::placeholder {
+  opacity: 0.45;
+}
+
+/* The address field is the quieter of the two: it is optional, and it should
+   not read as a second thing that has to be filled in before SEND works. */
+.overlay.settings .feedback-mail {
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
+.overlay.settings .feedback-text:focus,
+.overlay.settings .feedback-mail:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* ---------- archive tabs ---------- */

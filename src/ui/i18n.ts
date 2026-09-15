@@ -181,6 +181,36 @@ const EN = {
   'settings.tutorial': 'WATCH THE TUTORIAL',
   'settings.language': 'LANGUAGE',
   'settings.account': 'ACCOUNT',
+  'settings.feedback': 'FEEDBACK',
+
+  /**
+   * WHAT THIS DELIBERATELY DOES NOT SAY: where the message goes. The server
+   * carries it to the developer over Telegram today and will carry it to
+   * brokerstarsupport@gmail.com when there is a sender for one
+   * (`worker/src/feedback.ts`). Naming the channel here would be either a lie
+   * now or a string to rewrite later; "we read all of it" survives the change,
+   * and is the part the player actually wants to know.
+   */
+  'feedback.lead':
+    'A bug, an idea, something that reads wrong in your language — write it here. Every one of these is read. Leave an address if you want an answer: without one there is nowhere to send it.',
+  'feedback.placeholder': 'What happened, or what should be different…',
+  /**
+   * Short enough to fit its own field at 16px, which the sentence it used to be
+   * was not — it was cut off mid-word on a 375pt screen. What it lost is in
+   * `feedback.lead` above, where there is room for prose.
+   */
+  'feedback.replyTo': 'EMAIL FOR A REPLY',
+  'feedback.send': 'SEND',
+  'feedback.sending': 'SENDING…',
+  'feedback.sent': 'Sent. Thank you — this is how the game gets fixed.',
+  'feedback.err.noserver': 'No connection. Try again in a moment.',
+  'feedback.err.empty': 'The box is empty.',
+  'feedback.err.short': 'A little more than that, so it can be acted on.',
+  'feedback.err.long': 'Too long — shorten it a little.',
+  'feedback.err.wait': 'Just sent one. Try again in {n} s.',
+  'feedback.err.refused': 'This message cannot be sent.',
+  'feedback.err.failed': 'It did not go. Your text is still here — try again.',
+
   'settings.privacy': 'PRIVACY POLICY',
   'settings.close': 'CLOSE',
 
@@ -647,6 +677,22 @@ const RU: Record<Key, string> = {
   'settings.tutorial': 'ПОСМОТРЕТЬ ТУТОРИАЛ',
   'settings.language': 'ЯЗЫК',
   'settings.account': 'АККАУНТ',
+  'settings.feedback': 'ОБРАТНАЯ СВЯЗЬ',
+  'feedback.lead':
+    'Баг, идея, криво переведённая фраза — напиши сюда. Это читают, все до одного. Оставь почту, если ждёшь ответа: без неё отвечать некуда.',
+  'feedback.placeholder': 'Что случилось или что стоит сделать иначе…',
+  'feedback.replyTo': 'ПОЧТА ДЛЯ ОТВЕТА',
+  'feedback.send': 'ОТПРАВИТЬ',
+  'feedback.sending': 'ОТПРАВЛЯЕМ…',
+  'feedback.sent': 'Отправлено. Спасибо — так игра и чинится.',
+  'feedback.err.noserver': 'Нет связи. Попробуй через минуту.',
+  'feedback.err.empty': 'Поле пустое.',
+  'feedback.err.short': 'Чуть подробнее, иначе с этим нечего делать.',
+  'feedback.err.long': 'Слишком длинно — немного сократи.',
+  'feedback.err.wait': 'Только что отправляли. Попробуй через {n} с.',
+  'feedback.err.refused': 'Это сообщение отправить нельзя.',
+  'feedback.err.failed': 'Не ушло. Текст на месте — попробуй ещё раз.',
+
   'settings.privacy': 'КОНФИДЕНЦИАЛЬНОСТЬ',
   'settings.close': 'ЗАКРЫТЬ',
 
