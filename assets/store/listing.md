@@ -162,8 +162,26 @@ faster than the person across from you.
 **Category** — Games → Simulation. Casual is the other honest answer; Simulation
 is closer to what the match actually is.
 
-**Tags** — pick from Play's own list; there is no free text. Stock market,
-simulation, competitive and casual are the ones that fit.
+**Tags** — pick from Play's own list; there is no free text, and the list is
+filtered by the CATEGORY above, so changing the category changes what is on
+offer. Four are set: **Casual, Simulation, Time management, Economic strategy**.
+
+Read Play's own tooltip before judging a tag by its name. Two of these looked
+wrong and were not. TIME MANAGEMENT sounds like Diner Dash; Play defines it as
+allocating resources quickly and in sequence, with the horizon set by the clock
+rather than by long-term goals — which is the match exactly, and is why the
+difficulty ladder is built on `holdTicks` rather than on money. ECONOMIC
+STRATEGY is the other half: "earning through strategic investments" is the
+share counter and the dollars board. The two tags contradict each other in
+Play's own wording and both are still true here, because the match has no long
+game and the meta between matches is nothing else.
+
+Rejected, and why, so nobody re-adds them: CLICKERS (no idle loop at all — it
+brings people who bounce, and Play counts retention), MINI-GAMES (means a
+collection of small games, and this is one game), LIFESTYLE SIMULATION (true of
+the office and the wardrobe, but they are the meta rather than the game).
+Nothing in the list names the stock market; the theme is carried by the title,
+the descriptions and the banner instead, which is what search actually reads.
 
 **Contact details** — an email address is required and is shown publicly on the
 listing. Use one you are willing to publish.
