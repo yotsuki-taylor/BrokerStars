@@ -31,7 +31,15 @@ export default function ResultScreen({
 
   const me = state.traders[humanIdx];
   const rival = state.traders[1 - humanIdx];
-  const start = state.cfg.match.startingCash;
+  /**
+   * Each side's own opening book, not the config's: a renovated office sits
+   * down with more (`ui/renovation.ts`), so the two percentages on this screen
+   * are two different sums. Measuring the rival off YOUR start is how a rival
+   * who did not move a penny came back as "−6.5 %" — which is the gap between
+   * the two books, printed as if it were their trading.
+   */
+  const start = me.startCash;
+  const rivalStart = rival.startCash;
   const closed = me.trades.filter((t) => t.realized !== 0);
   const best = closed.reduce((a, b) => (b.realized > (a?.realized ?? -Infinity) ? b : a), closed[0]);
   const worst =
@@ -100,8 +108,8 @@ export default function ResultScreen({
           <div className="k">{rival.name.toUpperCase()}</div>
           <div className="v">
             {money(rival.netWorth)}{' '}
-            <span className={rival.netWorth >= start ? 'delta up' : 'delta down'}>
-              {signed(((rival.netWorth - start) / start) * 100, 1)}%
+            <span className={rival.netWorth >= rivalStart ? 'delta up' : 'delta down'}>
+              {signed(((rival.netWorth - rivalStart) / rivalStart) * 100, 1)}%
             </span>
           </div>
         </div>

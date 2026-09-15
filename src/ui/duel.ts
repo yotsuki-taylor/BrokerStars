@@ -490,6 +490,17 @@ export interface DuelSetup {
   names: [string, string];
   outfits: [Outfit, Outfit];
   abilities: [MatchState['traders'][number]['ability'], MatchState['traders'][number]['ability']];
+  /**
+   * What each seat opens on, the server's arithmetic, ordered for this client
+   * so `starts[0]` is its own. See the `setup` message in `duel/protocol.ts`:
+   * two renovated offices are two different books, and only the server has
+   * read both profiles.
+   *
+   * Optional here and required in the message: a client that has been open
+   * since before the server learned to send it still has to be able to build
+   * a mirror, and `buildMirror` falls back to the flat book.
+   */
+  starts?: [number, number];
 }
 
 /**
@@ -501,8 +512,14 @@ export interface DuelSetup {
  * that way round (see `src/duel/protocol.ts`).
  */
 export function buildMirror(setup: DuelSetup): MatchState {
-  const cash = CONFIG.match.startingCash;
-  const perks = [perksFor(setup.outfits[0], cash), perksFor(setup.outfits[1], cash)];
+  // A client one build behind the server has no `starts` in the message; the
+  // flat book is what every duel used to open on, so that is what it falls
+  // back to, and the mirror is then wrong by an office rather than broken.
+  const starts: [number, number] = [
+    setup.starts?.[0] ?? CONFIG.match.startingCash,
+    setup.starts?.[1] ?? CONFIG.match.startingCash,
+  ];
+  const perks = [perksFor(setup.outfits[0], starts[0]), perksFor(setup.outfits[1], starts[1])];
   return createMatch(setup.seed, CONFIG, {
     stocks: setup.stocks,
     traders: [
@@ -512,6 +529,7 @@ export function buildMirror(setup: DuelSetup): MatchState {
         preset: 'medium',
         perks: perks[0].trader,
         ability: setup.abilities[0],
+        startCash: starts[0],
       },
       {
         name: setup.names[1],
@@ -519,6 +537,7 @@ export function buildMirror(setup: DuelSetup): MatchState {
         preset: 'medium',
         perks: perks[1].trader,
         ability: setup.abilities[1],
+        startCash: starts[1],
       },
     ],
   });

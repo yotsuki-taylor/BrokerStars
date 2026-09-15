@@ -20,11 +20,34 @@ import { snapshotFor, syncFor, type Seat } from './snapshot';
 
 const PERKS = perksOrDefault({ undos: 1, undoWindowTicks: 10 });
 
+/**
+ * Two different opening books, on purpose: a renovated office adds to the cash
+ * a seat sits down with (`ui/renovation.ts`), so the two sides of a real duel
+ * hardly ever start level. A mirror that quietly opened both seats on the
+ * config's flat number would be out by the difference from the first tick, and
+ * every assertion below would be comparing the wrong two numbers.
+ */
+const STARTS: [number, number] = [10_700, 10_150];
+
 function liveMatch(seed = 4242): MatchState {
   return createMatch(seed, undefined, {
     traders: [
-      { name: 'HOST', kind: 'human', preset: 'medium', perks: PERKS, ability: 'rumour' },
-      { name: 'GUEST', kind: 'human', preset: 'medium', perks: PERKS, ability: 'margincall' },
+      {
+        name: 'HOST',
+        kind: 'human',
+        preset: 'medium',
+        perks: PERKS,
+        ability: 'rumour',
+        startCash: STARTS[0],
+      },
+      {
+        name: 'GUEST',
+        kind: 'human',
+        preset: 'medium',
+        perks: PERKS,
+        ability: 'margincall',
+        startCash: STARTS[1],
+      },
     ],
   });
 }
@@ -41,6 +64,7 @@ function mirrorOf(server: MatchState, seat: Seat): MatchState {
     // wardrobe.
     outfits: [{ torso: 'legend' }, { torso: 'legend' }],
     abilities: order([server.traders[0].ability, server.traders[1].ability]),
+    starts: order([server.traders[0].startCash, server.traders[1].startCash]),
   });
 }
 

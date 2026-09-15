@@ -19,45 +19,65 @@ export interface RoomStep {
   slot: RoomSlot;
   label: string;
   price: number;
+  /** what finishing this step adds to the starting cash of every match */
+  cash: number;
 }
 
 /**
- * Renovation order, exactly as it is offered. All seven numbers live here and
- * nowhere else, and they come to 1000 coins.
+ * Renovation order, exactly as it is offered. All fourteen numbers live here
+ * and nowhere else: the prices come to 1000 coins, the cash column to 700
+ * dollars.
  *
- * DELIBERATELY A TENTH OF THE WARDROBE, WHICH IS 7750. The room is the one
- * thing a player buys that does nothing: it changes the picture behind the
- * menu and not a single number in a match, where every rung of a slot hands
- * out a perk. A cosmetic that costs what a perk costs is a cosmetic nobody
- * sane buys, and this used to be worse in the other direction — the steps came
- * to 144 coins against a wardrobe of 415, so the room was a quarter of
- * everything there was to buy and finished in an afternoon.
+ * PRICES ARE DELIBERATELY A TENTH OF THE WARDROBE, WHICH IS 7750. The room
+ * used to be the one thing a player buys that does nothing — it changed the
+ * picture behind the menu and not a single number in a match, where every rung
+ * of a slot hands out a perk. That is what the cash column is for, and the
+ * prices stay where they were: the room is still the cheap purchase, it simply
+ * is no longer the empty one.
  *
- * The shape follows two rules. No step costs more than the SECOND rung of a
- * slot (`PRICES.uncommon` is 200, the dearest step here is 250 — close enough
- * that the room never out-prices a garment that actually does something), and
- * the first step at 20 stays the cheapest purchase in the game, under even the
- * common. That first one is the tutorial for spending: it is on the menu from
- * the first minute, and it should be affordable on the first evening.
+ * The shape of the prices follows two rules. No step costs more than the
+ * SECOND rung of a slot (`PRICES.uncommon` is 200, the dearest step here is
+ * 250 — close enough that the room never out-prices a garment), and the first
+ * step at 20 stays the cheapest purchase in the game, under even the common.
+ * That first one is the tutorial for spending: it is on the menu from the
+ * first minute, and it should be affordable on the first evening.
  *
- * At what a league pays and what the day's quests add, the whole room is two
- * to five weeks — a side goal that finishes while the wardrobe is still
- * months away, which is the right order for the thing with an award on it and
- * no effect on play.
+ * THE CASH COLUMN IS AN ARITHMETIC LADDER OF 25, and the whole of it is +700
+ * on a starting 10 000 — a seventh of a match's opening book, handed out over
+ * two to five weeks of leagues and day quests. Three things set that ceiling:
+ *
+ *   - It has to stay UNDER the best single garment. A legend HAND takes the
+ *     commission to zero and slippage to 0.65, which over a busy match is
+ *     worth something like five per cent of the book, and it costs 600 coins
+ *     against the room's 1000 for the lot. A room that beat it would make the
+ *     cheapest thing in the game the strongest, and the wardrobe — the months
+ *     of play — the mug's bargain.
+ *   - It has to be FELT. The rival sits down with a flat 10 000 and the market
+ *     is won by the wider book, so +7 % is a few points of win rate rather
+ *     than a rounding error: enough that a finished office is a reason to
+ *     finish it, and not enough to carry a bad match.
+ *   - The rungs rise while the value per coin falls away from a generous
+ *     first step: 25 dollars for 20 coins is a dollar and a quarter each, and
+ *     every step after it settles around two thirds of that. Same shape as the
+ *     rarity ladder, where common 50 buys more per coin than legend 600, and
+ *     it keeps the cheapest purchase in the game the open-handed one — which
+ *     is the whole job of the first step.
  *
  * The bedroom's eight steps also came to 1000. Keeping the total across the
  * change is what makes the move free: `spent` is a stored number, not one
  * recomputed from this table, so nobody's balance moves when the office
- * replaces the bedroom under a save that is halfway through it.
+ * replaces the bedroom under a save that is halfway through it. The cash
+ * column arrived later and needed no such care — it is recomputed from the
+ * count every match and nothing stores it.
  */
 export const ROOM_STEPS: RoomStep[] = [
-  { slot: 'bg', label: 'WALLS & FLOOR', price: 20 },
-  { slot: 'window', label: 'WINDOW', price: 60 },
-  { slot: 'table', label: 'DESK', price: 110 },
-  { slot: 'comp', label: 'COMPUTER', price: 150 },
-  { slot: 'shelf', label: 'CABINET', price: 190 },
-  { slot: 'picture_1', label: 'POSTER', price: 220 },
-  { slot: 'picture_2', label: 'SECOND POSTER', price: 250 },
+  { slot: 'bg', label: 'WALLS & FLOOR', price: 20, cash: 25 },
+  { slot: 'window', label: 'WINDOW', price: 60, cash: 50 },
+  { slot: 'table', label: 'DESK', price: 110, cash: 75 },
+  { slot: 'comp', label: 'COMPUTER', price: 150, cash: 100 },
+  { slot: 'shelf', label: 'CABINET', price: 190, cash: 125 },
+  { slot: 'picture_1', label: 'POSTER', price: 220, cash: 150 },
+  { slot: 'picture_2', label: 'SECOND POSTER', price: 250, cash: 175 },
 ];
 
 /**
@@ -166,6 +186,29 @@ export function upgradedSprite(slot: RoomSlot): string {
 }
 
 export const ROOM_DONE = ROOM_STEPS.length;
+
+/**
+ * What a room this far along is worth at the whistle: the dollars added to the
+ * starting cash of every match this player sits down to.
+ *
+ * ADDED TO, not replacing. The match config's `startingCash` is still what
+ * everyone starts with — a bot always, an opponent whose office is bare — and
+ * this is the only thing on top of it. Clamped both ends because the number it
+ * reads comes off a profile, and a profile is a thing the client sends.
+ *
+ * Recomputed from the count wherever it is needed rather than stored anywhere.
+ * That is what lets this table be re-tuned without a migration: change a
+ * number below and every save is worth the new number the next time it plays.
+ */
+export function roomCash(done: number): number {
+  const n = Math.min(ROOM_DONE, Math.max(0, Math.floor(done || 0)));
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += ROOM_STEPS[i].cash;
+  return sum;
+}
+
+/** What a finished office is worth. 700, against a starting book of 10 000. */
+export const ROOM_CASH_TOTAL = roomCash(ROOM_DONE);
 
 /* ------------------------------------------------------------- persistence */
 

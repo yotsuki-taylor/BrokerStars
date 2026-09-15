@@ -22,6 +22,14 @@ export interface TraderSpec {
   preset: string;
   /** the terms this seat trades on; left out means the ordinary ones */
   perks?: Partial<TraderPerks>;
+  /**
+   * What this seat sits down with. Left out means the config's `startingCash`,
+   * which is what a bot always gets and what a player with a bare office gets.
+   * The game hands in the config number plus whatever this player's renovation
+   * is worth (`ui/renovation.ts`), so the two seats of a duel can and do open
+   * on different books.
+   */
+  startCash?: number;
   /** the one ability this seat brought to the match, if any */
   ability?: AbilityId | null;
 }
@@ -65,29 +73,35 @@ export function createMatch(seed: number, cfg: Config = CONFIG, opts: MatchOptio
   });
 
   const specs = opts.traders ?? DEFAULT_TRADERS;
-  const traders: TraderState[] = specs.map((spec, idx) => ({
-    idx,
-    name: spec.name,
-    kind: spec.kind,
-    preset: spec.preset,
-    cash: config.match.startingCash,
-    positions: config.stocks.map(() => 0),
-    avgEntry: config.stocks.map(() => 0),
-    bankrupt: false,
-    netWorth: config.match.startingCash,
-    netWorthHistory: [config.match.startingCash],
-    trades: [],
-    pending: [],
-    exitAt: config.stocks.map(() => -1),
-    coolUntil: config.stocks.map(() => 0),
-    perks: spec.perks ? perksOrDefault(spec.perks) : NO_PERKS,
-    stopsLeft: spec.perks?.stopLossUses ?? 0,
-    undosLeft: spec.perks?.undos ?? 0,
-    refundUsed: false,
-    undoPoint: null,
-    ability: spec.ability ?? null,
-    abilityUsed: false,
-  }));
+  const traders: TraderState[] = specs.map((spec, idx) => {
+    // Rounded on the way in: it is read off a profile, and a book that opened
+    // on a fraction of a cent would print as one for the whole match.
+    const start = Math.max(0, Math.round(spec.startCash ?? config.match.startingCash));
+    return {
+      idx,
+      name: spec.name,
+      kind: spec.kind,
+      preset: spec.preset,
+      cash: start,
+      startCash: start,
+      positions: config.stocks.map(() => 0),
+      avgEntry: config.stocks.map(() => 0),
+      bankrupt: false,
+      netWorth: start,
+      netWorthHistory: [start],
+      trades: [],
+      pending: [],
+      exitAt: config.stocks.map(() => -1),
+      coolUntil: config.stocks.map(() => 0),
+      perks: spec.perks ? perksOrDefault(spec.perks) : NO_PERKS,
+      stopsLeft: spec.perks?.stopLossUses ?? 0,
+      undosLeft: spec.perks?.undos ?? 0,
+      refundUsed: false,
+      undoPoint: null,
+      ability: spec.ability ?? null,
+      abilityUsed: false,
+    };
+  });
 
   const state: MatchState = {
     seed,

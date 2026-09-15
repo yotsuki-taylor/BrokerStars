@@ -132,7 +132,7 @@ import {
   saveWins,
   unlockedCount,
 } from './leagues';
-import { ROOM_DONE, ROOM_STEPS, loadRoom, saveRoom } from './renovation';
+import { ROOM_DONE, ROOM_STEPS, loadRoom, roomCash, saveRoom } from './renovation';
 import { isAdmin, loadFreeMode, saveFreeMode } from './admin';
 import { markTutorialSeen, tutorialSeen } from './tutorial';
 import { openPrivacy } from './legal';
@@ -265,14 +265,21 @@ function makeMatch(
   perks: TraderPerks,
   board: PickOptions,
   ability: AbilityId | null,
+  /** the player's own opening book: the standard one plus their office */
+  startCash: number,
 ): MatchState {
   const h = hashSeed(seed);
   return createMatch(h, cfg, {
     traders: [
-      { name: playerName(), kind: 'human', preset: 'medium', perks, ability },
+      { name: playerName(), kind: 'human', preset: 'medium', perks, ability, startCash },
       // The rival brings the same one. Anything else moves the ladder: the
       // league win rates were measured with neither side holding an ability,
       // and handing one to the player alone quietly makes every rung easier.
+      //
+      // It does NOT bring an office, and that asymmetry is the point: the bot
+      // always sits down with the flat `startingCash`, so the renovation is
+      // felt as a head start rather than cancelled out by a rival who renovated
+      // too. The clothes are the same bargain and always have been.
       { name: t('match.rival'), kind: 'bot', preset, ability },
     ],
     stocks: pickCompanies(league, new Rng(h ^ 0x1b873593), 3, board),
@@ -843,12 +850,28 @@ export default function App() {
   const [league, setLeague] = useState(() => loadPick(leagueWins));
   const [botPreset, setBotPreset] = useState(() => LEAGUES[league].preset);
   const [outfit, setOutfit] = useState<Outfit>(loadOutfit);
+  /**
+   * How far the office is along. Up here rather than down with the rest of the
+   * menu's state because the perks below are built off it: a renovation is
+   * money at the desk now, and the BODY perk's floor is a share of the book it
+   * has to be a share of.
+   */
+  const [roomDone, setRoomDone] = useState(loadRoom);
   const [boardPrefs, setBoardPrefs] = useState<BoardPrefs>(loadPrefs);
-  /** everything the clothes change, rebuilt whenever the player changes them */
-  const perks = useMemo(
-    () => perksFor(outfit, baseCfg.current.match.startingCash),
-    [outfit],
-  );
+  /**
+   * What this player sits down to a match with: the book everybody gets, plus
+   * whatever their renovation is worth (`ui/renovation.ts`). The rival — bot or
+   * stranger — opens on their own number, never on this one.
+   */
+  const startCash = baseCfg.current.match.startingCash + roomCash(roomDone);
+  const startCashRef = useRef(startCash);
+  startCashRef.current = startCash;
+  /**
+   * Everything the clothes change, rebuilt whenever the player changes them —
+   * or renovates, since the PRESSED SHIRT's floor is a tenth of the book and
+   * the book just got bigger.
+   */
+  const perks = useMemo(() => perksFor(outfit, startCash), [outfit, startCash]);
   const perksRef = useRef(perks);
   perksRef.current = perks;
   const outfitRef = useRef(outfit);
@@ -864,7 +887,16 @@ export default function App() {
     saveHeld(heldRef.current);
   };
   const stateRef = useRef<MatchState>(
-    makeMatch(baseCfg.current, seed, botPreset, league, perks.trader, {}, perks.ui.ability),
+    makeMatch(
+      baseCfg.current,
+      seed,
+      botPreset,
+      league,
+      perks.trader,
+      {},
+      perks.ui.ability,
+      startCash,
+    ),
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(0);
@@ -928,7 +960,6 @@ export default function App() {
   });
   /** the last thing the server said about this player, for the shelf to draw */
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [roomDone, setRoomDone] = useState(loadRoom);
   const [freeMode, setFreeMode] = useState(loadFreeMode);
   const [rivalOutfit, setRivalOutfit] = useState<Outfit>(() => randomOutfit(Math.random));
   /** 3, 2, 1 before the first tick; the match is frozen while it runs */
@@ -1256,7 +1287,7 @@ export default function App() {
             : awardFor(
                 st.winner === HUMAN,
                 st.winner === null,
-                tradedWell(me.netWorth, st.cfg.match.startingCash),
+                tradedWell(me.netWorth, me.startCash),
                 LEAGUES[li].reward,
               );
         setAward(a);
@@ -1290,7 +1321,7 @@ export default function App() {
               outcome:
                 st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
               netWorth: Math.round(me.netWorth),
-              tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
+              tradedWell: tradedWell(me.netWorth, me.startCash),
               // minted here, once, and kept with the match if it has to be sent
               // again: the same match twice must not be paid for twice
               token: mintToken(),
@@ -1315,7 +1346,7 @@ export default function App() {
             outcome:
               st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
             netWorth: Math.round(me.netWorth),
-            tradedWell: tradedWell(me.netWorth, st.cfg.match.startingCash),
+            tradedWell: tradedWell(me.netWorth, me.startCash),
             bankrupt: me.bankrupt,
             trades: me.trades.length,
             // this branch is the bot match; a duel is counted by the server
@@ -1432,6 +1463,7 @@ export default function App() {
         perksRef.current.trader,
         { pin: prefs.pin, ban: prefs.ban, force: forcedRef.current },
         perksRef.current.ui.ability,
+        startCashRef.current,
       );
       stateRef.current = match;
       // seeded off the match, so replaying a seed brings back the same opponent
@@ -2543,7 +2575,7 @@ export default function App() {
           netWorth={me.netWorth}
           cash={me.cash}
           held={positionValue(st, me)}
-          startCash={cfg.match.startingCash}
+          startCash={me.startCash}
           cheapestShare={cheapestShare}
           bankrupt={me.bankrupt}
           hit={isHit(st, HUMAN)}
@@ -2557,7 +2589,7 @@ export default function App() {
           netWorth={rival.netWorth}
           cash={rival.cash}
           held={duel ? (lastTick.current?.tr[1].hv ?? 0) : positionValue(st, rival)}
-          startCash={cfg.match.startingCash}
+          startCash={rival.startCash}
           cheapestShare={cheapestShare}
           bankrupt={rival.bankrupt}
           hit={isHit(st, rival.idx)}

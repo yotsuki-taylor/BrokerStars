@@ -31,9 +31,10 @@ import { Rng } from '../../src/sim/rng';
 import { TRADE_FRACTION, applyAction, undoLast } from '../../src/sim/trading';
 import type { MatchState } from '../../src/sim/types';
 import { perksFor } from '../../src/ui/perks';
+import { roomCash } from '../../src/ui/renovation';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
-import { giftFirstHat, outfitOf, settle } from './profile';
+import { giftFirstHat, outfitOf, roomOf, settle } from './profile';
 import { settle as settleInvite } from './invites';
 import {
   DUEL_INTRO_MS,
@@ -54,6 +55,13 @@ interface Player {
   outfit: Outfit;
   /** the league this player is paid at, read off the board at kick-off */
   payLeague: number;
+  /**
+   * Renovation steps finished, read off the profile at kick-off alongside the
+   * league and for the same reason: an office that gets a step richer mid-duel
+   * must not change the match already being played. Missing on a lobby stored
+   * before the office was worth anything, so every read of it defaults.
+   */
+  room?: number;
 }
 
 interface Meta {
@@ -398,14 +406,24 @@ export class Duel implements DurableObject {
     a.payLeague = Math.min(meta.league, await topLeague(this.env, a.id));
     b.payLeague = Math.min(meta.league, await topLeague(this.env, b.id));
 
+    // And what each of them sits down with. Off the profile this Worker keeps,
+    // never off the hello: an office is money at the desk now, and this is a
+    // match against somebody who can open a console.
+    a.room = (await roomOf(this.env, a.id)) ?? 0;
+    b.room = (await roomOf(this.env, b.id)) ?? 0;
+
     meta.phase = 'live';
     await this.save();
 
     const seed = (Math.floor(Math.random() * 0xffffffff) ^ Date.now()) >>> 0;
-    const perks = [
-      perksFor(a.outfit, CONFIG.match.startingCash),
-      perksFor(b.outfit, CONFIG.match.startingCash),
+    // Two books, and they are rarely the same size: the standard one plus
+    // whatever each office is worth. The perks are built off the seat's OWN
+    // number, because the PRESSED SHIRT's floor is a share of the book.
+    const starts: [number, number] = [
+      CONFIG.match.startingCash + roomCash(a.room ?? 0),
+      CONFIG.match.startingCash + roomCash(b.room ?? 0),
     ];
+    const perks = [perksFor(a.outfit, starts[0]), perksFor(b.outfit, starts[1])];
     // A clean draw for the league. The board perks — reroll, pin, ban, the
     // whole of what the HEAD slot sells — are a single-player bargain with the
     // dealer, and there is no honest way for two of them to be struck at once
@@ -421,6 +439,7 @@ export class Duel implements DurableObject {
           preset: 'medium',
           perks: perks[0].trader,
           ability: perks[0].ui.ability,
+          startCash: starts[0],
         },
         {
           name: b.name.toUpperCase(),
@@ -428,6 +447,7 @@ export class Duel implements DurableObject {
           preset: 'medium',
           perks: perks[1].trader,
           ability: perks[1].ui.ability,
+          startCash: starts[1],
         },
       ],
     });
@@ -441,6 +461,7 @@ export class Duel implements DurableObject {
         names: ordered(s, [a.name.toUpperCase(), b.name.toUpperCase()]),
         outfits: ordered(s, [a.outfit, b.outfit]),
         abilities: ordered(s, [perks[0].ui.ability, perks[1].ui.ability]),
+        starts: ordered(s, starts),
         startsInMs: DUEL_INTRO_MS,
       });
     }
@@ -475,6 +496,9 @@ export class Duel implements DurableObject {
         meta.players[1]?.outfit ?? {},
       ]),
       abilities: ordered(seat, [perks[0], perks[1]]),
+      // straight off the match rather than off the profiles: whatever the two
+      // offices are worth today, this duel opened on the numbers it opened on
+      starts: ordered(seat, [st.traders[0].startCash, st.traders[1].startCash]),
       startsInMs: null,
     });
     this.sendTo(seat, {
@@ -583,7 +607,6 @@ export class Duel implements DurableObject {
     this.stopTimer();
     await this.save();
 
-    const start = st.cfg.match.startingCash;
     const seed = st.seed.toString(36);
 
     for (const s of [0, 1] as Seat[]) {
@@ -592,7 +615,10 @@ export class Duel implements DurableObject {
       const t = st.traders[s];
       const outcome: Outcome =
         st.winner === null ? 'draw' : st.winner === s ? 'win' : 'loss';
-      const well = clearedBar(t.netWorth, start);
+      // measured off what THIS seat sat down with — a renovated office opens on
+      // a bigger book, and a bar that stayed pinned to the config's number would
+      // quietly hand the profit bonus out for a smaller gain
+      const well = clearedBar(t.netWorth, t.startCash);
       // Giving up pays nothing, exactly as it does against a bot — otherwise an
       // early lead could be cashed out by quitting.
       const paid =

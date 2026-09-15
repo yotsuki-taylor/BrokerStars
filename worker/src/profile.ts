@@ -932,3 +932,15 @@ export async function outfitOf(env: Env, id: string): Promise<Outfit | null> {
   const stored = await read(env, id);
   return stored ? stored.held.outfit : null;
 }
+
+/**
+ * How far this player's office is along, or null for somebody with no row yet.
+ *
+ * The duel object asks at kick-off, the same way it asks for the outfit and
+ * for the same reason: a renovation is money at the desk (`ui/renovation.ts`),
+ * and what a player claims about their own is not what they play on.
+ */
+export async function roomOf(env: Env, id: string): Promise<number | null> {
+  const stored = await read(env, id);
+  return stored ? stored.held.room : null;
+}

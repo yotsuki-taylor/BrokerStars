@@ -24,6 +24,17 @@ export interface TraderState {
   kind: 'human' | 'bot';
   preset: string;
   cash: number;
+  /**
+   * What this seat sat down with. The config's `startingCash` is what a seat
+   * gets by default, but it is no longer what every seat gets: a renovated
+   * office adds to the human's (see `ui/renovation.ts`), and the rival's is
+   * whatever their own office is worth. Everything that measures a match
+   * against its opening — the profit bar, the percentages on the trader cards,
+   * the dashed break-even line on the net-worth chart — has to ask the TRADER
+   * rather than the config, or it is measuring two different books with one
+   * ruler.
+   */
+  startCash: number;
   positions: number[];
   /** average entry price per stock, for the dashed break-even line */
   avgEntry: number[];

@@ -471,7 +471,15 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
   const px = (i: number) => padX + (i / (n - 1)) * (W - padX * 2);
   const py = (v: number) => padY + (1 - (v - lo) / (hi - lo)) * (H - padY * 2);
 
-  const start = state.cfg.match.startingCash;
+  /**
+   * Break-even, and it is the READER'S break-even: trader 0 is always the
+   * person looking at the screen (`HUMAN` in App.tsx, and the seat the duel
+   * protocol orders every message for). Two offices open on two different
+   * books now, so the config's number is nobody's line in particular, and a
+   * second dashed line for the rival would be two unlabelled dashes on a chart
+   * whose whole job is "did I finish above where I started".
+   */
+  const start = state.traders[0]?.startCash ?? state.cfg.match.startingCash;
   if (start >= lo && start <= hi) {
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.setLineDash([4, 4]);

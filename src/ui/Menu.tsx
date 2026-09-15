@@ -16,7 +16,7 @@ import {
   money,
 } from './components';
 import { t, tr } from './i18n';
-import { ROOM_DONE, ROOM_STEPS, stepIndexOf } from './renovation';
+import { ROOM_CASH_TOTAL, ROOM_DONE, ROOM_STEPS, stepIndexOf } from './renovation';
 import type { Outfit } from './wardrobe';
 
 /** Main menu: the player's room, the player standing in it, and the way out to a match. */
@@ -181,6 +181,12 @@ export default function Menu({
                 : t('menu.nextUpgrade', { n: roomDone + 1, of: ROOM_DONE })}
             </span>
             <b>{tr(`room.${step.slot}`, step.label)}</b>
+            {/* What the step is actually bought for, under the name of it: the
+                room stopped being decoration when the steps started paying, and
+                a player who is told so on the card is a player who finishes it.
+                Money in the market's own units, so it reads as the same stuff
+                the match is played in rather than a second currency. */}
+            <span className="reno-gain">{t('menu.roomCash', { n: money(step.cash) })}</span>
           </div>
 
           {confirming ? (
@@ -222,6 +228,9 @@ export default function Menu({
       ) : (
         <div className="reno done" data-tut="room">
           <b>{t('menu.roomComplete')}</b>
+          <span className="reno-gain">
+            {t('menu.roomCashTotal', { n: money(ROOM_CASH_TOTAL) })}
+          </span>
         </div>
       )}
 

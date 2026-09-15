@@ -239,6 +239,19 @@ export type ServerMsg =
       names: [string, string];
       outfits: [Outfit, Outfit];
       abilities: [AbilityId | null, AbilityId | null];
+      /**
+       * What each seat sits down with, ordered like everything else here:
+       * `starts[0]` is the recipient's. A renovated office adds to the book a
+       * match opens on (`ui/renovation.ts`), so the two sides of a duel do not
+       * have to start level and the client cannot work the numbers out for
+       * itself — it knows its own room and nothing about the other one's.
+       *
+       * The BOOK rather than the step count on purpose. The server is the only
+       * one that has read both profiles, so let it be the only one doing the
+       * arithmetic: a client built before a re-tuning of the cash table then
+       * still mirrors the match the server is actually running.
+       */
+      starts: [number, number];
       /** null when the match is already running — see `sync` */
       startsInMs: number | null;
     }

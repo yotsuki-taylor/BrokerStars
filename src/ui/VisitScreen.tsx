@@ -1,9 +1,9 @@
 import React from 'react';
 import Character from './Character';
 import Room from './Room';
-import { Coin } from './components';
+import { Coin, money } from './components';
 import { t } from './i18n';
-import { ROOM_DONE } from './renovation';
+import { ROOM_DONE, roomCash } from './renovation';
 import type { Friend } from '../friends/protocol';
 
 /**
@@ -46,7 +46,12 @@ export default function VisitScreen({ friend, onBack }: { friend: Friend; onBack
 
       {/* Where the renovation card sits on the player's own menu, and it says
           the same thing about this room: how far along it is. A finished one
-          says so instead of counting, exactly as the owner's does. */}
+          says so instead of counting, exactly as the owner's does.
+
+          And what it is worth, which stopped being trivia when the office
+          started paying: this is somebody you can be matched against, and how
+          much they sit down with is the one fact about them on this screen
+          that decides anything. */}
       <div className="reno visit-card">
         <div className="reno-text">
           <span className="reno-kicker">
@@ -55,9 +60,16 @@ export default function VisitScreen({ friend, onBack }: { friend: Friend; onBack
           <b>{friend.name}</b>
         </div>
         <div className="visit-room">
-          {friend.room >= ROOM_DONE
-            ? t('menu.roomComplete')
-            : t('friends.roomAt', { n: friend.room, of: ROOM_DONE })}
+          <span>
+            {friend.room >= ROOM_DONE
+              ? t('menu.roomComplete')
+              : t('friends.roomAt', { n: friend.room, of: ROOM_DONE })}
+          </span>
+          {friend.room > 0 && (
+            <span className="reno-gain">
+              {t('menu.roomCash', { n: money(roomCash(friend.room)) })}
+            </span>
+          )}
         </div>
       </div>
     </div>

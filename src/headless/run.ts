@@ -74,7 +74,7 @@ function duel(a: string, b: string, seed0: number, runs: number, off: string[]):
       ],
     });
     const a0 = st.traders[0];
-    const start = cfg.match.startingCash;
+    const start = a0.startCash;
     let invested = 0;
     let flat = 0;
     let ticks = 0;

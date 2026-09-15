@@ -11,7 +11,7 @@ import {
 } from '../src/awards';
 import { AWARDS, AWARD_IDS } from '../../src/awards/catalogue';
 import { COMPANIES } from '../../src/sim/companies';
-import { ROOM_DONE } from '../../src/ui/renovation';
+import { ROOM_CASH_TOTAL, ROOM_DONE } from '../../src/ui/renovation';
 
 /**
  * The shelf. Every rule that decides whether somebody has earned something is a
@@ -153,6 +153,25 @@ describe('the secret half', () => {
   it('gives PYRRHIC for winning below the starting cash', () => {
     expect(satisfied(EMPTY, at(), match({ outcome: 'win', netWorth: 9_999 }))).toContain('pyrrhic');
     expect(satisfied(EMPTY, at(), match({ outcome: 'win', netWorth: 10_000 }))).not.toContain(
+      'pyrrhic',
+    );
+  });
+
+  it('measures PYRRHIC against the office this player actually sat down in', () => {
+    // "Won with less than you sat down with", and a renovated office sits down
+    // with more (`ui/renovation.ts`). Pinned to the flat 10 000 this used to
+    // go the wrong way at both ends: a finished office could lose 690 on a win
+    // and be told it had made money.
+    const rich = held({ room: ROOM_DONE });
+    const start = 10_000 + ROOM_CASH_TOTAL;
+    expect(satisfied(rich, at(), match({ outcome: 'win', netWorth: start - 1 }))).toContain(
+      'pyrrhic',
+    );
+    expect(satisfied(rich, at(), match({ outcome: 'win', netWorth: start }))).not.toContain(
+      'pyrrhic',
+    );
+    // and the bare office is still judged at the flat number
+    expect(satisfied(EMPTY, at(), match({ outcome: 'win', netWorth: 10_001 }))).not.toContain(
       'pyrrhic',
     );
   });

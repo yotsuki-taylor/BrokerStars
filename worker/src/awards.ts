@@ -27,7 +27,7 @@
 import { AWARDS, cleanAwards, type Award } from '../../src/awards/catalogue';
 import { COMPANIES } from '../../src/sim/companies';
 import { RARITIES, SLOTS, itemId } from '../../src/ui/wardrobe';
-import { ROOM_DONE } from '../../src/ui/renovation';
+import { ROOM_DONE, roomCash } from '../../src/ui/renovation';
 import type { Held } from './profile';
 
 /** What one finished match is, as far as the shelf is concerned. */
@@ -50,8 +50,17 @@ export interface Standing {
   topLeague: number;
 }
 
-/** The starting cash a match is measured against; `sim/config.ts` sets it. */
+/** The book everybody opens on; `sim/config.ts` sets it. */
 const STARTING_CASH = 10_000;
+
+/**
+ * What THIS player opened on: the flat book plus whatever their office is
+ * worth (`ui/renovation.ts`). Only one award asks, and it asks about a number
+ * the player recognises — "less than you sat down with" has to mean less than
+ * *you* sat down with, or a renovated office quietly stops being able to earn
+ * it and a bare one earns it a little too easily.
+ */
+const satDownWith = (held: Held): number => STARTING_CASH + roomCash(held.room);
 
 /**
  * Everything the profile satisfies right now. Called after a match and after a
@@ -104,7 +113,8 @@ export function satisfied(held: Held, at: Standing, match?: MatchFacts): string[
         // the top of the ladder is.
         if (a.id === 'honest-loss' && match.tradedWell && match.outcome === 'loss') yes(a);
         // Won with less than you sat down with. The other side did worse.
-        if (a.id === 'pyrrhic' && match.outcome === 'win' && match.netWorth < STARTING_CASH) yes(a);
+        if (a.id === 'pyrrhic' && match.outcome === 'win' && match.netWorth < satDownWith(held))
+          yes(a);
         // Won without touching anything. The market drifts up on its own and
         // once in a long while that is enough.
         if (a.id === 'no-trades' && match.outcome === 'win' && match.trades === 0) yes(a);

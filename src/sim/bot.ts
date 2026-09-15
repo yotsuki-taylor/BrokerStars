@@ -299,7 +299,9 @@ function maybeFireAbility(state: MatchState, t: TraderState): void {
   if (!canUseAbility(state, t.idx)) return;
   const foe = state.traders[1 - t.idx];
   if (!foe) return;
-  const start = state.cfg.match.startingCash;
+  // the OPPONENT'S opening book: what MARGIN CALL is about to take is a share
+  // of their gain, so the number it is weighed against has to be theirs
+  const start = foe.startCash;
   // never on the opening tick: every one of these wants a board to read
   const warm = state.tick > Math.round(state.totalTicks * 0.1);
   if (!warm) return;

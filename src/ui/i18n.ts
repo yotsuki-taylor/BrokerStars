@@ -138,6 +138,13 @@ const EN = {
   'menu.renovate': 'RENOVATE?',
   'menu.free': 'FREE',
   'menu.roomComplete': 'ROOM COMPLETE',
+  /**
+   * What the step pays, and it is deliberately the word START rather than a
+   * bare number: the gain is cash on the table at the opening bell of every
+   * match from now on, not a one-off and not a coin balance.
+   */
+  'menu.roomCash': '+${n} STARTING CASH',
+  'menu.roomCashTotal': '+${n} TO EVERY MATCH',
   'menu.daily': 'DAILY',
 
   'daily.bonusTitle': 'DAILY BONUS',
@@ -276,11 +283,11 @@ const EN = {
 
   'tut.equip.title': 'EQUIP · CLOTHES ARE PERKS',
   'tut.equip.body':
-    'This is the part to take seriously: what you wear changes the match itself. More starting cash, cheaper trading, a look at what the market is about to do, an ability to fire at your rival. Owning a garment does nothing on its own — it has to be worn, and only what is worn counts.',
+    'This is the part to take seriously: what you wear changes the match itself. Cheaper trading, a floor under a ruined book, a look at what the market is about to do, an ability to fire at your rival. Owning a garment does nothing on its own — it has to be worn, and only what is worn counts.',
 
   'tut.room.title': 'THE RENOVATION',
   'tut.room.body':
-    'The other thing coins buy: seven upgrades that turn a bare office into a good one. This one is purely for the look of it — not a single number in a match moves. It is what friends see when they visit, and finishing it has an award on it, and that is the whole of what it is for.',
+    'The other thing coins buy: seven upgrades that turn a bare office into a good one, and every one of them adds to the cash you sit down with. The first is worth 25 and the last 175, so a finished office opens every match 700 up on a rival who never renovated. It is also what friends see when they visit, and finishing it has an award on it.',
 
   'tut.rating.title': 'RATING',
   'tut.rating.body':
@@ -608,6 +615,8 @@ const RU: Record<Key, string> = {
   'menu.renovate': 'ОБНОВИТЬ?',
   'menu.free': 'ДАРОМ',
   'menu.roomComplete': 'КОМНАТА ГОТОВА',
+  'menu.roomCash': '+${n} К СТАРТУ',
+  'menu.roomCashTotal': '+${n} К СТАРТУ КАЖДОГО МАТЧА',
   'menu.daily': 'ДЕНЬ',
 
   'daily.bonusTitle': 'ЕЖЕДНЕВНЫЙ БОНУС',
@@ -734,11 +743,11 @@ const RU: Record<Key, string> = {
 
   'tut.equip.title': 'НАДЕТЬ · ОДЕЖДА ДАЁТ ПЕРКИ',
   'tut.equip.body':
-    'Вот это стоит воспринимать всерьёз: то, что на тебе надето, меняет сам матч. Больше стартовых денег, дешевле сделки, подсказки о том, куда пойдёт рынок, способность, которую можно применить против соперника. Просто купить вещь мало — она работает, только пока надета, и считается только надетое.',
+    'Вот это стоит воспринимать всерьёз: то, что на тебе надето, меняет сам матч. Дешевле сделки, страховка от разорения, подсказки о том, куда пойдёт рынок, способность, которую можно применить против соперника. Просто купить вещь мало — она работает, только пока надета, и считается только надетое.',
 
   'tut.room.title': 'РЕМОНТ',
   'tut.room.body':
-    'Второе, на что уходят монеты: семь улучшений, которые превращают пустой офис в приличный. Это чистая красота — в матче от него не меняется ни одна цифра. Его видят друзья, когда заходят в гости, а за полностью законченный ремонт дают награду. Больше он ни для чего.',
+    'Второе, на что уходят монеты: семь улучшений, которые превращают пустой офис в приличный, и каждое добавляет денег на старте матча. Первое стоит 25 к капиталу, последнее — 175, так что законченный офис начинает каждый забег на 700 впереди соперника без ремонта. Его ещё и видят друзья, когда заходят в гости, а за полностью законченный ремонт дают награду.',
 
   'tut.rating.title': 'РЕЙТИНГ',
   'tut.rating.body':
