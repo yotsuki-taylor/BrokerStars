@@ -20,7 +20,7 @@
  * only one most people will see: a match in progress, which is the game.
  */
 import sharp from 'sharp';
-import { readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 
 /** From `adb shell dumpsys window displays`, ROTATION_0 overrideNonDecorInsets. */
 const TOP = 172;
@@ -46,11 +46,39 @@ const ORDER = [
   ['leagues', '5-leagues'],
 ];
 
+/**
+ * A raw that is not there is SKIPPED, not an error.
+ *
+ * One screen changes at a time. The renovation card grew a line the day the
+ * office started paying, and only `3-office` was stale — but this loop used to
+ * demand all five raws and threw on the first one missing, so redoing one
+ * screenshot meant recapturing the set, including four that had not changed.
+ * The screenshot most likely to be skipped for the effort is the one that is
+ * wrong, which is the wrong way round.
+ *
+ * The finished PNGs are kept between runs, so whatever is not recaptured stays
+ * exactly as it was.
+ */
+const done = [];
 for (const [from, to] of ORDER) {
-  await sharp(`assets/store/raw-${from}.png`)
+  const raw = `assets/store/raw-${from}.png`;
+  if (!existsSync(raw)) continue;
+  await sharp(raw)
     .extract({ left: 0, top: TOP, width: WIDTH, height: DISPLAY_HEIGHT - TOP - BOTTOM })
     .png({ palette: true, colors: 256, dither: 1, effort: 10 })
     .toFile(`assets/store/${to}.png`);
+  done.push(to);
+}
+
+if (done.length === 0) {
+  // Silence here would read as success and leave the listing on old pictures.
+  throw new Error(
+    [
+      'build-screens: no raw-*.png in assets/store — capture one first:',
+      '  adb exec-out screencap -p > assets/store/raw-menu.png',
+      `  (names: ${ORDER.map(([from]) => `raw-${from}.png`).join(', ')})`,
+    ].join('\n'),
+  );
 }
 
 // The raws carry the status bar, which carries whoever happened to message the
@@ -59,4 +87,6 @@ for (const f of readdirSync('assets/store')) {
   if (f.startsWith('raw-') || f.startsWith('_')) unlinkSync(`assets/store/${f}`);
 }
 
-console.log(ORDER.map(([, to]) => to).join(', '));
+const skipped = ORDER.map(([, to]) => to).filter((t) => !done.includes(t));
+console.log(`rebuilt: ${done.join(', ')}`);
+if (skipped.length) console.log(`left alone: ${skipped.join(', ')}`);
