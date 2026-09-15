@@ -7,9 +7,16 @@ Every claim here is read off the game rather than remembered. Eighty seconds is
 `durationSec` in `src/sim/config.ts`; the leagues and their blurbs are
 `src/ui/leagues.ts`; what the five abilities actually do is `src/sim/abilities.ts`
 and the item text in `src/ui/i18n.ts`; three orders a day is `ORDERS_A_DAY`;
-seven upgrades is `ROOM_STEPS`; twenty-eight companies and twenty-two awards are
-their catalogues. If any of those change, this file is wrong and should change
-with them.
+seven upgrades and the 700 they add to the opening book are `ROOM_STEPS` and
+`ROOM_CASH_TOTAL`; the 10 000 everybody starts on is `startingCash`;
+twenty-eight companies and twenty-two awards are their catalogues. If any of
+those change, this file is wrong and should change with them.
+
+THE OFFICE PARAGRAPH IS THE PROOF OF THAT. It described the renovation as
+decoration — "somewhere worth sitting" and nothing else — for as long as the
+renovation was decoration, and stayed that way for a release after it started
+paying out. A description that undersells the thing coins are actually for is a
+description that costs installs.
 
 THE RUSSIAN NAMES ARE THE GAME'S OWN, not translations of the English ones. The
 first draft of this file translated BRONZE PIT as "Бронзовая яма" and the game
@@ -29,7 +36,7 @@ player deciding whether to install it, or by a reviewer deciding what it is.
 80 seconds. Three stocks. One rival. Trade fast, read the board, cash out.
 ```
 
-## English — full description (2312 / 4000)
+## English — full description (2482 / 4000)
 
 ```
 Eighty seconds. Three companies. One rival across the table.
@@ -57,11 +64,13 @@ Bronze Pit, Silver Floor, Gold Desk, Global Fund, Bull Crown. The first rival
 trades late, small, and panics out. The last one reads the tape before you do —
 beat it and you have doubled your money.
 
-AN OFFICE THAT FILLS UP
+AN OFFICE THAT PAYS FOR ITSELF
 Coins go into the room behind the menu: walls, a window, a desk, shelves, a
-monitor, posters. Seven upgrades from a bare room to somewhere worth sitting.
-Clothes too — five things to wear, five grades of each, and the good ones are
-not just for looking at.
+monitor, posters. Seven upgrades from a bare room to somewhere worth sitting —
+and every one of them raises the cash you sit down with, up to 700 on a starting
+10,000. A finished office opens every match ahead of a rival who never
+renovated. Clothes too: five things to wear, five grades of each, and the good
+ones are not just for looking at.
 
 A SHARE COUNTER
 Between matches there is a slower game: three orders a day, prices that move
@@ -91,7 +100,7 @@ faster than the person across from you.
 80 секунд. Три акции. Один соперник. Кто прочёл рынок быстрее, тот и богаче.
 ```
 
-## Русский — полное описание (2157 / 4000)
+## Русский — полное описание (2304 / 4000)
 
 ```
 Восемьдесят секунд. Три компании. Один соперник напротив.
@@ -118,10 +127,12 @@ faster than the person across from you.
 соперник заходит поздно, мелко и паникует. Последний читает ленту раньше тебя —
 обыграешь, считай, удвоил счёт.
 
-КАБИНЕТ, КОТОРЫЙ ОБРАСТАЕТ
+КАБИНЕТ, КОТОРЫЙ ОКУПАЕТСЯ
 Монеты уходят в комнату за меню: стены, окно, стол, полки, монитор, постеры.
-Семь шагов от пустой комнаты до места, где хочется сидеть. И одежда — пять
-вещей, по пять уровней каждая, и хорошие нужны не только для вида.
+Семь шагов от пустой комнаты до места, где хочется сидеть, — и каждый шаг
+добавляет денег на старте матча, до 700 к стартовым 10 000. Законченный кабинет
+начинает каждый забег впереди соперника без ремонта. И одежда: пять вещей, по
+пять уровней каждая, и хорошие нужны не только для вида.
 
 СТОЙКА АКЦИЙ
 Между матчами идёт медленная игра: три заявки в сутки, цены меняются за ночь, а
@@ -160,4 +171,20 @@ listing. Use one you are willing to publish.
 **Privacy policy** — a public URL, required because the game signs people in
 with Google. It has to say what is collected (a Google account id and display
 name), what it is used for (one account across two devices, a leaderboard), and
-how to delete it — which the game does itself, in Settings → Account.
+how to delete it — which the game does itself, in Settings → Account. The
+document is `public/privacy.html` and ships with the web build, so it cannot
+drift from the game by a release.
+
+**Data safety** — the form Play keeps beside the policy, and it has to agree
+with it. Two things were added the day the settings sheet grew a FEEDBACK box:
+the **message text a player types**, and an **email address, if they choose to
+give one** for a reply. Both are collected and **neither is stored** — the
+report is carried to the developers and kept in no table — which is exactly what
+the form has a checkbox for. Answering "we collect nothing" because the game
+used to collect nothing is how a Data safety form and a privacy policy end up
+contradicting each other, and it is the policy that will be read out to you.
+
+**Financial features** — the declaration a game about a stock market obviously
+attracts. The honest answer is none of them: invented companies, play money, no
+transaction anybody can make. Said plainly in the last paragraph of both
+descriptions on purpose, and it should stay said.
