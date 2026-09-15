@@ -44,6 +44,12 @@ const ORDER = [
   ['menu', '3-office'],
   ['shop', '4-wardrobe'],
   ['leagues', '5-leagues'],
+  // The archive, on its COMPANIES tab: the collection counter, a company's own
+  // character written out, and the share counter under it. Last because it is
+  // the slowest thing in the game and the least of what a first look is for —
+  // but it is the half of the game the store never showed, and Play takes up
+  // to eight.
+  ['archive', '6-companies'],
 ];
 
 /**
