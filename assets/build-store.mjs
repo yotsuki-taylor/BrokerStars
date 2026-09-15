@@ -78,13 +78,77 @@ const background = Buffer.from(
 );
 
 /**
+ * Where the figure is pasted, and how close the lettering may come to it.
+ *
+ * The cut-out is opaque right to its own left edge, so 566 is a hard wall
+ * rather than a soft one: a glyph that reaches it is a glyph sitting on the
+ * trader's shoulder. 40px of blue is the gap that reads as deliberate.
+ */
+const FIGURE_LEFT = 566;
+const GUTTER = 40;
+const SAFE_RIGHT = FIGURE_LEFT - GUTTER;
+
+/**
+ * The rightmost column of a rendered layer that has any ink in it.
+ *
+ * WHY THIS IS MEASURED AND NOT CALCULATED, which cost a release to learn. The
+ * font sizes below used to be picked by eye and written down, and `FONT` is a
+ * STACK of system faces — whichever of them the rendering machine happens to
+ * have is the one that decides the width. On the machine that made the first
+ * banner, "80 SECONDS · 3 STOCKS · 1 RIVAL" at 27px ran to x=577 and sat on
+ * the trader's arm, eleven pixels past him, and nothing said so: the script
+ * exited 0 and wrote a file. Anything that has to clear the figure is now
+ * rendered, scanned, and shrunk until it does.
+ */
+async function inkRight(svg) {
+  const { data, info } = await sharp(Buffer.from(svg))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let right = -1;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = info.width - 1; x > right; x--) {
+      if (data[(y * info.width + x) * info.channels + 3] > 8) {
+        right = x;
+        break;
+      }
+    }
+  }
+  return right;
+}
+
+/**
+ * The biggest size at which a layer still clears the figure.
+ *
+ * Steps down a point at a time from the size the design wants. `floor` is the
+ * point below which the answer is no longer "smaller text" but "different
+ * artwork" — reaching it throws rather than quietly shipping a banner whose
+ * lettering nobody can read at listing size.
+ */
+async function fitted(build, want, floor, what) {
+  for (let size = want; size >= floor; size--) {
+    const svg = build(size);
+    const right = await inkRight(svg);
+    if (right <= SAFE_RIGHT) {
+      const note = size === want ? '' : ` (down from ${want})`;
+      console.log(`  ${what}: ${size}px, ends at x=${right}${note}`);
+      return Buffer.from(svg);
+    }
+  }
+  throw new Error(
+    `build-store: "${what}" will not fit left of x=${SAFE_RIGHT} even at ${floor}px. ` +
+      `The font this machine picked out of "${FONT}" is wider than the layout allows — ` +
+      `shorten the line, move the figure, or install the face the banner was drawn with.`,
+  );
+}
+
+/**
  * The name, in two lines because one would either be small or run under the
  * trader. White on a dark stroke, which is what every piece of lettering in
  * this game wears — see the BUY and SELL buttons in the artwork.
  */
-const title = Buffer.from(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
-     <g font-family="${FONT}" font-weight="900" font-size="92" letter-spacing="1">
+const name = (size) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+     <g font-family="${FONT}" font-weight="900" font-size="${size}" letter-spacing="1">
        <text x="62" y="228" fill="#0A2E63" stroke="#0A2E63" stroke-width="14"
              stroke-linejoin="round">BROKER</text>
        <text x="62" y="228" fill="#FFFFFF">BROKER</text>
@@ -92,19 +156,27 @@ const title = Buffer.from(
              stroke-linejoin="round">STARS</text>
        <text x="62" y="322" fill="#3FD11A">STARS</text>
      </g>
-     <g font-family="${FONT}" font-weight="700" font-size="27" fill="#FFFFFF"
+   </svg>`;
+
+/** The same three facts the short description opens with, and they must agree. */
+const tagline = (size) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+     <g font-family="${FONT}" font-weight="700" font-size="${size}" fill="#FFFFFF"
         fill-opacity="0.82">
        <text x="66" y="378">80 SECONDS · 3 STOCKS · 1 RIVAL</text>
      </g>
-   </svg>`,
-);
+   </svg>`;
+
+console.log('fitting the lettering left of the trader:');
+const nameLayer = await fitted(name, 92, 64, 'BROKER STARS');
+const taglineLayer = await fitted(tagline, 27, 16, 'the tagline');
 
 await sharp(background)
   .composite([
     // Bleeds off the right edge and runs the full height: a crop that stopped
     // short of both would read as a sticker laid on the background.
-    { input: figure, left: 566, top: 0 },
-    { input: title, left: 0, top: 0 },
+    { input: figure, left: FIGURE_LEFT, top: 0 },
+    { input: nameLayer, left: 0, top: 0 },
+    { input: taglineLayer, left: 0, top: 0 },
   ])
   .flatten({ background: '#0044C8' })
   .png({ palette: true, colors: 256, dither: 1, effort: 10 })
