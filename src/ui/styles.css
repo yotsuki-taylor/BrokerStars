@@ -3564,7 +3564,23 @@ a.big-btn {
 
 /* ---------- founding one ---------- */
 
+/* The form scrolls, and the header above it does not.
+ *
+ * This screen sits inside `.app`, which is a fixed viewport that never scrolls
+ * — every screen in the game is expected to fit or to scroll something of its
+ * own. The form stopped fitting the day it grew a picker: twenty-six marks and
+ * ten colours are about three hundred pixels more than a phone has, and what
+ * went off the bottom was the FOUND IT button, which made founding a
+ * corporation impossible on a phone rather than merely awkward.
+ *
+ * The scroll goes here rather than on `.archive` so that BACK stays pinned
+ * where it is. Somebody halfway down a long form should not have to scroll up
+ * to leave it.
+ */
 .corp-new {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
