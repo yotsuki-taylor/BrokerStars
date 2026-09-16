@@ -3161,11 +3161,27 @@ a.big-btn {
   font-size: 11px;
 }
 
+/* A NAME IS NEVER CUT. It wraps.
+ *
+ * It used to be one line with an ellipsis, which is the usual answer and the
+ * wrong one here. The column is what is left after the rank, the match count
+ * and the coins, so at 320 pixels it is about 137 — and anything past
+ * nineteen characters lost its tail. What a player is called is the one thing
+ * on this row that is theirs; the number beside it can be read at a glance,
+ * their name cannot be guessed from the half of it that fits.
+ *
+ * So the row grows to two lines instead, and only for the names that need it.
+ * `anywhere` rather than `break-word` so that a long single word breaks too:
+ * the point is that nothing is ever lost, and a name with no space in it is
+ * exactly the case an ellipsis was hiding.
+ *
+ * Shared, deliberately, with the friends list, the member list, the people at
+ * a corporation's door and the table of corporations — same row, same rule,
+ * and a name cut in one place and not another would be the odd one out.
+ */
 .rating-who {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .rating-matches {
@@ -3410,10 +3426,13 @@ a.big-btn {
   gap: 1px;
 }
 
+/* Wraps rather than being cut, under the same rule as `.rating-who`: a name is
+   the one thing on a row that cannot be guessed from the part that fits. The
+   motto under it is the opposite case and keeps its ellipsis — it is a
+   sentence, it reads fine cut short, and letting it wrap would turn a list of
+   corporations into a list of paragraphs. */
 .corp-line-text b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .corp-line-text i {
@@ -3642,14 +3661,16 @@ a.big-btn {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  /* so a long name can take a second line instead of being clipped by the
+     row it sits in */
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .corp-head-name b {
   font-size: 17px;
   letter-spacing: 1px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .corp-motto {
