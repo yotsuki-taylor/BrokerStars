@@ -688,6 +688,87 @@ describe('the share counter', () => {
     expect(out.held.portfolio.nova).toBeUndefined();
   });
 
+  /* ------------------------------------------ what a sale actually earned */
+
+  /**
+   * `dollars` on a trade is what goes into a corporation's season, so getting
+   * it wrong is not a wrong number on a screen — it is a table anybody can
+   * mint a place in. The rule is that it is the PROFIT and never the proceeds.
+   */
+  it('reports the profit on a sale, not what the sale paid out', () => {
+    const cost = 3000;
+    const out = trade(
+      trader({ portfolio: { nova: { shares: 3, cost, day: TODAY - 5 } }, dollars: 0 }),
+      'nova',
+      3,
+      true,
+      SALT,
+      NOON,
+    );
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    const got = bidOf(price) * 3;
+    // the proceeds are `got`; what was EARNED is that less what those shares
+    // cost, and the two are wildly different numbers
+    expect(out.dollars).toBe(Math.max(0, got - cost));
+    expect(out.dollars).not.toBe(got);
+  });
+
+  it('earns nothing on a purchase: the dollars moved, they were not made', () => {
+    const out = trade(trader(), 'nova', 2, false, SALT, NOON);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.dollars).toBe(0);
+  });
+
+  it('cannot be farmed by buying and selling the same shares', () => {
+    // The trap this whole field exists to avoid. Buy, then sell the lot back
+    // at the same price: the spread means it comes back SHORT, so a round trip
+    // earns nothing at all and a season cannot be minted out of one purchase.
+    const bought = trade(trader(), 'nova', 5, false, SALT, NOON);
+    expect(bought.ok).toBe(true);
+    if (!bought.ok) return;
+    const sold = trade(bought.held, 'nova', 5, true, SALT, NOON);
+    expect(sold.ok).toBe(true);
+    if (!sold.ok) return;
+
+    expect(sold.dollars).toBe(0);
+    // ...and the player really is down on the round trip, by the spread
+    expect(sold.held.dollars).toBeLessThan(100_000);
+  });
+
+  it('counts a loss as nothing rather than as a subtraction', () => {
+    // A decision about the game rather than about arithmetic: a season that
+    // can go backwards is a member who can be blamed for a bad week.
+    const out = trade(
+      trader({ portfolio: { nova: { shares: 2, cost: 999_999, day: TODAY - 9 } }, dollars: 0 }),
+      'nova',
+      2,
+      true,
+      SALT,
+      NOON,
+    );
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.dollars).toBe(0);
+  });
+
+  it('reports the same total whether a position is sold whole or in halves', () => {
+    // The cost basis leaves in proportion, so two halves have to add up to the
+    // whole — otherwise selling in pieces would be worth more than selling at
+    // once, and somebody would find that out.
+    const start = { nova: { shares: 4, cost: 2000, day: TODAY - 3 } };
+    const whole = trade(trader({ portfolio: start, dollars: 0 }), 'nova', 4, true, SALT, NOON);
+    const first = trade(trader({ portfolio: start, dollars: 0 }), 'nova', 2, true, SALT, NOON);
+    expect(whole.ok && first.ok).toBe(true);
+    if (!whole.ok || !first.ok) return;
+    const second = trade(first.held, 'nova', 2, true, SALT, NOON);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    expect((first.dollars ?? 0) + (second.dollars ?? 0)).toBe(whole.dollars);
+  });
+
   /**
    * The archive is the shop window. A company nobody has had on a board is one
    * they cannot buy a piece of, which is the whole of what ties the counter to

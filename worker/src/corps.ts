@@ -632,8 +632,16 @@ export async function takeDuel(
  *
  * WHAT COUNTS, and it is the whole of the honesty of the dollar table. Coins
  * come from matches — the same payouts `players.stars` ranks on, worked out by
- * the server from its own table. Dollars come from the daily bonus, which is
- * what turning up pays. Neither can be bought.
+ * the server from its own table. Dollars come from two places: the daily bonus,
+ * which is what turning up pays, and the PROFIT on a sale at the share counter,
+ * which is what being right about a company pays. Neither can be bought.
+ *
+ * THE PROFIT AND NEVER THE PROCEEDS. Selling shares hands back money that was
+ * already the player's, so crediting what a sale paid out would let anybody
+ * mint a season out of one purchase and one sale. What arrives here is the
+ * proceeds less what those particular shares cost (`sellShares`), and a loss
+ * arrives as nothing at all — see `profiles.trade` for why that is a decision
+ * about the game rather than an oversight.
  *
  * WHAT DOES NOT COUNT, deliberately: quest rewards, which are `granted` and
  * kept off the player board for the same reason; and anything that will one day

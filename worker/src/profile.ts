@@ -221,7 +221,22 @@ export function priceOf(owned: Owned, room: number): number {
 /* ------------------------------------------------------------- the counter */
 
 /** A purchase either happened or it did not, and the caller is told which. */
-export type Bought = { ok: true; held: Held } | { ok: false; error: string };
+export type Bought =
+  | {
+      ok: true;
+      held: Held;
+      /**
+       * Dollars this change EARNED, as opposed to moved about.
+       *
+       * Only the share counter sets it, and only on a sale that came out
+       * ahead: a corporation's season counts what the game paid out, and the
+       * proceeds of a sale are mostly the player's own money coming back
+       * (`sellShares`). Absent everywhere else, which is every other change in
+       * this file.
+       */
+      dollars?: number;
+    }
+  | { ok: false; error: string };
 
 /**
  * One garment off today's shelf.
@@ -466,6 +481,22 @@ export function trade(
       portfolio: done.portfolio,
       dollars: done.dollars,
     },
+    /**
+     * What the sale made, and only when it made something.
+     *
+     * A LOSS COUNTS AS NOTHING rather than as a subtraction. That is a
+     * decision about the game and not an oversight: a season that can go
+     * backwards is a member who can be blamed for a bad week, and this table
+     * is meant to be worth being in. What it costs is that somebody patient
+     * can hold their losers and sell only their winners, and bank the winners.
+     *
+     * The spread is what keeps that from being free money: a share bought and
+     * sold at the same price comes back two per cent short (`SPREAD`), so a
+     * round trip has to actually be right about the direction before it pays
+     * anything at all. Nobody can mint a season out of one purchase and one
+     * sale.
+     */
+    dollars: done.gain > 0 ? done.gain : 0,
   };
 }
 
@@ -803,6 +834,8 @@ export interface Applied {
    * from having to read the profile a second time to find out what it did.
    */
   gained?: string[];
+  /** dollars this change earned at the share counter; absent on every other */
+  dollars?: number;
 }
 
 /** A change, worked out against the row as it stands at the moment it is read. */
@@ -886,7 +919,10 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
       // thirty people about it would be telling them about a change that was
       // thrown away.
       const gained = Object.keys(settled.awards).filter((id) => held.awards[id] === undefined);
-      return { held: settled, earned, at, gained };
+      // What this change earned at the counter, carried out for the same
+      // reason `gained` is: the caller that reports it to other people should
+      // not have to work it out again from two profiles.
+      return { held: settled, earned, at, gained, dollars: out.dollars };
     }
     last = { held, earned, at };
   }

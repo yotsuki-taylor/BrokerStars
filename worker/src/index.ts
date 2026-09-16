@@ -621,8 +621,10 @@ async function daily(request: Request, env: Env) {
    * for Telegram Stars one day, and a table ranking dollar balances would be a
    * table ranking what people spent. So nothing here reads a balance: what is
    * credited is the payout the server just made, at the moment it makes it, and
-   * a dollar that arrives any other way — bought, granted, or made at the share
-   * counter — never passes through this line. See `corps.credit`.
+   * a dollar that arrives any other way — bought or granted — never passes
+   * through this line. The other thing that does count is the profit on a sale
+   * at the share counter, credited where that profit is worked out
+   * (`tradeShares`). See `corps.credit`.
    *
    * A QUEST PAYS NOTHING HERE either, for the reason `claimQuest` keeps its
    * coins off the player board: two players with identical match records should
@@ -800,11 +802,29 @@ async function tradeShares(request: Request, env: Env) {
   }
 
   const now = Date.now();
-  return sent(
-    await profiles.change(env, caller, (held) =>
-      profiles.trade(held, id, shares, sell, env.MARKET_SALT ?? '', now),
-    ),
+  const applied = await profiles.change(env, caller, (held) =>
+    profiles.trade(held, id, shares, sell, env.MARKET_SALT ?? '', now),
   );
+
+  /**
+   * A sale that came out ahead counts towards the corporation's season.
+   *
+   * WHAT IS CREDITED IS THE PROFIT, NOT THE PROCEEDS, and that is the whole
+   * care in this line. Sell what was bought a minute ago and the proceeds are
+   * the player's own dollars coming back; crediting those would let anybody
+   * mint a season out of one purchase and one sale, for ever. `sellShares`
+   * works out what those particular shares cost and hands back the difference.
+   *
+   * A loss counts as nothing rather than as a subtraction — a decision about
+   * the game, written down in `profiles.trade` where the number is decided.
+   *
+   * Only when the change actually landed: a refused trade is a trade that did
+   * not happen, and `change` answers with the profile either way.
+   */
+  if (!applied.error && applied.dollars) {
+    await corps.credit(env, caller.id, { dollars: applied.dollars }, now);
+  }
+  return sent(applied);
 }
 
 /* ----------------------------------------------------------------- duels */

@@ -387,7 +387,23 @@ export function overnight(p: Portfolio, m: Market): number {
 
 /** A trade either happened or it did not, the same shape a purchase has. */
 export type Traded =
-  | { ok: true; portfolio: Portfolio; dollars: number; paid: number }
+  | {
+      ok: true;
+      portfolio: Portfolio;
+      dollars: number;
+      paid: number;
+      /**
+       * What a SALE actually made: the proceeds less what those particular
+       * shares cost. Zero on a purchase, and negative on a sale at a loss.
+       *
+       * It exists because a corporation's season counts dollars the GAME paid
+       * out, and the proceeds of a sale are not that — sell what was bought a
+       * minute ago and the proceeds are the player's own money coming back.
+       * Crediting those would let anybody mint a season out of one purchase
+       * and one sale. This is the part that was earned.
+       */
+      gain: number;
+    }
   | { ok: false; error: string };
 
 /**
@@ -418,6 +434,9 @@ export function buyShares(
     paid,
     dollars: dollars - paid,
     portfolio: { ...p, [id]: { shares: held.shares + n, cost: held.cost + paid, day } },
+    // A purchase earns nothing: the dollars have moved into shares, they have
+    // not been made.
+    gain: 0,
   };
 }
 
@@ -444,6 +463,10 @@ export function sellShares(
 
   const got = bidOf(price) * n;
   const next = { ...p };
+  // What the shares being sold cost, worked out the same way the cost that
+  // STAYS is below — so a position sold in two halves reports the same total
+  // gain as the same position sold whole.
+  const spent = Math.round((held.cost * n) / held.shares);
   if (held.shares === n) delete next[id];
   else {
     // round the cost that leaves, so the two halves of a split position add
@@ -451,5 +474,5 @@ export function sellShares(
     const left = held.shares - n;
     next[id] = { shares: left, cost: Math.round((held.cost * left) / held.shares), day };
   }
-  return { ok: true, paid: -got, dollars: dollars + got, portfolio: next };
+  return { ok: true, paid: -got, dollars: dollars + got, portfolio: next, gain: got - spent };
 }
