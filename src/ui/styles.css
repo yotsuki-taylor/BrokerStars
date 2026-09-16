@@ -3296,6 +3296,514 @@ a.big-btn {
   }
 }
 
+/* ---------- corporations ---------- */
+
+/* The screen scrolls as a whole rather than holding the header and the buttons
+   still the way the friends menu does. Two reasons: there is more on it than
+   fits any phone — a header, a feed, thirty members, a code and the owner's
+   panel — and nothing on it is the one button the screen exists for. The
+   friends menu pins ADD A FRIEND because that IS the screen; here the thing
+   worth doing is in the feed, and the feed is what is being scrolled. */
+.archive.corp {
+  overflow-y: auto;
+}
+
+/* The tag, which is the one piece of a corporation that is meant to be read at
+   a glance. Boxed and monospaced-by-letterspacing rather than merely bold: it
+   is a ticker, and the game already writes companies that way. */
+.corp-tag {
+  flex: 0 0 auto;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: linear-gradient(#1d5ea6, #10427c);
+  padding: 2px 6px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.corp-tag.big {
+  font-size: 15px;
+  padding: 4px 9px;
+}
+
+/* ---------- with no corporation: the pitch, the search, the list ---------- */
+
+.corp-pitch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 14px 18px 6px;
+}
+
+.corp-pitch b {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.corp-pitch p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.8;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.corp-search {
+  padding: 8px 12px 0;
+}
+
+.corp-search .friend-code-input {
+  width: 100%;
+}
+
+.corp-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 0;
+}
+
+/* A row of the list, and the same row the leaderboard draws, with the tag in
+   front of the name and the place behind it. Its own grid rather than the
+   rating one: there are five columns here, and two of them stack. */
+.corp-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.corp-line:active {
+  transform: translateY(1px);
+  filter: brightness(1.15);
+}
+
+/* A full corporation is still drawn, and drawn as unavailable rather than left
+   out: the one somebody is looking for is very often the one their friends
+   have already filled. */
+.corp-line:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.corp-line-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.corp-line-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.corp-line-text i {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.corp-line-at {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.corp-rank {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.corp-count {
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  opacity: 0.5;
+}
+
+.corp-count em {
+  font-style: normal;
+}
+
+.corp-count.full {
+  color: var(--down);
+  opacity: 0.9;
+}
+
+/* ---------- founding one ---------- */
+
+.corp-new {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.corp-new-title {
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.corp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.corp-field > span {
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+/* The rule under the box, said in the smallest type on the screen: the box
+   already refuses what it cannot take, so this is an explanation rather than
+   an instruction. */
+.corp-field > i {
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1.35;
+  opacity: 0.5;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.corp-field .friend-code-input {
+  width: 100%;
+}
+
+.corp-policy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* ---------- being in one ---------- */
+
+.corp-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 4px;
+  text-align: center;
+}
+
+.corp-head-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.corp-head-name b {
+  font-size: 17px;
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.corp-motto {
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.7;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+/* The two places, side by side, because the two tables reward opposite habits
+   — one is what the corporation earned playing, the other what it earned
+   turning up — and a player who sees only one of them will assume there is
+   only one way to be good. */
+.corp-ranks {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.corp-rank-chip {
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.corp-rank-chip:active {
+  transform: translateY(1px);
+}
+
+.corp-season {
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  opacity: 0.5;
+}
+
+/* The duel and the table on one line — see the note where it is used. */
+.corp-acts {
+  grid-template-columns: 1fr auto;
+  align-items: stretch;
+  margin: 0 12px;
+}
+
+.corp-acts .menu-btn {
+  padding: 0 14px;
+}
+
+.corp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 0;
+}
+
+.corp-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+.corp-section-title em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.corp-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.6;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+/* ---------- the feed ---------- */
+
+.corp-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.corp-feed-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.45);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.corp-feed-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.corp-feed-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.corp-feed-text i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  opacity: 0.55;
+}
+
+/* A duel that is still open is the only line here anybody can act on, so it is
+   the only one with any colour in it. Everything else is a record; this is an
+   invitation with a clock on it. */
+.corp-feed-line.live {
+  background: linear-gradient(rgba(255, 192, 46, 0.22), rgba(240, 131, 34, 0.14));
+  border-color: #ffc02e;
+}
+
+.corp-feed-line.duel .menu-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-height: 32px;
+  font-size: 11px;
+  padding: 0 12px;
+}
+
+/* Taken, and therefore finished with: it stays on the screen saying who took
+   it rather than vanishing under the reader's thumb, and it goes when the
+   invitation behind it expires. */
+.corp-feed-line.duel:not(.live) {
+  opacity: 0.55;
+}
+
+/* ---------- the members ---------- */
+
+.corp-members {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.corp-member {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.corp-member.you {
+  background: linear-gradient(#1d5ea6, #10427c);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+.corp-owner-mark {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  color: #ffc02e;
+}
+
+/* What this member has put into the season, in both currencies. Small, because
+   it is the number that decides the corporation's place and not the player's
+   — nobody is being ranked against their neighbours here. */
+.corp-member-earned {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.corp-member-acts {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.corp-member-acts .menu-btn {
+  min-height: 30px;
+  font-size: 10px;
+}
+
+/* ---------- the door, the owner's panel, and the way out ---------- */
+
+.corp-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 12px 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 192, 46, 0.12);
+  border: 2px solid rgba(255, 192, 46, 0.5);
+  font-size: 12px;
+}
+
+.corp-request {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.corp-request .menu-btn {
+  min-height: 30px;
+  font-size: 10px;
+  padding: 0 10px;
+}
+
+.corp-manage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 12px 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.corp-leave {
+  margin: 10px 12px;
+}
+
+/* Everything that cannot be undone wears the same red and asks twice. */
+.corp-danger {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 123, 123, 0.5);
+  background: rgba(255, 123, 123, 0.1);
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+
+.menu-btn.danger {
+  background: linear-gradient(#a33b3b, #6f2323);
+}
+
+/* The one paragraph that explains the table, under the table and under the
+   place in the header — both of the two screens where somebody is looking at a
+   number they could otherwise misread as a total. */
+.corp-foot {
+  margin: 10px 12px;
+  font-size: 10px;
+  line-height: 1.45;
+  opacity: 0.5;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+/* The table's own row: the leaderboard's grid with the tag spliced in after
+   the rank. */
+.corp-top-line {
+  grid-template-columns: 26px auto 1fr auto auto;
+}
+
 /* ---------- visiting a friend ---------- */
 
 /* Their room, drawn out of the menu's own pieces — see VisitScreen. The card
@@ -3387,6 +3895,13 @@ a.big-btn {
    rail rather than as two buttons that happen to be near each other. */
 .menu > .friends-btn {
   top: calc(22% + 68px);
+}
+
+/* And the third, at the same pitch. Three is as many as this rail takes: at
+   22% down a 375pt screen the last one lands just above the renovation card,
+   and a fourth would be under it. */
+.menu > .corps-btn {
+  top: calc(22% + 136px);
 }
 
 /* Something behind it. Gold rather than grey, and breathing rather than

@@ -33,6 +33,8 @@ import ArchiveScreen from './ArchiveScreen';
 import DailyScreen from './DailyScreen';
 import DuelScreen, { type DuelPhase } from './DuelScreen';
 import DevPanel from './DevPanel';
+import CorpScreen from './CorpScreen';
+import CorpTopScreen from './CorpTopScreen';
 import FriendsScreen from './FriendsScreen';
 import LeagueSelect from './LeagueSelect';
 import Menu from './Menu';
@@ -112,7 +114,13 @@ import {
   shoutInvite,
   type Link,
 } from './duel';
-import { apiBase, deleteAccount, feedbackAvailable, sendFeedback } from './api';
+import {
+  apiBase,
+  callOutCorp,
+  deleteAccount,
+  feedbackAvailable,
+  sendFeedback,
+} from './api';
 import {
   MAX_FEEDBACK,
   MAX_REPLY_TO,
@@ -1049,6 +1057,8 @@ export default function App() {
     | 'rating'
     | 'daily'
     | 'friends'
+    | 'corp'
+    | 'corpTop'
     | 'leagues'
     | 'board'
     | 'duel'
@@ -1820,7 +1830,20 @@ export default function App() {
    * still shows it — a message that did not land must not end the duel.
    */
   const startDuel = useCallback(
-    async (friend?: { id: string; name: string }) => {
+    async (
+      friend?: { id: string; name: string },
+      /**
+       * Leave the invitation in the corporation's feed as well.
+       *
+       * The duel itself is unchanged — same route, same code, same fifteen
+       * minutes. What differs is who is told: a friend is written to by name,
+       * a corporation gets a card thirty people can see, and both are things
+       * that happen AFTER the seat exists. A card that could not be written is
+       * deliberately not an error: the lobby is open either way and the player
+       * still has the link in their hand.
+       */
+      toCorp = false,
+    ) => {
       // Two things a duel cannot do without, and they fail differently: a build
       // with no server behind it, and a game opened outside Telegram, where
       // there is no signature and so no way to say who is playing.
@@ -1846,6 +1869,7 @@ export default function App() {
       setScreen('duel');
       const invite = await createInvite(leagueRef.current, outfitRef.current, friend?.id);
       if (!invite) return duelRefusal('net');
+      if (toCorp) void callOutCorp(invite.code, invite.expiresAt);
       connect(invite.code, 'waiting', {
         code: invite.code,
         link: invite.link,
@@ -1924,6 +1948,15 @@ export default function App() {
    * behaviour this screen has always had.
    */
   const [friendOffer, setFriendOffer] = useState<string | null>(null);
+
+  /**
+   * Which corporation the table should light up, handed over by the screen
+   * that knows. Null for somebody who is in none, which is a table with
+   * nothing lit rather than a table they are not allowed to read — the two
+   * player boards work the same way, and `me` there is a highlight and not a
+   * permission.
+   */
+  const [corpTop, setCorpTop] = useState<string | null>(null);
   useEffect(() => {
     const code = friendCodeFromLaunch();
     if (!code) return;
@@ -2488,6 +2521,37 @@ export default function App() {
     );
   }
 
+  if (screen === 'corp') {
+    return (
+      <div className="app">
+        <CorpScreen
+          onCallOut={() => void startDuel(undefined, true)}
+          // Straight into the lobby somebody else opened. The card was claimed
+          // on the server a moment ago (`takeCorpDuel`), which is what makes
+          // thirty cards go dark together — but the seat itself is still the
+          // duel object's to give, exactly as it is for a link.
+          onJoinDuel={(code) => connect(code, 'joining', { code })}
+          onTable={(mine) => {
+            setCorpTop(mine);
+            setScreen('corpTop');
+          }}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
+  if (screen === 'corpTop') {
+    return (
+      <div className="app">
+        {/* Back to the corporation rather than to the menu: the table is
+            reached from that screen and nowhere else, so that is where BACK
+            means. */}
+        <CorpTopScreen mine={corpTop} onBack={() => setScreen('corp')} />
+      </div>
+    );
+  }
+
   if (screen === 'daily') {
     return (
       <div className="app">
@@ -2548,6 +2612,7 @@ export default function App() {
           onRating={() => setScreen('rating')}
           onDaily={() => setScreen('daily')}
           onFriends={() => setScreen('friends')}
+          onCorps={() => setScreen('corp')}
           onSettings={() => setSettingsOpen(true)}
         />
         {/* Over the menu rather than on a screen of its own: an invitation with

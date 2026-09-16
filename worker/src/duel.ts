@@ -34,6 +34,7 @@ import { perksFor } from '../../src/ui/perks';
 import { roomCash } from '../../src/ui/renovation';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
+import * as corps from './corps';
 import { giftFirstHat, outfitOf, roomOf, settle } from './profile';
 import { settle as settleInvite } from './invites';
 import {
@@ -660,7 +661,7 @@ export class Duel implements DurableObject {
         // does: the duel counter it keeps, the streak, and the companies that
         // were up. A duel banks no league win — `settle` knows that from the
         // `duel` flag rather than from being told twice.
-        await settle(
+        const applied = await settle(
           this.env,
           { id: player.id, name: player.name },
           {
@@ -676,6 +677,17 @@ export class Duel implements DurableObject {
             companies: st.cfg.stocks.map((x) => x.id),
           },
         );
+
+        // And the corporation, on the same footing a bot match is on: a duel is
+        // coins earned in a season, and an award earned in one is an award.
+        //
+        // NO LEAGUE LINE FROM A DUEL, deliberately: the ladder is climbed
+        // against bots, because a friend willing to lose ten times is a lift
+        // rather than a climb — and a feed that announced a league taken that
+        // way would be advertising exactly the lift.
+        const who = { id: player.id, name: player.name };
+        await corps.credit(this.env, player.id, { coins: paid.total });
+        for (const id of applied.gained ?? []) await corps.note(this.env, who, 'award', id);
       } catch (err) {
         // The board is a shop window, never a condition of play: a duel that
         // could not be filed is still a duel that was won.

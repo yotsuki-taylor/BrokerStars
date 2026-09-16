@@ -792,6 +792,17 @@ export interface Applied {
   earned: number;
   at: Standing;
   error?: string;
+  /**
+   * Awards this particular change put on the shelf, which is a different
+   * question from what is on it — and the only one anybody can be told about.
+   *
+   * Empty on every change that earned nothing, which is nearly all of them.
+   * The caller that cares is whatever reports an award to other people: a
+   * corporation's feed today (`worker/src/corps.ts`), a notification one day.
+   * Working it out here rather than at the call site is what keeps that caller
+   * from having to read the profile a second time to find out what it did.
+   */
+  gained?: string[];
 }
 
 /** A change, worked out against the row as it stands at the moment it is read. */
@@ -870,7 +881,12 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
     const settled = afterChange(out.held, at, Date.now());
 
     if (await write(env, caller.id, settled, stored?.version ?? null)) {
-      return { held: settled, earned, at };
+      // Only once the write actually landed. An award worked out against a row
+      // that then lost the race was never earned by anything, and telling
+      // thirty people about it would be telling them about a change that was
+      // thrown away.
+      const gained = Object.keys(settled.awards).filter((id) => held.awards[id] === undefined);
+      return { held: settled, earned, at, gained };
     }
     last = { held, earned, at };
   }

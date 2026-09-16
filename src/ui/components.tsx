@@ -350,6 +350,71 @@ export function People({ size = 18 }: { size?: number }) {
   );
 }
 
+/**
+ * CORPORATIONS. A tower with a lower block beside it.
+ *
+ * The rail already carries a briefcase and a pair of heads, so this one had to
+ * be neither a container nor a person — and a corporation in this game is a
+ * NAME over a group rather than the group itself, which is what a building is
+ * for. The two masses do the job the half-drawn second head does in `People`:
+ * at 28 pixels one rectangle is a door or a card, and two of unequal height
+ * read as a skyline immediately.
+ *
+ * The windows are filled rather than outlined because a 2.2 stroke inside a
+ * 2.6 square is a grey smudge at this size. Three rows of two, which is enough
+ * repetition to say "office" without becoming texture.
+ *
+ * WHAT WAS TRIED AND DROPPED: a handshake (unreadable below 32 and reads as
+ * "friends", which is the button above it); a shield (guilds, not companies —
+ * and this game has no wars in it); a flag (the same, plus it is the shape
+ * everything else in this genre already uses); three heads (the friends icon
+ * with a crowding problem).
+ */
+export function Tower({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      {/* the annex, behind and to the left, cut off by the tower rather than
+          drawn around it */}
+      <path
+        d="M3.4 20.8V11.2a1.4 1.4 0 011.4-1.4h4.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="8.8"
+        y="3.2"
+        width="11.8"
+        height="17.6"
+        rx="1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      {/* the ground both of them stand on, which is what stops the annex
+          floating when the icon is drawn small */}
+      <path
+        d="M2.2 20.8h19.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <g fill="currentColor">
+        <rect x="11.4" y="6" width="2.4" height="2.4" rx="0.6" />
+        <rect x="15.6" y="6" width="2.4" height="2.4" rx="0.6" />
+        <rect x="11.4" y="10.4" width="2.4" height="2.4" rx="0.6" />
+        <rect x="15.6" y="10.4" width="2.4" height="2.4" rx="0.6" />
+        {/* the doorway: one tall opening on the ground floor, so the tower has
+            a way in and a bottom rather than four floors of the same thing */}
+        <rect x="13" y="15.4" width="3.4" height="5.4" rx="0.8" />
+      </g>
+    </svg>
+  );
+}
+
 /* ---------------------------------------------------------- trader card */
 
 export function TraderCard({

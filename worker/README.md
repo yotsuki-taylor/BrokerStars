@@ -319,6 +319,15 @@ README игры), так что стороны садятся за разные 
 | `POST` | `/duel/new` | `{ initData, league, outfit, invite? }` → `{ code, link, webLink, expiresAt, sent, chat }`; `invite` — id друга, которому бот отнесёт приглашение сам; `chat` — есть ли куда позвать |
 | `POST` | `/duel/shout` | `{ initData, code }` → `{ ok }` либо `{ ok: false, reason }`; бот зовёт на дуэль в общий чат, не чаще раза в десять минут на игрока |
 | `POST` | `/feedback` | `{ initData, text, replyTo?, about? }` → `{ ok }` либо `{ ok: false, reason, wait? }`; сообщение игрока разработчикам, не чаще раза в две минуты на игрока |
+| `POST` | `/corp` | `{ initData }` → `{ ok, error?, corp }`; корпорация вызывающего целиком или `null`, если он ни в какой |
+| `POST` | `/corp/feed` | `{ initData }` → `{ feed }`; только лента — её просят раз в десять секунд, пока экран открыт, и тащить ради этого тридцать участников и два ранжирующих запроса было бы грубо по отношению к телефону |
+| `POST` | `/corp/list` | `{ initData, query?, limit? }` → `{ corps }`; список для того, кто ни в какой не состоит, с поиском по имени и тегу |
+| `POST` | `/corp/new` | `{ initData, name, tag, motto?, policy? }` → то же, что `/corp`; основание бесплатно |
+| `POST` | `/corp/join` | `{ initData, id }` или `{ initData, code }`; закрытая отвечает `closed` и оставляет заявку, код открывает её и так |
+| `POST` | `/corp/leave` | `{ initData }`; последний вышедший удаляет корпорацию, вышедший владелец передаёт её старейшему |
+| `POST` | `/corp/owner` | `{ initData, does: 'edit' \| 'kick' \| 'transfer' \| 'accept' \| 'refuse' \| 'disband', ... }`; всё, что может владелец, одной ручкой — у них одна проверка подписи, один отказ «ты не владелец» и один ответ. `disband` требует `confirm: 'disband'` |
+| `POST` | `/corp/duel` | `{ initData, code, expiresAt }` кладёт приглашение в ленту; `{ initData, take: <id строки> }` забирает чужое — первый нажавший выигрывает, остальным `gone` |
+| `GET` | `/corp/top?metric=coins\|dollars&limit=25&me=<id корпорации>` | таблица корпораций: **среднее** за сезон на участника, не сумма; меньше трёх участников — вне таблицы |
 | `GET` | `/duel/<code>/ws` | сокет дуэли |
 | `POST` | `/tg` | вебхук Telegram; 401 без заголовка с паролем |
 
@@ -562,6 +571,7 @@ npm run migrate -- ./migrations/008-chat-shouts.sql      # новая табли
 npm run migrate -- ./migrations/012-profiles-offer.sql   # если profiles уже была
 npm run migrate -- ./migrations/013-profiles-opens.sql   # если profiles уже была
 npm run migrate -- ./migrations/014-feedback-sent.sql    # новая таблица; хватит и schema
+npm run migrate -- ./migrations/015-corporations.sql     # новые таблицы; хватит и schema
 npm run schema                                          # таблицы; безопасно повторять
 ```
 

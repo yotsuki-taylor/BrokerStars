@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import SCHEMA from '../schema.sql?raw';
+import CORPS from '../src/corps.ts?raw';
 import INDEX from '../src/index.ts?raw';
 
 /**
@@ -22,12 +23,27 @@ import INDEX from '../src/index.ts?raw';
  * decides which it is, rather than a silent omission.
  */
 
-/** The statements `deleteAccount` runs, and nothing else in the file. */
+/**
+ * The statements `deleteAccount` runs, and nothing else in the file.
+ *
+ * Plus the ones it splices in from elsewhere. `corps.forgetting` hands back
+ * statements rather than running them precisely so that this route keeps its
+ * one promise — one batch, all of it or none — and a batch assembled in two
+ * files would otherwise be half invisible to the check below. Following it is
+ * the alternative to exempting five tables with a reason that amounts to "they
+ * are deleted, just not here".
+ */
 const DELETE_BATCH = (() => {
   const from = INDEX.indexOf('async function deleteAccount');
   expect(from, 'deleteAccount has been renamed').toBeGreaterThan(-1);
   const batch = INDEX.slice(from, INDEX.indexOf('\n}', from));
-  return batch;
+  expect(batch, 'deleteAccount no longer splices in the corporation statements').toContain(
+    'corps.forgetting(env, id)',
+  );
+
+  const spliced = CORPS.indexOf('export const forgetting');
+  expect(spliced, 'corps.forgetting has been renamed').toBeGreaterThan(-1);
+  return batch + CORPS.slice(spliced, CORPS.indexOf('\n];', spliced));
 })();
 
 /**

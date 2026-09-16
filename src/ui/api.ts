@@ -19,6 +19,18 @@
  *   there is nothing to send. Reading the board still works: it is public.
  */
 
+import {
+  cleanCorp,
+  cleanFeedOnly,
+  cleanSummaries,
+  cleanSummary,
+  type Corp,
+  type CorpError,
+  type CorpSummary,
+  type FeedItem,
+  type Metric,
+  type Policy,
+} from '../corp/protocol';
 import { cleanCall, type DuelCall } from '../duel/protocol';
 import type { FeedbackError } from '../feedback/protocol';
 import { cleanLinkState, type LinkError, type LinkState } from '../link/protocol';
@@ -511,6 +523,146 @@ export async function addFriend(code: string): Promise<Added> {
   if (!body) return { error: null, list: null };
   const error = typeof body.error === 'string' ? (body.error as FriendError) : null;
   return { error, list: cleanList(body) };
+}
+
+/* --------------------------------------------------------- the corporations */
+
+/**
+ * A corporation needs a server to keep it and a host that can prove who is
+ * asking — the same two things friends and duels need, and for the same reason:
+ * a membership is a claim about an account.
+ */
+export const corpsAvailable = (): boolean => BASE !== '' && initData() !== '';
+
+/**
+ * What every corporation route answers with: what went wrong if anything, and
+ * the corporation as it stands afterwards.
+ *
+ * `corp` is null in two different situations and the screen has to tell them
+ * apart — the caller is in none, or nothing answered at all. So `reached` says
+ * whether the server spoke; without it a request that timed out would draw the
+ * screen for somebody with no corporation, and the JOIN button would offer to
+ * put them in one they are already in.
+ */
+export interface CorpAnswer {
+  reached: boolean;
+  error: CorpError | null;
+  /** how much of a cooldown is left, when that is what refused it */
+  wait: number;
+  corp: Corp | null;
+}
+
+const NOTHING: CorpAnswer = { reached: false, error: null, wait: 0, corp: null };
+
+async function corpCall(path: string, body: Record<string, unknown> = {}): Promise<CorpAnswer> {
+  const answer = ok(await post(path, body)) as Record<string, unknown> | null;
+  if (!answer) return NOTHING;
+  return {
+    reached: true,
+    error: typeof answer.error === 'string' ? (answer.error as CorpError) : null,
+    wait: Math.max(0, Math.floor(Number(answer.wait) || 0)),
+    corp: cleanCorp(answer.corp),
+  };
+}
+
+/** Where the screen starts: the corporation this player is in, if any. */
+export const fetchCorp = (): Promise<CorpAnswer> => corpCall('/corp');
+
+/**
+ * Just the feed, asked for on a timer while the screen is open.
+ *
+ * Its own route because it runs on a timer: fetching thirty members and two
+ * ranking queries every ten seconds to find out that nothing has happened would
+ * be a rude thing to do to a phone. Null when nothing answered, which the
+ * screen treats as "keep what you have" rather than as an empty feed.
+ */
+export async function fetchCorpFeed(): Promise<FeedItem[] | null> {
+  const answer = ok(await post('/corp/feed', {}));
+  return answer ? cleanFeedOnly(answer) : null;
+}
+
+/** The list somebody with no corporation reads, filtered by what they typed. */
+export async function listCorps(query: string): Promise<CorpSummary[] | null> {
+  const answer = ok(await post('/corp/list', { query })) as { corps?: unknown } | null;
+  return answer ? cleanSummaries(answer.corps) : null;
+}
+
+export const createCorp = (
+  name: string,
+  tag: string,
+  motto: string,
+  policy: Policy,
+): Promise<CorpAnswer> => corpCall('/corp/new', { name, tag, motto, policy });
+
+export const joinCorp = (by: { id?: string; code?: string }): Promise<CorpAnswer> =>
+  corpCall('/corp/join', by);
+
+export const leaveCorp = (): Promise<CorpAnswer> => corpCall('/corp/leave');
+
+/**
+ * Everything the owner can do, behind one call with a word in it — the shape
+ * the route has, for the reason the route has it.
+ */
+export const corpOwner = (
+  does: 'edit' | 'kick' | 'transfer' | 'accept' | 'refuse' | 'disband',
+  extra: Record<string, unknown> = {},
+): Promise<CorpAnswer> => corpCall('/corp/owner', { does, ...extra });
+
+/**
+ * Leave an invitation to a duel in the feed.
+ *
+ * The invitation itself was minted by `/duel/new` a moment ago, exactly as it
+ * is for a link or a friend: this only points the corporation at it. True when
+ * the card was written — and a false is not worth telling the player about,
+ * because the duel is open either way and they still have the link.
+ */
+export async function callOutCorp(code: string, expiresAt: number): Promise<boolean> {
+  const answer = ok(await post('/corp/duel', { code, expiresAt })) as { ok?: boolean } | null;
+  return answer?.ok === true;
+}
+
+/**
+ * Take the duel on a card. The code to connect to, or why not — `gone` is
+ * somebody else having tapped it a tenth of a second sooner, which is the
+ * answer this route exists to give.
+ */
+export async function takeCorpDuel(id: number): Promise<{ code: string } | CorpError> {
+  const answer = ok(await post('/corp/duel', { take: id })) as
+    | { ok?: boolean; code?: unknown; error?: unknown }
+    | null;
+  if (!answer) return 'noserver';
+  if (answer.ok && typeof answer.code === 'string') return { code: answer.code };
+  return typeof answer.error === 'string' ? (answer.error as CorpError) : 'nosuch';
+}
+
+export interface CorpBoard {
+  top: CorpSummary[];
+  me: CorpSummary | null;
+  season: string;
+}
+
+/**
+ * The table of corporations. Public reading like both player boards, so it
+ * works in a plain browser and needs no signature; naming your own corporation
+ * only decides which row is highlighted.
+ */
+export async function fetchCorpTop(
+  metric: Metric,
+  mine: string | null,
+  limit = 25,
+): Promise<CorpBoard | null> {
+  if (!BASE) return null;
+  const me = mine ? `&me=${encodeURIComponent(mine)}` : '';
+  const body = ok(await call(`/corp/top?metric=${metric}&limit=${limit}${me}`)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!body) return null;
+  return {
+    top: cleanSummaries(body.top),
+    me: cleanSummary(body.me),
+    season: String(body.season ?? ''),
+  };
 }
 
 /* -------------------------------------------------------------- the market */

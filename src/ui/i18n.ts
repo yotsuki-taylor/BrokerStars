@@ -493,6 +493,129 @@ const EN = {
   'friends.chatPitch': 'Nobody to play against? The game has a chat. People there are looking for a duel too — and a link sent in it comes back with a friend.',
   'friends.chatJoin': 'JOIN THE CHAT',
 
+  /* ---------------------------------------------------- the corporations */
+
+  /* The screen names itself once and the round button on the main screen reads
+     the same key, exactly as the rating and friends pairs above do.
+
+     A corporation's own NAME, TAG and MOTTO are never translated. They are
+     what a player typed, like a company ticker — and the alphabet they are
+     allowed in (`src/corp/protocol.ts`) is the same in both languages. */
+  'corp.title': 'CORPORATIONS',
+  'corp.loading': 'LOADING',
+  'corp.offline': 'Not answering. Try again in a moment.',
+  'corp.noServer': 'No server behind this build, so there are no corporations.',
+
+  // The empty screen: no corporation, and the two ways out of it.
+  'corp.noneTitle': 'NO CORPORATION',
+  'corp.none':
+    'Up to {max} traders under one name, ranked on what the average one earns in a month. Join one, or start your own — it costs nothing.',
+  'corp.search': 'NAME OR TAG',
+  'corp.found': 'NOTHING BY THAT NAME',
+  'corp.create': 'FOUND ONE',
+  'corp.join': 'JOIN',
+  'corp.ask': 'ASK TO JOIN',
+  'corp.fullMark': 'FULL',
+  'corp.closedMark': 'CLOSED',
+  'corp.membersOf': '{n}/{max}',
+  'corp.unranked': 'UNRANKED',
+  'corp.place': '#{n}',
+
+  // Founding one.
+  'corp.newTitle': 'FOUND A CORPORATION',
+  'corp.name': 'NAME',
+  'corp.tag': 'TAG',
+  'corp.motto': 'MOTTO',
+  'corp.mottoHint': 'OPTIONAL',
+  'corp.policy': 'WHO CAN JOIN',
+  'corp.policyOpen': 'ANYBODY',
+  'corp.policyClosed': 'BY REQUEST',
+  /* The alphabet, said plainly rather than as a rule. It is the one piece of
+     this feature a player runs into without being told, and "letters and
+     numbers" is the whole of it — the reason (there is nobody here to moderate
+     a name) is not the player's problem. */
+  'corp.letters': 'Capitals, digits and spaces. {min}–{max} characters.',
+  'corp.tagLetters': '{min}–{max} characters, no spaces.',
+  'corp.found2': 'FOUND IT',
+
+  // Being in one.
+  'corp.membersTitle': 'TRADERS',
+  'corp.feedTitle': 'WHAT HAS BEEN HAPPENING',
+  'corp.feedEmpty': 'Nothing yet. Play a match, or call somebody out.',
+  'corp.seasonEnds': 'SEASON ENDS IN {time}',
+  'corp.inDays': '{d}d {h}h',
+  'corp.thisSeason': 'THIS SEASON',
+  'corp.coinRank': 'COINS · {place}',
+  'corp.dollarRank': 'DOLLARS · {place}',
+  'corp.table': 'THE TABLE',
+  'corp.callOut': 'CALL A DUEL',
+  'corp.invite': 'INVITE SOMEBODY',
+  'corp.inviteText':
+    'Join my corporation in Broker Stars. Thirty traders, one table, one month to climb it.',
+  'corp.yourCode': 'INVITATION CODE',
+  // Not `duel.copy`, which says LINK: this is a code, and a button that offers
+  // a link and hands over eight characters is a button that lied.
+  'corp.copyCode': 'COPY THE CODE',
+  'corp.enterCode': 'OR TYPE A CODE',
+  'corp.leave': 'LEAVE',
+  'corp.leaveSure': 'LEAVE? YOUR SEASON STAYS BEHIND.',
+  'corp.owner': 'OWNER',
+  'corp.you': 'YOU',
+
+  // What the owner can do. All of it behind one button, because none of it is
+  // done often and all of it is dangerous.
+  'corp.manage': 'MANAGE',
+  'corp.rename': 'RENAME',
+  'corp.renameWait': 'RENAMED RECENTLY · AGAIN IN {time}',
+  'corp.kick': 'REMOVE',
+  'corp.transfer': 'MAKE OWNER',
+  'corp.disband': 'DISBAND',
+  'corp.disbandSure': 'DISBAND? EVERYBODY LOSES THE SEASON.',
+  'corp.requests': 'WAITING AT THE DOOR',
+  'corp.accept': 'LET IN',
+  'corp.refuse': 'NO',
+  'corp.save': 'SAVE',
+
+  // The feed. One line per kind, and the game is the only thing that writes
+  // them — there is no free text in this feature at all.
+  'corp.feed.joined': '{who} JOINED',
+  'corp.feed.left': '{who} LEFT',
+  'corp.feed.league': '{who} REACHED {what}',
+  'corp.feed.award': '{who} EARNED {what}',
+  'corp.feed.duel': '{who} WANTS A DUEL',
+  'corp.feed.duelYours': 'YOUR DUEL IS OPEN',
+  'corp.feed.taken': 'TAKEN BY {who}',
+  'corp.feed.join': 'SIT DOWN',
+  'corp.feed.left2': '{time} LEFT',
+
+  // The table of corporations, which is its own screen with two tabs.
+  'corp.topTitle': 'CORPORATIONS',
+  'corp.tabCoins': 'COINS',
+  'corp.tabDollars': 'DOLLARS',
+  /* The heading says AVERAGE out loud, because the number under it is the one
+     thing about this table somebody will otherwise get wrong. */
+  'corp.headCoins': 'COINS PER TRADER THIS MONTH',
+  'corp.headDollars': 'DOLLARS PER TRADER THIS MONTH',
+  'corp.topEmpty': 'No corporation has {min} traders in it yet. Found one.',
+  'corp.topWhy':
+    'The average, not the total — a corporation of thirty does not beat one of five by being thirty. Under {min} traders it is not in the table. Earned dollars only: nothing bought counts.',
+
+  // What can go wrong, in the one sentence the screen draws.
+  'corp.err.nosuch': 'THERE IS NO CORPORATION BY THAT NAME.',
+  'corp.err.full': 'THAT ONE IS FULL.',
+  'corp.err.already': 'YOU ARE ALREADY IN ONE.',
+  'corp.err.notmember': 'YOU ARE NOT IN A CORPORATION.',
+  'corp.err.notowner': 'ONLY THE OWNER CAN DO THAT.',
+  'corp.err.badname': 'CAPITALS, DIGITS AND SPACES ONLY.',
+  'corp.err.taken': 'SOMEBODY HAS THAT NAME.',
+  'corp.err.renamed': 'RENAMED TOO RECENTLY.',
+  'corp.err.cooldown': 'YOU LEFT A CORPORATION TODAY. TRY AGAIN IN {time}.',
+  'corp.err.closed': 'ASKED. THE OWNER DECIDES.',
+  'corp.err.pending': 'ALREADY ASKED. THE OWNER DECIDES.',
+  'corp.err.gone': 'SOMEBODY TOOK THAT DUEL FIRST.',
+  'corp.err.busy': 'SOMEBODY CHANGED IT WHILE YOU WERE LOOKING. TRY AGAIN.',
+  'corp.err.noserver': 'NO SERVER BEHIND THIS BUILD.',
+
   'shop.tryingOn': 'TRYING ON',
   'shop.worn': 'WORN',
   'shop.owned': 'OWNED',
@@ -941,6 +1064,108 @@ const RU: Record<Key, string> = {
     'Не с кем играть? У игры есть чат. Там такие же ищут соперника — а ссылка, отправленная туда, возвращается с другом.',
   'friends.chatJoin': 'ВСТУПИТЬ В ЧАТ',
   'friends.roomAt': 'КОМНАТА · {n}/{of}',
+
+  /* ---------------------------------------------------- корпорации */
+
+  'corp.title': 'КОРПОРАЦИИ',
+  'corp.loading': 'ЗАГРУЗКА',
+  'corp.offline': 'Не отвечает. Попробуй через минуту.',
+  'corp.noServer': 'За этой сборкой нет сервера, так что нет и корпораций.',
+
+  'corp.noneTitle': 'НЕТ КОРПОРАЦИИ',
+  'corp.none':
+    'До {max} трейдеров под одним именем. В таблице считается не сумма, а сколько зарабатывает средний за месяц. Вступи в чужую или основай свою — это бесплатно.',
+  'corp.search': 'НАЗВАНИЕ ИЛИ ТЕГ',
+  'corp.found': 'ТАКИХ НЕТ',
+  'corp.create': 'ОСНОВАТЬ',
+  'corp.join': 'ВСТУПИТЬ',
+  'corp.ask': 'ПОДАТЬ ЗАЯВКУ',
+  'corp.fullMark': 'МЕСТ НЕТ',
+  'corp.closedMark': 'ПО ЗАЯВКЕ',
+  'corp.membersOf': '{n}/{max}',
+  'corp.unranked': 'ВНЕ ТАБЛИЦЫ',
+  'corp.place': '#{n}',
+
+  'corp.newTitle': 'ОСНОВАТЬ КОРПОРАЦИЮ',
+  'corp.name': 'НАЗВАНИЕ',
+  'corp.tag': 'ТЕГ',
+  'corp.motto': 'ДЕВИЗ',
+  'corp.mottoHint': 'МОЖНО БЕЗ НЕГО',
+  'corp.policy': 'КТО МОЖЕТ ВСТУПИТЬ',
+  'corp.policyOpen': 'ЛЮБОЙ',
+  'corp.policyClosed': 'ПО ЗАЯВКЕ',
+  // Про латиницу сказано прямо: это единственное место, где игрок упрётся в
+  // правило, ничего о нём не зная, и «латиница и цифры» — весь ответ.
+  'corp.letters': 'Латиница, цифры и пробелы, {min}–{max} символа.',
+  'corp.tagLetters': '{min}–{max} символа, без пробелов.',
+  'corp.found2': 'ОСНОВАТЬ',
+
+  'corp.membersTitle': 'ТРЕЙДЕРЫ',
+  'corp.feedTitle': 'ЧТО ПРОИСХОДИЛО',
+  'corp.feedEmpty': 'Пока ничего. Сыграй матч или позови кого-нибудь на дуэль.',
+  'corp.seasonEnds': 'СЕЗОН ЗАКАНЧИВАЕТСЯ ЧЕРЕЗ {time}',
+  'corp.inDays': '{d}д {h}ч',
+  'corp.thisSeason': 'ЗА СЕЗОН',
+  'corp.coinRank': 'МОНЕТЫ · {place}',
+  'corp.dollarRank': 'ДОЛЛАРЫ · {place}',
+  'corp.table': 'ТАБЛИЦА',
+  'corp.callOut': 'ПОЗВАТЬ НА ДУЭЛЬ',
+  'corp.invite': 'ПОЗВАТЬ К СЕБЕ',
+  'corp.inviteText':
+    'Вступай в мою корпорацию в Broker Stars. Тридцать трейдеров, одна таблица и месяц, чтобы её взять.',
+  'corp.yourCode': 'КОД ПРИГЛАШЕНИЯ',
+  'corp.copyCode': 'СКОПИРОВАТЬ КОД',
+  'corp.enterCode': 'ИЛИ ВВЕДИ КОД',
+  'corp.leave': 'ВЫЙТИ',
+  'corp.leaveSure': 'ВЫЙТИ? СЕЗОН ОСТАНЕТСЯ ЗДЕСЬ.',
+  'corp.owner': 'ВЛАДЕЛЕЦ',
+  'corp.you': 'ТЫ',
+
+  'corp.manage': 'УПРАВЛЕНИЕ',
+  'corp.rename': 'ПЕРЕИМЕНОВАТЬ',
+  'corp.renameWait': 'НЕДАВНО ПЕРЕИМЕНОВАНА · СНОВА ЧЕРЕЗ {time}',
+  'corp.kick': 'ИСКЛЮЧИТЬ',
+  'corp.transfer': 'СДЕЛАТЬ ВЛАДЕЛЬЦЕМ',
+  'corp.disband': 'РАСПУСТИТЬ',
+  'corp.disbandSure': 'РАСПУСТИТЬ? СЕЗОН ПОТЕРЯЮТ ВСЕ.',
+  'corp.requests': 'СТОЯТ У ДВЕРИ',
+  'corp.accept': 'ВПУСТИТЬ',
+  'corp.refuse': 'НЕТ',
+  'corp.save': 'СОХРАНИТЬ',
+
+  'corp.feed.joined': '{who} ВСТУПИЛ',
+  'corp.feed.left': '{who} ВЫШЕЛ',
+  'corp.feed.league': '{who} ДОБРАЛСЯ ДО {what}',
+  'corp.feed.award': '{who} ПОЛУЧИЛ НАГРАДУ {what}',
+  'corp.feed.duel': '{who} ЗОВЁТ НА ДУЭЛЬ',
+  'corp.feed.duelYours': 'ТВОЯ ДУЭЛЬ ОТКРЫТА',
+  'corp.feed.taken': 'ЗАНЯТО · {who}',
+  'corp.feed.join': 'СЕСТЬ',
+  'corp.feed.left2': 'ЕЩЁ {time}',
+
+  'corp.topTitle': 'КОРПОРАЦИИ',
+  'corp.tabCoins': 'МОНЕТЫ',
+  'corp.tabDollars': 'ДОЛЛАРЫ',
+  'corp.headCoins': 'МОНЕТ НА ТРЕЙДЕРА ЗА МЕСЯЦ',
+  'corp.headDollars': 'ДОЛЛАРОВ НА ТРЕЙДЕРА ЗА МЕСЯЦ',
+  'corp.topEmpty': 'Ни в одной корпорации ещё нет {min} трейдеров. Основай свою.',
+  'corp.topWhy':
+    'Среднее, а не сумма: корпорация из тридцати не обгоняет корпорацию из пяти тем, что их тридцать. Меньше {min} трейдеров — в таблицу не попадает. Доллары считаются только заработанные: купленное не в счёт.',
+
+  'corp.err.nosuch': 'ТАКОЙ КОРПОРАЦИИ НЕТ.',
+  'corp.err.full': 'ТАМ НЕТ МЕСТ.',
+  'corp.err.already': 'ТЫ УЖЕ В КОРПОРАЦИИ.',
+  'corp.err.notmember': 'ТЫ НЕ СОСТОИШЬ В КОРПОРАЦИИ.',
+  'corp.err.notowner': 'ЭТО МОЖЕТ ТОЛЬКО ВЛАДЕЛЕЦ.',
+  'corp.err.badname': 'ТОЛЬКО ЛАТИНИЦА, ЦИФРЫ И ПРОБЕЛЫ.',
+  'corp.err.taken': 'ТАКОЕ НАЗВАНИЕ УЖЕ ЗАНЯТО.',
+  'corp.err.renamed': 'ПЕРЕИМЕНОВЫВАЛИ СЛИШКОМ НЕДАВНО.',
+  'corp.err.cooldown': 'ТЫ СЕГОДНЯ ВЫШЕЛ ИЗ КОРПОРАЦИИ. ПОПРОБУЙ ЧЕРЕЗ {time}.',
+  'corp.err.closed': 'ЗАЯВКА ПОДАНА. РЕШАЕТ ВЛАДЕЛЕЦ.',
+  'corp.err.pending': 'ЗАЯВКА УЖЕ ПОДАНА. РЕШАЕТ ВЛАДЕЛЕЦ.',
+  'corp.err.gone': 'ЭТУ ДУЭЛЬ УЖЕ ЗАБРАЛИ.',
+  'corp.err.busy': 'ПОКА ТЫ СМОТРЕЛ, ЕЁ ИЗМЕНИЛИ. ПОПРОБУЙ ЕЩЁ РАЗ.',
+  'corp.err.noserver': 'ЗА ЭТОЙ СБОРКОЙ НЕТ СЕРВЕРА.',
 
   'shop.tryingOn': 'ПРИМЕРКА',
   'shop.worn': 'НАДЕТО',

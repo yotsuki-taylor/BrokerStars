@@ -31,8 +31,9 @@
  * no process to keep alive anywhere.
  */
 
-import { dayOf } from '../../src/daily/protocol';
-import { DUEL_CODE_LENGTH, normalizeCode } from '../../src/duel/protocol';
+import { dayOf, DAILY_BONUS } from '../../src/daily/protocol';
+import { NAME_MAX, seasonOf, type Metric } from '../../src/corp/protocol';
+import { DUEL_CODE_LENGTH, DUEL_TTL_MS, normalizeCode } from '../../src/duel/protocol';
 import { cleanCode } from '../../src/friends/protocol';
 import { cleanLinkCode } from '../../src/link/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
@@ -51,6 +52,7 @@ import {
   waitLeft as feedbackWaitLeft,
 } from './feedback';
 import * as calls from './calls';
+import * as corps from './corps';
 import * as friends from './friends';
 import * as link from './link';
 import * as profiles from './profile';
@@ -241,9 +243,15 @@ async function submit(request: Request, env: Env) {
   }
 
   const now = Date.now();
-  const existing = await env.DB.prepare(`SELECT updated_at FROM players WHERE id = ?1`)
+  // `top_league` comes along for the ride: `record` below raises it to whatever
+  // this match was played in, so the value read here is the last moment
+  // anything can tell that this league is a new one for this player. That is
+  // the whole of what a corporation's feed is told about a league.
+  const existing = await env.DB.prepare(
+    `SELECT updated_at, top_league FROM players WHERE id = ?1`,
+  )
     .bind(caller.id)
-    .first<{ updated_at: number }>();
+    .first<{ updated_at: number; top_league: number }>();
 
   if (existing && now - existing.updated_at < MIN_SECONDS_BETWEEN_RESULTS * 1000) {
     return bad(429, 'too soon');
@@ -276,11 +284,27 @@ async function submit(request: Request, env: Env) {
   // not one anybody earned. A surrender arrives here as a loss and banks
   // nothing; a duel never arrives at all, it is settled where it was played.
   try {
-    await profiles.settle(env, caller, {
+    const applied = await profiles.settle(env, caller, {
       league,
       facts: { outcome, netWorth, tradedWell, bankrupt, trades, duel: false },
       companies,
     });
+
+    // And the corporation, if this player is in one. All of it is fire and
+    // forget — `corps` swallows its own failures, because a match that was
+    // played and paid must not fail over a line in somebody's feed.
+    //
+    // The coins are the ones the SERVER just decided to pay, not a number that
+    // came off the wire, which is the same rule the board is kept under.
+    await corps.credit(env, caller.id, { coins: stars });
+    // A league nobody in this corporation has seen this player reach before.
+    // Off `players.top_league`, which only ever goes up, so it cannot be
+    // announced twice — and only from a match against a bot, because the
+    // ladder is deliberately climbed against bots (`profiles.settle`).
+    if (league > (existing?.top_league ?? 0)) {
+      await corps.note(env, caller, 'league', String(league));
+    }
+    for (const id of applied.gained ?? []) await corps.note(env, caller, 'award', id);
   } catch (err) {
     // The match is recorded and paid either way, and none of this is worth
     // failing the whole submission over — which would only have the client
@@ -584,13 +608,33 @@ async function daily(request: Request, env: Env) {
   const claim = typeof body.claim === 'string' ? body.claim : '';
   if (!claim) return bad(400, 'no such claim');
   const now = Date.now();
-  return sent(
-    await profiles.change(env, caller, (held) =>
-      claim === 'bonus'
-        ? profiles.claimBonus(held, now)
-        : profiles.claimQuest(held, claim, now),
-    ),
+  const applied = await profiles.change(env, caller, (held) =>
+    claim === 'bonus'
+      ? profiles.claimBonus(held, now)
+      : profiles.claimQuest(held, claim, now),
   );
+
+  /**
+   * The bonus, and only the bonus, counts towards a corporation's season.
+   *
+   * WHY THE DOLLAR TABLE IS SAFE TO HAVE AT ALL. Dollars are going to be sold
+   * for Telegram Stars one day, and a table ranking dollar balances would be a
+   * table ranking what people spent. So nothing here reads a balance: what is
+   * credited is the payout the server just made, at the moment it makes it, and
+   * a dollar that arrives any other way — bought, granted, or made at the share
+   * counter — never passes through this line. See `corps.credit`.
+   *
+   * A QUEST PAYS NOTHING HERE either, for the reason `claimQuest` keeps its
+   * coins off the player board: two players with identical match records should
+   * not be separated by which of them remembered to tap a button.
+   *
+   * Only when the claim actually succeeded — a refused bonus is a bonus that
+   * was already taken today, and paying a season for it would pay twice.
+   */
+  if (claim === 'bonus' && !applied.error) {
+    await corps.credit(env, caller.id, { dollars: DAILY_BONUS }, now);
+  }
+  return sent(applied);
 }
 
 /** The dev panel's undo, checked against a signature rather than against a bundle. */
@@ -655,6 +699,11 @@ async function deleteAccount(request: Request, env: Env) {
     // rather than mostly gone -- and a stale cooldown would otherwise be the
     // one thing a deleted account left behind to be counted against the next.
     env.DB.prepare(`DELETE FROM feedback_sent WHERE player_id = ?1`).bind(id),
+    // The corporation: their membership, their season, anything they asked
+    // for, and every line of every feed with their name on it. `forgetting`
+    // hands back statements rather than running them, so this route keeps its
+    // one promise — one batch, all of it or none (`worker/src/corps.ts`).
+    ...corps.forgetting(env, id),
   ]);
 
   // The session the request arrived on still verifies — it is signed, not
@@ -1070,6 +1119,165 @@ async function friendList(env: Env, caller: Caller) {
   };
 }
 
+/* ------------------------------------------------------- the corporations */
+
+/**
+ * Every corporation route answers the same way: what the caller asked for, if
+ * anything, and then the corporation as it stands afterwards.
+ *
+ * It is the habit the profile and friends routes already have, and it is worth
+ * the extra read here more than it is there. Everything a corporation does is
+ * done to a shared thing — thirty people can be changing it at once — so a
+ * client that acted on what it was looking at a second ago has to be told what
+ * is actually true, and the only useful answer to "that did not work" is the
+ * state in which it did not.
+ *
+ * A refusal is therefore 200 with `error` in it, exactly like a refused
+ * purchase, and the screen draws the sentence with the right list underneath.
+ */
+const corpSent = async (env: Env, caller: Caller, out: corps.Founded = {}) =>
+  json({
+    ok: !out.error,
+    error: out.error,
+    wait: out.wait,
+    corp: await corps.mine(env, caller, Date.now()),
+  });
+
+/** What the caller is in, if anything. The screen's first question. */
+async function myCorp(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  return corpSent(env, asked.caller);
+}
+
+/**
+ * Just the feed, which is what the open screen asks for every ten seconds.
+ *
+ * Its own route for the reason `/duel/call` is its own route: this one runs on
+ * a timer, and fetching a whole corporation — thirty members, their season, two
+ * ranking queries — to find out that nothing has happened would be a rude thing
+ * to do to a phone.
+ */
+async function corpFeed(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const corpId = await corps.corpIdOf(env, asked.caller.id);
+  if (!corpId) return json({ ok: true, feed: [] });
+  return json({ ok: true, feed: await corps.feedOf(env, corpId, Date.now()) });
+}
+
+/** The list a player with no corporation reads, and the search box over it. */
+async function corpList(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const query = String(asked.body.query ?? '').slice(0, NAME_MAX);
+  const limit = Math.min(50, Math.max(1, Math.floor(Number(asked.body.limit) || 25)));
+  return json({ ok: true, corps: await corps.browse(env, query, limit, Date.now()) });
+}
+
+async function corpNew(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  return corpSent(env, caller, await corps.create(env, caller, body as never));
+}
+
+async function corpJoin(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  return corpSent(env, caller, await corps.join(env, caller, body));
+}
+
+async function corpLeave(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  return corpSent(env, asked.caller, await corps.leave(env, asked.caller));
+}
+
+/**
+ * Everything the owner can do, behind one route with a word in the body.
+ *
+ * One route rather than five because they want the same signature check, the
+ * same "you are not the owner" refusal and the same answer — and the thing they
+ * differ in is which line of `corps.ts` decides. The same arrangement
+ * `/profile/daily` makes of the bonus and the quests.
+ */
+async function corpOwner(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+  const who = String(body.player ?? '').slice(0, 32);
+
+  switch (String(body.does ?? '')) {
+    case 'edit':
+      return corpSent(env, caller, await corps.edit(env, caller, body));
+    case 'kick':
+      return corpSent(env, caller, await corps.kick(env, caller, who));
+    case 'transfer':
+      return corpSent(env, caller, await corps.transfer(env, caller, who));
+    case 'accept':
+      return corpSent(env, caller, await corps.answer(env, caller, who, true));
+    case 'refuse':
+      return corpSent(env, caller, await corps.answer(env, caller, who, false));
+    case 'disband':
+      // Typed out rather than tapped, like deleting an account: a route that
+      // ends something thirty people are in should not be reachable by a
+      // mis-sent request.
+      if (String(body.confirm ?? '') !== 'disband') return bad(400, 'not confirmed');
+      return corpSent(env, caller, await corps.disband(env, caller));
+    default:
+      return bad(400, 'no such change');
+  }
+}
+
+/**
+ * Leaving an invitation to a duel in the feed, and taking one that is there.
+ *
+ * The invitation itself is minted by `/duel/new` exactly as it always was —
+ * this only writes the card that points at it, which is why the code arrives
+ * from the client rather than being made here. See `corps.callOut` for why a
+ * code is not checked against the duel it names.
+ */
+async function corpDuel(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  const take = Math.floor(Number(body.take));
+  if (Number.isFinite(take) && take > 0) {
+    const out = await corps.takeDuel(env, caller, take);
+    return typeof out === 'string'
+      ? json({ ok: false, error: out, corp: await corps.mine(env, caller, Date.now()) })
+      : json({ ok: true, code: out.code });
+  }
+
+  const code = normalizeCode(body.code);
+  const expiresAt = Math.floor(Number(body.expiresAt));
+  if (!code || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    return bad(400, 'no such invitation');
+  }
+  // Never longer than an invitation actually lives, whatever the body says: a
+  // card that outlives its seat is a card that sends people at a dead lobby.
+  const dies = Math.min(expiresAt, Date.now() + DUEL_TTL_MS);
+  const error = await corps.callOut(env, caller, code, dies);
+  return json({ ok: !error, error });
+}
+
+/**
+ * The table of corporations, under the same public reading the two player
+ * boards get: it is the same answer for everybody, it carries nobody's
+ * identity, and naming your own corporation only decides which row is
+ * highlighted.
+ */
+function corpTop(env: Env, url: URL) {
+  const metric: Metric = url.searchParams.get('metric') === 'dollars' ? 'dollars' : 'coins';
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 25) || 25));
+  return corps
+    .table(env, metric, limit, url.searchParams.get('me'), Date.now())
+    .then((t) => json({ ...t, metric, season: seasonOf(Date.now()) }));
+}
+
 /* -------------------------------------------------------------- the bot */
 
 /**
@@ -1171,7 +1379,20 @@ export default {
       if (url.pathname === '/duel/call') return duelCall(request, env);
       if (url.pathname === '/friends') return myFriends(request, env);
       if (url.pathname === '/friends/add') return addFriend(request, env);
+      if (url.pathname === '/corp') return myCorp(request, env);
+      if (url.pathname === '/corp/feed') return corpFeed(request, env);
+      if (url.pathname === '/corp/list') return corpList(request, env);
+      if (url.pathname === '/corp/new') return corpNew(request, env);
+      if (url.pathname === '/corp/join') return corpJoin(request, env);
+      if (url.pathname === '/corp/leave') return corpLeave(request, env);
+      if (url.pathname === '/corp/owner') return corpOwner(request, env);
+      if (url.pathname === '/corp/duel') return corpDuel(request, env);
     }
+
+    // Public reading, like both player boards and for the same reason: it is
+    // the same table for everybody and naming your own corporation claims
+    // nothing, it only decides which row is highlighted.
+    if (url.pathname === '/corp/top' && request.method === 'GET') return corpTop(env, url);
 
     if (url.pathname === '/duel/new' && request.method === 'POST') return newDuel(request, env);
 

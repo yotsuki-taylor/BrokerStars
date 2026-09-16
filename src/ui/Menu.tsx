@@ -12,6 +12,7 @@ import {
   Coin,
   People,
   Tie,
+  Tower,
   Trophy,
   money,
 } from './components';
@@ -40,6 +41,7 @@ export default function Menu({
   onRating,
   onDaily,
   onFriends,
+  onCorps,
   onSettings,
 }: {
   coins: number;
@@ -63,6 +65,7 @@ export default function Menu({
   onRating: () => void;
   onDaily: () => void;
   onFriends: () => void;
+  onCorps: () => void;
   onSettings: () => void;
 }) {
   const step = roomDone < ROOM_DONE ? ROOM_STEPS[roomDone] : null;
@@ -148,6 +151,24 @@ export default function Menu({
         aria-label={t('friends.title')}
       >
         <People size={28} />
+      </button>
+
+      {/* Third on the rail, under the friends, because a corporation is the
+          same kind of thing they are: people rather than a place to play.
+
+          Under rather than over, and not lit. FRIENDS is the one somebody uses
+          on their first evening — a corporation is a thing to join once they
+          know somebody — so the older button keeps the higher slot. It does not
+          glow either, for the reason FRIENDS does not: the feed changes, but
+          nothing arrives on it that is gone by tomorrow, and a rail of three
+          blinking buttons is a rail nobody looks at. */}
+      <button
+        className="rail-btn corps-btn"
+        data-tut="corps"
+        onClick={onCorps}
+        aria-label={t('corp.title')}
+      >
+        <Tower size={28} />
       </button>
 
       <div className={`hero${seated ? ' hero-seated' : ''}`}>
