@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Coin, Dollar, Lock, Tower, money } from './components';
+import { Check, Coin, Dollar, LogoMask, Lock, Tower, money } from './components';
 import {
   corpsAvailable,
   corpOwner,
@@ -13,6 +13,14 @@ import {
   type CorpAnswer,
 } from './api';
 import { AWARDS } from '../awards/catalogue';
+import {
+  COLORS,
+  COMPANY_EMBLEMS,
+  DEFAULT_COLOR,
+  DEFAULT_EMBLEM,
+  OWN_EMBLEMS,
+  emblemById,
+} from '../corp/emblems';
 import { copyText, shareInvite } from './friends';
 import { LEAGUES, leagueName } from './leagues';
 import { t } from './i18n';
@@ -149,6 +157,84 @@ function Head({ onBack }: { onBack: () => void }) {
   );
 }
 
+/**
+ * A corporation's mark, at whatever size the caller asks for.
+ *
+ * `LogoMask` is the company archive's own renderer — a white silhouette tinted
+ * through a CSS mask — so one file serves every size and all ten colours, and
+ * a mark drawn here is drawn exactly the way a company's is on a board.
+ */
+function Emblem({ corp, className }: { corp: { emblem: string; color: string }; className: string }) {
+  return <LogoMask file={emblemById(corp.emblem).file} color={corp.color} className={className} />;
+}
+
+/**
+ * Choosing one: the marks in a grid, the colours in a row under them.
+ *
+ * Both are closed sets, so both are shown whole rather than hidden behind a
+ * dialog — there are twenty-six marks and ten colours, they fit, and a choice
+ * you can see all of is a choice nobody has to go looking for.
+ *
+ * The grid is in two headed halves. The first is drawn for corporations; the
+ * second is what the companies wear, and it is worth having because somebody
+ * who has met KRAKEN on a board may well want to fly its flag — but it is
+ * second, because a corporation is not a company and the default should not
+ * suggest otherwise.
+ *
+ * Every mark is drawn in the colour that is currently chosen, so the two
+ * choices are never made blind of each other.
+ */
+function Picker({
+  emblem,
+  color,
+  onEmblem,
+  onColor,
+}: {
+  emblem: string;
+  color: string;
+  onEmblem: (id: string) => void;
+  onColor: (c: string) => void;
+}) {
+  const half = (title: string, list: typeof OWN_EMBLEMS) => (
+    <>
+      <span className="corp-pick-head">{title}</span>
+      <div className="corp-emblems">
+        {list.map((e) => (
+          <button
+            key={e.id}
+            type="button"
+            className={`corp-emblem${e.id === emblem ? ' on' : ''}`}
+            aria-label={e.id}
+            onClick={() => onEmblem(e.id)}
+          >
+            <LogoMask file={e.file} color={color} className="corp-emblem-mark" />
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  return (
+    <div className="corp-field">
+      <span>{t('corp.emblem')}</span>
+      <div className="corp-colors">
+        {COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={`corp-color${c === color ? ' on' : ''}`}
+            style={{ backgroundColor: c }}
+            aria-label={c}
+            onClick={() => onColor(c)}
+          />
+        ))}
+      </div>
+      {half(t('corp.emblemOwn'), OWN_EMBLEMS)}
+      {half(t('corp.emblemCompanies'), COMPANY_EMBLEMS)}
+    </div>
+  );
+}
+
 /** What a player may type into a name box: the alphabet, as it is typed. */
 const keepLetters = (raw: string, max: number): string =>
   raw
@@ -169,6 +255,7 @@ function CorpLine({
   const full = row.members >= MAX_MEMBERS;
   return (
     <button className="corp-line" disabled={full} onClick={() => onJoin(row)}>
+      <Emblem corp={row} className="corp-mark" />
       <span className="corp-tag">{row.tag}</span>
       <span className="corp-line-text">
         <b>{row.name}</b>
@@ -213,6 +300,8 @@ function NewCorp({
   const [tag, setTag] = useState('');
   const [motto, setMotto] = useState('');
   const [policy, setPolicy] = useState<Policy>('open');
+  const [emblem, setEmblem] = useState(DEFAULT_EMBLEM);
+  const [color, setColor] = useState(DEFAULT_COLOR);
   const [busy, setBusy] = useState(false);
 
   const ready = Boolean(cleanName(name) && cleanTag(tag)) && !busy;
@@ -220,7 +309,7 @@ function NewCorp({
   const submit = async () => {
     if (!ready) return;
     setBusy(true);
-    const answer = await createCorp(name, tag, motto, policy);
+    const answer = await createCorp(name, tag, motto, policy, emblem, color);
     setBusy(false);
     onDone(answer);
   };
@@ -234,6 +323,18 @@ function NewCorp({
       }}
     >
       <b className="corp-new-title">{t('corp.newTitle')}</b>
+
+      {/* The thing being made, drawn as it will actually look: the mark, the
+          colour, the tag and the name together. Three choices on one screen
+          are three choices somebody would otherwise be making blind of each
+          other. */}
+      <div className="corp-preview">
+        <Emblem corp={{ emblem, color }} className="corp-mark big" />
+        <span className="corp-head-name">
+          <span className="corp-tag">{cleanTag(tag) ?? t('corp.tag')}</span>
+          <b>{cleanName(name) ?? t('corp.name')}</b>
+        </span>
+      </div>
 
       <label className="corp-field">
         <span>{t('corp.name')}</span>
@@ -274,6 +375,8 @@ function NewCorp({
           spellCheck={false}
         />
       </label>
+
+      <Picker emblem={emblem} color={color} onEmblem={setEmblem} onColor={setColor} />
 
       <div className="corp-field">
         <span>{t('corp.policy')}</span>
@@ -526,6 +629,8 @@ function Manage({
   const [name, setName] = useState(corp.name);
   const [motto, setMotto] = useState(corp.motto);
   const [policy, setPolicy] = useState<Policy>(corp.policy);
+  const [emblem, setEmblem] = useState(corp.emblem);
+  const [color, setColor] = useState(corp.color);
   const [sure, setSure] = useState(false);
   const waiting = Math.max(0, corp.renameAt - Date.now());
 
@@ -554,6 +659,11 @@ function Manage({
         />
       </label>
 
+      {/* The mark and the colour change as often as the owner likes, unlike the
+          name: sixteen drawings and ten colours cannot be made to say anything,
+          so there is nothing for a cooldown to defend against. */}
+      <Picker emblem={emblem} color={color} onEmblem={setEmblem} onColor={setColor} />
+
       <div className="corp-field">
         <span>{t('corp.policy')}</span>
         <div className="corp-policy">
@@ -572,7 +682,9 @@ function Manage({
       <div className="friend-actions">
         <button
           className="big-btn"
-          onClick={async () => onAnswer(await corpOwner('edit', { name, motto, policy }))}
+          onClick={async () =>
+            onAnswer(await corpOwner('edit', { name, motto, policy, emblem, color }))
+          }
         >
           {t('corp.save')}
         </button>
@@ -759,6 +871,7 @@ export default function CorpScreen({
           the other what it earned turning up. */}
       <div className="corp-head">
         <div className="corp-head-name">
+          <Emblem corp={corp} className="corp-mark big" />
           <span className="corp-tag big">{corp.tag}</span>
           <b>{corp.name}</b>
         </div>

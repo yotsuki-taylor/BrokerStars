@@ -1,0 +1,31 @@
+-- What a corporation wears: a mark and a colour.
+--
+-- Both are ids rather than content. `emblem` names a row in
+-- `src/corp/emblems.ts` — sixteen marks drawn for this plus the twenty-eight
+-- the companies wear — and `color` is one of ten literals from the same file.
+-- Neither is ever a file path, a URL or a hex string off the wire: the server
+-- validates both against the catalogue before writing (`cleanEmblem`,
+-- `cleanColor`), so what comes back out is always something this build can draw.
+--
+-- WHY NOT AN UPLOAD, said here because this is where somebody will come looking
+-- when they want one: a picture a player supplies is a moderation duty, and the
+-- whole of this feature is built to have none. It is the same argument that
+-- keeps free text out of the feed and Cyrillic out of a name.
+--
+-- The colour is a closed set for a second reason. It is written into a style
+-- attribute on a mark that thirty other people are shown, so a free string
+-- there is somebody else's CSS running in your client. Ten constants is not.
+--
+--   npm run migrate -- ./migrations/016-corp-emblem.sql
+--   npm run migrate:local -- ./migrations/016-corp-emblem.sql
+--
+-- ALTER TABLE has no idempotent form, so this runs ONCE and by hand, and only
+-- on a database where `corps` already exists — a base that has never seen
+-- migration 015 gets both columns from `schema.sql` instead and must not run
+-- this. Running it twice says "duplicate column name" and changes nothing.
+--
+-- The defaults are the first mark and the first colour in the catalogue, so
+-- every corporation founded before this existed is drawn rather than blank.
+
+ALTER TABLE corps ADD COLUMN emblem TEXT NOT NULL DEFAULT 'arrow';
+ALTER TABLE corps ADD COLUMN color TEXT NOT NULL DEFAULT '#FFC02E';

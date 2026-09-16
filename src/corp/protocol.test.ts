@@ -1,4 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { COMPANIES } from '../sim/companies';
+import {
+  COLORS,
+  COMPANY_EMBLEMS,
+  DEFAULT_COLOR,
+  DEFAULT_EMBLEM,
+  EMBLEMS,
+  OWN_EMBLEMS,
+  cleanColor,
+  cleanEmblem,
+  emblemById,
+} from './emblems';
 import {
   BANNED,
   MAX_MEMBERS,
@@ -76,6 +88,50 @@ describe('what a corporation may be called', () => {
     expect(keyOf(cleanName('BULL RUN')!)).toBe('BULLRUN');
     expect(keyOf(cleanName('bullrun')!)).toBe('BULLRUN');
     expect(keyOf(cleanName('B U L L R U N')!)).toBe('BULLRUN');
+  });
+});
+
+describe('what a corporation wears', () => {
+  it('takes an emblem this build knows, and nothing else', () => {
+    expect(cleanEmblem('bull')).toBe('bull');
+    expect(cleanEmblem('c:kraken')).toBe('c:kraken');
+    // an id from a later version, or one whose company has since been removed
+    expect(cleanEmblem('unicorn')).toBe(DEFAULT_EMBLEM);
+    expect(cleanEmblem(null)).toBe(DEFAULT_EMBLEM);
+    // and never a path, whatever it is dressed up as
+    expect(cleanEmblem('../../secret.svg')).toBe(DEFAULT_EMBLEM);
+    expect(cleanEmblem('corps/bull.svg')).toBe(DEFAULT_EMBLEM);
+  });
+
+  it('takes a colour from the ten and nothing else', () => {
+    // This value is written into a style attribute on a mark thirty other
+    // people are shown, so the closed set is the whole of the defence.
+    expect(cleanColor(COLORS[3])).toBe(COLORS[3]);
+    expect(cleanColor('#123456')).toBe(DEFAULT_COLOR);
+    expect(cleanColor('red')).toBe(DEFAULT_COLOR);
+    expect(cleanColor('url(javascript:alert(1))')).toBe(DEFAULT_COLOR);
+    expect(cleanColor('#FFC02E; background-image: url(x)')).toBe(DEFAULT_COLOR);
+  });
+
+  it('forgives the case of a colour, since it is typed nowhere', () => {
+    expect(cleanColor(COLORS[0].toLowerCase())).toBe(COLORS[0]);
+  });
+
+  it('names a real file for every emblem in the catalogue', () => {
+    // A catalogue entry with no drawing behind it is an empty square in the
+    // picker, which nothing else would catch.
+    for (const e of EMBLEMS) {
+      expect(e.file, e.id).toMatch(/\.(svg|png)$/);
+      expect(e.id, e.file).not.toContain('/');
+    }
+    // the two halves are disjoint, which is what the `c:` prefix is for
+    expect(new Set(EMBLEMS.map((e) => e.id)).size).toBe(EMBLEMS.length);
+    expect(OWN_EMBLEMS.length).toBe(16);
+    expect(COMPANY_EMBLEMS.length).toBe(COMPANIES.length);
+  });
+
+  it('draws something for a corporation that chose nothing', () => {
+    expect(emblemById('nonsense').file).toBe(emblemById(DEFAULT_EMBLEM).file);
   });
 });
 

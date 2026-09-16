@@ -28,6 +28,8 @@
  * night of the year anybody is watching.
  */
 
+import { cleanColor, cleanEmblem } from './emblems';
+
 /* ------------------------------------------------------------- the numbers */
 
 /**
@@ -188,6 +190,10 @@ export interface CorpSummary {
   name: string;
   tag: string;
   motto: string;
+  /** an id from `src/corp/emblems.ts`; never a file path off the wire */
+  emblem: string;
+  /** one of the ten in `COLORS`, and never anything else — see `cleanColor` */
+  color: string;
   members: number;
   policy: Policy;
   /** place in the table this row was read out of, or null when unranked */
@@ -209,6 +215,8 @@ export interface Corp {
   name: string;
   tag: string;
   motto: string;
+  emblem: string;
+  color: string;
   policy: Policy;
   ownerId: string;
   /** the standing invitation code, which any member may hand out */
@@ -452,6 +460,12 @@ export function cleanSummary(raw: unknown): CorpSummary | null {
     name,
     tag: str(r?.tag, TAG_MAX),
     motto: str(r?.motto, MOTTO_MAX),
+    // Through the catalogue, both of them: an emblem this build has never
+    // heard of and a colour that is not one of the ten both come back as the
+    // default. The colour matters most — it is written into a style attribute
+    // on a mark drawn for everybody else in the corporation.
+    emblem: cleanEmblem(r?.emblem),
+    color: cleanColor(r?.color),
     members: Math.min(MAX_MEMBERS, num(r?.members)),
     policy: policyOf(r?.policy),
     rank: rankOf(r?.rank),
@@ -537,6 +551,8 @@ export function cleanCorp(raw: unknown, now: number = Date.now()): Corp | null {
     name,
     tag: str(r?.tag, TAG_MAX),
     motto: str(r?.motto, MOTTO_MAX),
+    emblem: cleanEmblem(r?.emblem),
+    color: cleanColor(r?.color),
     policy: policyOf(r?.policy),
     ownerId: str(r?.ownerId, 32),
     code: str(r?.code, 32),

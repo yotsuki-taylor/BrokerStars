@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Coin, Dollar, Lock, money } from './components';
+import { Coin, Dollar, LogoMask, Lock, money } from './components';
+import { emblemById } from '../corp/emblems';
 import { boardConfigured, fetchCorpTop, type CorpBoard } from './api';
 import { t } from './i18n';
 import { MAX_MEMBERS, MIN_RANKED, type CorpSummary, type Metric } from '../corp/protocol';
@@ -48,6 +49,9 @@ function Line({ row, metric, mine }: { row: CorpSummary; metric: Metric; mine: b
   return (
     <div className={`rating-line corp-top-line${mine ? ' you' : ''}`}>
       <span className="rating-rank">{row.rank}</span>
+      {/* The mark before the tag, so a corporation is recognised down the
+          column by its colour before anybody reads a word of it. */}
+      <LogoMask file={emblemById(row.emblem).file} color={row.color} className="corp-mark" />
       <span className="corp-tag">{row.tag}</span>
       <span className="rating-who">{row.name}</span>
       <span className="rating-matches">

@@ -53,6 +53,7 @@ import {
   type Metric,
   type Policy,
 } from '../../src/corp/protocol';
+import { cleanColor, cleanEmblem } from '../../src/corp/emblems';
 import type { Env } from './results';
 import type { Caller } from './telegram';
 
@@ -86,6 +87,8 @@ interface CorpRow {
   name: string;
   tag: string;
   motto: string;
+  emblem: string;
+  color: string;
   policy: Policy;
   owner_id: string;
   code: string;
@@ -115,8 +118,8 @@ interface FeedRow {
   created_at: number;
 }
 
-const CORP_COLUMNS = `id, name, tag, motto, policy, owner_id, code, members,
-                      created_at, renamed_at, updated_at`;
+const CORP_COLUMNS = `id, name, tag, motto, emblem, color, policy, owner_id, code,
+                      members, created_at, renamed_at, updated_at`;
 
 /* -------------------------------------------------------------- the reads */
 
@@ -295,6 +298,8 @@ export async function table(
       name: row.name,
       tag: row.tag,
       motto: row.motto,
+      emblem: row.emblem,
+      color: row.color,
       // the count the table was worked out over, not the counted column: the
       // two agree, and this one cannot be the stale half of a disagreement
       members: at.members,
@@ -391,6 +396,8 @@ export async function mine(env: Env, caller: Caller, now: number): Promise<Corp 
     name: row.name,
     tag: row.tag,
     motto: row.motto,
+    emblem: row.emblem,
+    color: row.color,
     policy: row.policy,
     ownerId: row.owner_id,
     code: row.code,
@@ -466,6 +473,8 @@ export async function browse(
       name: row.name,
       tag: row.tag,
       motto: row.motto,
+      emblem: row.emblem,
+      color: row.color,
       members: row.members,
       policy: row.policy,
       rank: at?.rank ?? null,
@@ -690,7 +699,14 @@ export interface Founded {
 export async function create(
   env: Env,
   caller: Caller,
-  raw: { name: unknown; tag: unknown; motto: unknown; policy: unknown },
+  raw: {
+    name: unknown;
+    tag: unknown;
+    motto: unknown;
+    policy: unknown;
+    emblem?: unknown;
+    color?: unknown;
+  },
   now: number = Date.now(),
 ): Promise<Founded> {
   if (await corpIdOf(env, caller.id)) return { error: 'already' };
@@ -700,6 +716,13 @@ export async function create(
   if (!name || !tag) return { error: 'badname' };
   const motto = cleanMotto(raw.motto);
   const policy: Policy = raw.policy === 'closed' ? 'closed' : 'open';
+  // Through the catalogue, so anything that is not one of the sixteen marks,
+  // the twenty-eight company marks or the ten colours becomes the default
+  // rather than reaching a column. Unlike the name, a mark nobody recognises
+  // is not worth refusing a founding over: there is nothing for the player to
+  // correct, since they can only have got here by sending it by hand.
+  const emblem = cleanEmblem(raw.emblem);
+  const color = cleanColor(raw.color);
 
   const wait = await cooldownLeft(env, caller.id, now);
   if (wait > 0) return { error: 'cooldown', wait };
@@ -708,10 +731,13 @@ export async function create(
   try {
     await env.DB.batch([
       env.DB.prepare(
-        `INSERT INTO corps (id, name, key, tag, motto, policy, owner_id, code,
-                            members, created_at, renamed_at, updated_at)
-              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, 0, ?9)`,
-      ).bind(id, name, keyOf(name), tag, motto, policy, caller.id, mint(CORP_CODE_LENGTH), now),
+        `INSERT INTO corps (id, name, key, tag, motto, emblem, color, policy, owner_id,
+                            code, members, created_at, renamed_at, updated_at)
+              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, 0, ?11)`,
+      ).bind(
+        id, name, keyOf(name), tag, motto, emblem, color, policy, caller.id,
+        mint(CORP_CODE_LENGTH), now,
+      ),
       env.DB.prepare(
         `INSERT INTO corp_members (player_id, corp_id, name, joined_at, season, coins, dollars)
               VALUES (?1, ?2, ?3, ?4, '', 0, 0)`,
@@ -1064,7 +1090,7 @@ export async function transfer(
 export async function edit(
   env: Env,
   caller: Caller,
-  raw: { name?: unknown; motto?: unknown; policy?: unknown },
+  raw: { name?: unknown; motto?: unknown; policy?: unknown; emblem?: unknown; color?: unknown },
   now: number = Date.now(),
 ): Promise<Founded> {
   const corpId = await corpIdOf(env, caller.id);
@@ -1092,15 +1118,32 @@ export async function edit(
     const policy: Policy =
       raw.policy === undefined ? row.policy : raw.policy === 'closed' ? 'closed' : 'open';
 
+    /**
+     * The mark and the colour, and NO COOLDOWN on either.
+     *
+     * A rename waits a week because a name is what everybody else knows this
+     * corporation by and can be made to say something new every afternoon. A
+     * mark cannot say anything: it is one of sixteen drawings and one of ten
+     * colours, and no arrangement of those is a joke somebody has to be
+     * protected from. So the thing the cooldown defends against does not exist
+     * here, and charging a week for changing a colour would only be a rule.
+     */
+    const emblem = raw.emblem === undefined ? row.emblem : cleanEmblem(raw.emblem);
+    const color = raw.color === undefined ? row.color : cleanColor(raw.color);
+
     let done;
     try {
       done = await env.DB.prepare(
         `UPDATE corps
-            SET name = ?2, key = ?3, motto = ?4, policy = ?5, renamed_at = ?6,
-                updated_at = MAX(updated_at + 1, ?7)
-          WHERE id = ?1 AND updated_at = ?8`,
+            SET name = ?2, key = ?3, motto = ?4, emblem = ?5, color = ?6,
+                policy = ?7, renamed_at = ?8,
+                updated_at = MAX(updated_at + 1, ?9)
+          WHERE id = ?1 AND updated_at = ?10`,
       )
-        .bind(corpId, name, keyOf(name), motto, policy, renamedAt, now, row.updated_at)
+        .bind(
+          corpId, name, keyOf(name), motto, emblem, color, policy, renamedAt, now,
+          row.updated_at,
+        )
         .run();
     } catch {
       // The UNIQUE on `key`: somebody founded that name while this one was

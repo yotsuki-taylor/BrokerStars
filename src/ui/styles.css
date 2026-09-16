@@ -3374,7 +3374,7 @@ a.big-btn {
    rating one: there are five columns here, and two of them stack. */
 .corp-line {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -3451,6 +3451,115 @@ a.big-btn {
 .corp-count.full {
   color: var(--down);
   opacity: 0.9;
+}
+
+/* The mark itself. A CSS mask over a background colour, exactly like a
+   company's logo in the archive — which is why one file covers every size and
+   all ten colours. */
+.corp-mark {
+  flex: 0 0 auto;
+  display: block;
+  width: 20px;
+  height: 20px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.corp-mark.big {
+  width: 34px;
+  height: 34px;
+}
+
+/* ---------- choosing one ---------- */
+
+.corp-pick-head {
+  font-size: 9px;
+  letter-spacing: 1px;
+  opacity: 0.45;
+}
+
+/* Both sets shown whole rather than behind a dialog: twenty-six marks fit, and
+   a choice you can see all of is one nobody has to go looking for. */
+.corp-emblems {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+
+.corp-emblem {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.corp-emblem.on {
+  background: linear-gradient(#1d5ea6, #10427c);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.corp-emblem:active {
+  transform: translateY(1px);
+}
+
+.corp-emblem-mark {
+  display: block;
+  width: 26px;
+  height: 26px;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* The ten, in a row and in wheel order, so two neighbours are never nearly the
+   same colour and the row reads as a spectrum. */
+/* Ten equal columns rather than a wrapping row: at 375 pixels a fixed size
+   puts the tenth swatch alone on a second line, and a row of colours that is
+   nine and a straggler reads as a mistake. The grid divides whatever width
+   there is by ten and they all stay on the line. */
+.corp-colors {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+}
+
+.corp-color {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.corp-color.on {
+  box-shadow:
+    0 0 0 2px #0b2344,
+    0 0 0 4px #fff;
+}
+
+/* What is being made, drawn as it will look. */
+.corp-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
 }
 
 /* ---------- founding one ---------- */
@@ -3801,7 +3910,7 @@ a.big-btn {
 /* The table's own row: the leaderboard's grid with the tag spliced in after
    the rank. */
 .corp-top-line {
-  grid-template-columns: 26px auto 1fr auto auto;
+  grid-template-columns: 26px auto auto 1fr auto auto;
 }
 
 /* ---------- visiting a friend ---------- */

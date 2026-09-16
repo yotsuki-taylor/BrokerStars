@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeD1 } from './d1';
 import * as corps from '../src/corps';
+import { COLORS, DEFAULT_COLOR, DEFAULT_EMBLEM } from '../../src/corp/emblems';
 import {
   MAX_MEMBERS,
   MIN_RANKED,
@@ -91,6 +92,100 @@ describe('founding one', () => {
     expect(await found(env, who('a'), { name: 'ГАЗПРОМ' })).toEqual({ error: 'badname' });
     expect(await found(env, who('a'), { name: 'AB' })).toEqual({ error: 'badname' });
     expect(await found(env, who('a'), { name: 'FUCK INC' })).toEqual({ error: 'badname' });
+  });
+});
+
+describe('the mark and the colour', () => {
+  it('stores what was chosen', async () => {
+    const { env } = db();
+    await corps.create(
+      env,
+      who('a'),
+      { name: 'BULL RUN', tag: 'BR', motto: '', policy: 'open', emblem: 'bull', color: COLORS[4] },
+      Date.now(),
+    );
+    const corp = (await seen(env, who('a')))!;
+    expect(corp.emblem).toBe('bull');
+    expect(corp.color).toBe(COLORS[4]);
+  });
+
+  it('refuses anything that is not in the catalogue, without refusing the founding', async () => {
+    // The check is here as well as on the client, and it is the one that
+    // counts: this route is reachable with a hand-written body. A mark nobody
+    // recognises is not worth failing a founding over, though — there is
+    // nothing for the player to correct — so it becomes the default.
+    const { env } = db();
+    const made = await corps.create(
+      env,
+      who('a'),
+      {
+        name: 'BULL RUN',
+        tag: 'BR',
+        motto: '',
+        policy: 'open',
+        emblem: '../../etc/passwd',
+        color: '#000000; background: url(x)',
+      },
+      Date.now(),
+    );
+    expect(made).toEqual({});
+
+    const corp = (await seen(env, who('a')))!;
+    expect(corp.emblem).toBe(DEFAULT_EMBLEM);
+    expect(corp.color).toBe(DEFAULT_COLOR);
+  });
+
+  it('lets the owner change both, as often as they like', async () => {
+    // Unlike the name: sixteen drawings and ten colours cannot be made to say
+    // anything, so there is nothing for a cooldown to defend against.
+    const t = Date.now();
+    const { env } = db();
+    await found(env, who('a'), {}, t);
+    expect(await corps.edit(env, who('a'), { emblem: 'crown', color: COLORS[2] }, t)).toEqual({});
+    expect(await corps.edit(env, who('a'), { emblem: 'moon', color: COLORS[7] }, t + 1)).toEqual(
+      {},
+    );
+
+    const corp = (await seen(env, who('a'), t))!;
+    expect(corp.emblem).toBe('moon');
+    expect(corp.color).toBe(COLORS[7]);
+    // ...and changing them is not a rename, so the week is not spent
+    expect(await corps.edit(env, who('a'), { name: 'BEAR PIT' }, t + 2)).toEqual({});
+  });
+
+  it('leaves them alone when a change is about something else', async () => {
+    const t = Date.now();
+    const { env } = db();
+    await corps.create(
+      env,
+      who('a'),
+      { name: 'BULL RUN', tag: 'BR', motto: '', policy: 'open', emblem: 'crown', color: COLORS[5] },
+      t,
+    );
+    await corps.edit(env, who('a'), { policy: 'closed' }, t);
+    const corp = (await seen(env, who('a'), t))!;
+    expect(corp.emblem).toBe('crown');
+    expect(corp.color).toBe(COLORS[5]);
+  });
+
+  it('carries them into the list and the table', async () => {
+    const MAY = Date.UTC(2026, 4, 15);
+    const { env } = db();
+    await corps.create(
+      env,
+      who('a'),
+      { name: 'BULL RUN', tag: 'BR', motto: '', policy: 'open', emblem: 'bolt', color: COLORS[6] },
+      MAY,
+    );
+    const corp = (await seen(env, who('a'), MAY))!;
+    await corps.join(env, who('b'), { id: corp.id }, MAY);
+    await corps.join(env, who('c'), { id: corp.id }, MAY);
+
+    const [listed] = await corps.browse(env, '', 25, MAY);
+    expect([listed.emblem, listed.color]).toEqual(['bolt', COLORS[6]]);
+
+    const { top } = await corps.table(env, 'coins', 10, null, MAY);
+    expect([top[0].emblem, top[0].color]).toEqual(['bolt', COLORS[6]]);
   });
 });
 

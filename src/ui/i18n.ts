@@ -527,6 +527,13 @@ const EN = {
   'corp.tag': 'TAG',
   'corp.motto': 'MOTTO',
   'corp.mottoHint': 'OPTIONAL',
+  // Choosing a mark and a colour. Both are closed sets, and the heading over
+  // the second half of the grid is what stops a company's mark from reading as
+  // an accident.
+  'corp.emblem': 'MARK AND COLOUR',
+  'corp.emblemOwn': 'MARKS',
+  'corp.emblemCompanies': 'COMPANY MARKS',
+
   'corp.policy': 'WHO CAN JOIN',
   'corp.policyOpen': 'ANYBODY',
   'corp.policyClosed': 'BY REQUEST',
@@ -1091,6 +1098,10 @@ const RU: Record<Key, string> = {
   'corp.tag': 'ТЕГ',
   'corp.motto': 'ДЕВИЗ',
   'corp.mottoHint': 'МОЖНО БЕЗ НЕГО',
+  'corp.emblem': 'ЗНАК И ЦВЕТ',
+  'corp.emblemOwn': 'ЗНАКИ',
+  'corp.emblemCompanies': 'ЗНАКИ КОМПАНИЙ',
+
   'corp.policy': 'КТО МОЖЕТ ВСТУПИТЬ',
   'corp.policyOpen': 'ЛЮБОЙ',
   'corp.policyClosed': 'ПО ЗАЯВКЕ',

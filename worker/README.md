@@ -322,7 +322,7 @@ README игры), так что стороны садятся за разные 
 | `POST` | `/corp` | `{ initData }` → `{ ok, error?, corp }`; корпорация вызывающего целиком или `null`, если он ни в какой |
 | `POST` | `/corp/feed` | `{ initData }` → `{ feed }`; только лента — её просят раз в десять секунд, пока экран открыт, и тащить ради этого тридцать участников и два ранжирующих запроса было бы грубо по отношению к телефону |
 | `POST` | `/corp/list` | `{ initData, query?, limit? }` → `{ corps }`; список для того, кто ни в какой не состоит, с поиском по имени и тегу |
-| `POST` | `/corp/new` | `{ initData, name, tag, motto?, policy? }` → то же, что `/corp`; основание бесплатно |
+| `POST` | `/corp/new` | `{ initData, name, tag, motto?, policy?, emblem?, color? }` → то же, что `/corp`; основание бесплатно. Знак и цвет сверяются с каталогом `src/corp/emblems.ts`: что угодно другое становится значением по умолчанию, а не отказом |
 | `POST` | `/corp/join` | `{ initData, id }` или `{ initData, code }`; закрытая отвечает `closed` и оставляет заявку, код открывает её и так |
 | `POST` | `/corp/leave` | `{ initData }`; последний вышедший удаляет корпорацию, вышедший владелец передаёт её старейшему |
 | `POST` | `/corp/owner` | `{ initData, does: 'edit' \| 'kick' \| 'transfer' \| 'accept' \| 'refuse' \| 'disband', ... }`; всё, что может владелец, одной ручкой — у них одна проверка подписи, один отказ «ты не владелец» и один ответ. `disband` требует `confirm: 'disband'` |
@@ -572,6 +572,7 @@ npm run migrate -- ./migrations/012-profiles-offer.sql   # если profiles у�
 npm run migrate -- ./migrations/013-profiles-opens.sql   # если profiles уже была
 npm run migrate -- ./migrations/014-feedback-sent.sql    # новая таблица; хватит и schema
 npm run migrate -- ./migrations/015-corporations.sql     # новые таблицы; хватит и schema
+npm run migrate -- ./migrations/016-corp-emblem.sql      # если corps уже была
 npm run schema                                          # таблицы; безопасно повторять
 ```
 

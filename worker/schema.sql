@@ -273,6 +273,14 @@ CREATE TABLE IF NOT EXISTS corps (
   key        TEXT NOT NULL UNIQUE,
   tag        TEXT NOT NULL,
   motto      TEXT NOT NULL DEFAULT '',
+  -- What it wears. Both are ids into `src/corp/emblems.ts` and never content:
+  -- `emblem` names one of the sixteen marks drawn for this or one of the
+  -- twenty-eight the companies wear, `color` is one of ten literals. The
+  -- server validates both against that catalogue before writing, so a file
+  -- path, a URL or an arbitrary hex cannot reach a browser from here — the
+  -- colour ends up in a style attribute on a mark thirty people are shown.
+  emblem     TEXT NOT NULL DEFAULT 'arrow',
+  color      TEXT NOT NULL DEFAULT '#FFC02E',
   -- 'open': tap and you are in. 'closed': tap and the owner is asked.
   policy     TEXT NOT NULL DEFAULT 'open' CHECK (policy IN ('open', 'closed')),
   -- exactly one, always: a corporation without an owner must not exist for a

@@ -592,7 +592,10 @@ export const createCorp = (
   tag: string,
   motto: string,
   policy: Policy,
-): Promise<CorpAnswer> => corpCall('/corp/new', { name, tag, motto, policy });
+  emblem: string,
+  color: string,
+): Promise<CorpAnswer> =>
+  corpCall('/corp/new', { name, tag, motto, policy, emblem, color });
 
 export const joinCorp = (by: { id?: string; code?: string }): Promise<CorpAnswer> =>
   corpCall('/corp/join', by);
