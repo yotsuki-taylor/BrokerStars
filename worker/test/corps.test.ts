@@ -136,7 +136,7 @@ describe('the mark and the colour', () => {
   });
 
   it('lets the owner change both, as often as they like', async () => {
-    // Unlike the name: sixteen drawings and ten colours cannot be made to say
+    // Unlike the name: fourteen drawings and ten colours cannot be made to say
     // anything, so there is nothing for a cooldown to defend against.
     const t = Date.now();
     const { env } = db();

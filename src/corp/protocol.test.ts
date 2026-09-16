@@ -126,12 +126,23 @@ describe('what a corporation wears', () => {
     }
     // the two halves are disjoint, which is what the `c:` prefix is for
     expect(new Set(EMBLEMS.map((e) => e.id)).size).toBe(EMBLEMS.length);
-    expect(OWN_EMBLEMS.length).toBe(16);
+    expect(OWN_EMBLEMS.length).toBe(14);
     expect(COMPANY_EMBLEMS.length).toBe(COMPANIES.length);
   });
 
   it('draws something for a corporation that chose nothing', () => {
     expect(emblemById('nonsense').file).toBe(emblemById(DEFAULT_EMBLEM).file);
+  });
+
+  it('offers no mark the companies already wear', () => {
+    // An anchor and a rocket were drawn for this set and then taken out, because
+    // `civic` and `garage` are an anchor and a rocket. Two near-identical marks
+    // in one picker are not a choice.
+    expect(OWN_EMBLEMS.map((e) => e.id)).not.toContain('anchor');
+    expect(OWN_EMBLEMS.map((e) => e.id)).not.toContain('rocket');
+    // A corporation wearing one of them falls back rather than drawing nothing
+    // — the same answer an id from a later version gets.
+    expect(cleanEmblem('rocket')).toBe(DEFAULT_EMBLEM);
   });
 });
 

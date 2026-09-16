@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS corps (
   tag        TEXT NOT NULL,
   motto      TEXT NOT NULL DEFAULT '',
   -- What it wears. Both are ids into `src/corp/emblems.ts` and never content:
-  -- `emblem` names one of the sixteen marks drawn for this or one of the
+  -- `emblem` names one of the fourteen marks drawn for this or one of the
   -- twenty-eight the companies wear, `color` is one of ten literals. The
   -- server validates both against that catalogue before writing, so a file
   -- path, a URL or an arbitrary hex cannot reach a browser from here — the

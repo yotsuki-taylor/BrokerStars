@@ -1,7 +1,7 @@
 -- What a corporation wears: a mark and a colour.
 --
 -- Both are ids rather than content. `emblem` names a row in
--- `src/corp/emblems.ts` — sixteen marks drawn for this plus the twenty-eight
+-- `src/corp/emblems.ts` — fourteen marks drawn for this plus the twenty-eight
 -- the companies wear — and `color` is one of ten literals from the same file.
 -- Neither is ever a file path, a URL or a hex string off the wire: the server
 -- validates both against the catalogue before writing (`cleanEmblem`,

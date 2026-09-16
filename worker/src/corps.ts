@@ -716,7 +716,7 @@ export async function create(
   if (!name || !tag) return { error: 'badname' };
   const motto = cleanMotto(raw.motto);
   const policy: Policy = raw.policy === 'closed' ? 'closed' : 'open';
-  // Through the catalogue, so anything that is not one of the sixteen marks,
+  // Through the catalogue, so anything that is not one of the fourteen marks,
   // the twenty-eight company marks or the ten colours becomes the default
   // rather than reaching a column. Unlike the name, a mark nobody recognises
   // is not worth refusing a founding over: there is nothing for the player to
@@ -1123,7 +1123,7 @@ export async function edit(
      *
      * A rename waits a week because a name is what everybody else knows this
      * corporation by and can be made to say something new every afternoon. A
-     * mark cannot say anything: it is one of sixteen drawings and one of ten
+     * mark cannot say anything: it is one of fourteen drawings and one of ten
      * colours, and no arrangement of those is a joke somebody has to be
      * protected from. So the thing the cooldown defends against does not exist
      * here, and charging a week for changing a colour would only be a rule.

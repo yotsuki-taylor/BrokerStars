@@ -660,7 +660,7 @@ function Manage({
       </label>
 
       {/* The mark and the colour change as often as the owner likes, unlike the
-          name: sixteen drawings and ten colours cannot be made to say anything,
+          name: fourteen drawings and ten colours cannot be made to say anything,
           so there is nothing for a cooldown to defend against. */}
       <Picker emblem={emblem} color={color} onEmblem={setEmblem} onColor={setColor} />
 

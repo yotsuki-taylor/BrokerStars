@@ -12,7 +12,7 @@
  * cannot say anything, so nothing has to be checked after the fact. It is also
  * the reason the colour is a list rather than a picker — see `COLORS`.
  *
- * TWO KINDS IN ONE LIST. Sixteen marks drawn for this (`textures/corps/`), and
+ * TWO KINDS IN ONE LIST. Fourteen marks drawn for this (`textures/corps/`), and
  * the twenty-eight the companies already wear. The second half costs nothing —
  * every one of them is in the bundle already — and gives somebody who has met
  * KRAKEN on a board the option of flying its flag. They are namespaced `c:` so
@@ -36,13 +36,20 @@ export interface Emblem {
  * The marks drawn for corporations.
  *
  * Chosen to be legible at eighteen pixels, which is the size the list draws
- * them at and the size that threw three of them out: a key upright, a rocket
- * with a painted window, and a bull whose horns pointed up like a rabbit's
- * ears. What survives is bold, and none of it has a detail smaller than the
- * stroke.
+ * them at and the size that sent three back to be redrawn: a key upright is a
+ * dot, a painted window is not a hole in a mask, and a bull whose horns point
+ * up is a rabbit. What survives is bold, and none of it has a detail smaller
+ * than the stroke.
  *
  * The order is the order they are offered in, and it opens with the four that
  * are about this game rather than about heraldry.
+ *
+ * TWO ARE MISSING ON PURPOSE. An anchor and a rocket were drawn and then taken
+ * out, because `civic` and `garage` in the half below are an anchor and a
+ * rocket — and two near-identical marks in one picker are not a choice, they
+ * are a thing to squint at. The company half cannot give them up; these could.
+ * Anything drawn for this set from now on wants checking against those
+ * twenty-eight first.
  */
 export const OWN_EMBLEMS: Emblem[] = [
   'arrow',
@@ -52,10 +59,8 @@ export const OWN_EMBLEMS: Emblem[] = [
   'crown',
   'diamond',
   'shield',
-  'anchor',
   'bolt',
   'star',
-  'rocket',
   'flame',
   'target',
   'hex',
