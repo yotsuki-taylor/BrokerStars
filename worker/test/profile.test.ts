@@ -35,7 +35,7 @@ import {
   type DayFacts,
   type Quest,
 } from '../../src/daily/protocol';
-import { askOf, bidOf, priceOn } from '../../src/market/protocol';
+import { askOf, bidOf, dividendOn, priceOn } from '../../src/market/protocol';
 import { companyById } from '../../src/sim/companies';
 import type { MatchFacts } from '../src/awards';
 
@@ -406,7 +406,7 @@ describe("the day's bonus", () => {
   const NOON = 20_000 * MS_PER_DAY + 12 * 3_600_000;
 
   it('pays a thousand dollars and marks the day taken', () => {
-    const out = claimBonus(EMPTY, NOON);
+    const out = claimBonus(EMPTY, NOON, '');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.held.dollars).toBe(DAILY_BONUS);
@@ -414,19 +414,19 @@ describe("the day's bonus", () => {
   });
 
   it('refuses the second one of the same day rather than paying twice', () => {
-    const first = claimBonus(EMPTY, NOON);
+    const first = claimBonus(EMPTY, NOON, '');
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(claimBonus(first.held, NOON + 60_000)).toEqual({
+    expect(claimBonus(first.held, NOON + 60_000, '')).toEqual({
       ok: false,
       error: 'the bonus is taken today',
     });
   });
 
   it('pays again tomorrow, and the dollars from today are still there', () => {
-    const first = claimBonus(EMPTY, NOON);
+    const first = claimBonus(EMPTY, NOON, '');
     if (!first.ok) return;
-    const second = claimBonus(first.held, NOON + MS_PER_DAY);
+    const second = claimBonus(first.held, NOON + MS_PER_DAY, '');
     expect(second.ok).toBe(true);
     if (!second.ok) return;
     expect(second.held.dollars).toBe(DAILY_BONUS * 2);
@@ -481,7 +481,7 @@ describe("the day's bonus", () => {
     // has to hold here too: this is the function that decides whether anybody
     // is paid, and it must not be able to answer about yesterday
     const stale = { ...EMPTY, daily: { ...freshDay(dayOf(NOON) - 1), bonus: true } };
-    const out = claimBonus(stale, NOON);
+    const out = claimBonus(stale, NOON, '');
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.held.daily.day).toBe(dayOf(NOON));
@@ -489,15 +489,83 @@ describe("the day's bonus", () => {
 
   it('touches nothing else on the profile, coins included', () => {
     const rich = { ...EMPTY, spent: 12, granted: 4 };
-    const out = claimBonus(rich, NOON);
+    const out = claimBonus(rich, NOON, '');
     if (!out.ok) return;
     expect(balance(out.held, 30)).toBe(balance(rich, 30));
   });
 
   it('shuts the migration door: a bonus taken is the server having something', () => {
-    const out = claimBonus(EMPTY, NOON);
+    const out = claimBonus(EMPTY, NOON, '');
     if (!out.ok) return;
     expect(untouched(out.held)).toBe(false);
+  });
+
+  /**
+   * The shares are collected by the same tap, so everything above is the case
+   * of a player who owns nothing and these are what happens once they do.
+   */
+  describe('and the dividends it collects with it', () => {
+    const DAY = dayOf(NOON);
+    /** POSTAL is a DIVIDEND company, so its yield is the top of the table. */
+    const holding = (day: number) => ({
+      ...EMPTY,
+      portfolio: { postal: { shares: 40, cost: 8_000, day } },
+    });
+    const owed = (h: typeof EMPTY, day: number) =>
+      dividendOn(h.portfolio, day, (id) => {
+        const c = companyById(id);
+        return c ? priceOn(c, day, '') : null;
+      });
+
+    it('pays the bonus and the shares in one go', () => {
+      const h = holding(DAY - 1);
+      const extra = owed(h, DAY);
+      expect(extra).toBeGreaterThan(0);
+      const out = claimBonus(h, NOON, '');
+      expect(out.ok).toBe(true);
+      if (!out.ok) return;
+      expect(out.held.dollars).toBe(DAILY_BONUS + extra);
+    });
+
+    /**
+     * What a corporation's season is credited with, and the reason the payout
+     * is reported rather than assumed: the caller used to name the constant.
+     */
+    it('reports what it actually paid, not what the bonus alone is', () => {
+      const out = claimBonus(holding(DAY - 1), NOON, '');
+      if (!out.ok) return;
+      expect(out.dollars).toBe(out.held.dollars);
+      expect(out.dollars).toBeGreaterThan(DAILY_BONUS);
+    });
+
+    it('reports the bare bonus for somebody who holds nothing', () => {
+      const out = claimBonus(EMPTY, NOON, '');
+      if (!out.ok) return;
+      expect(out.dollars).toBe(DAILY_BONUS);
+    });
+
+    /** Bought today, paid from tomorrow — the counter's own rule. */
+    it('pays nothing on shares bought today', () => {
+      const out = claimBonus(holding(DAY), NOON, '');
+      if (!out.ok) return;
+      expect(out.held.dollars).toBe(DAILY_BONUS);
+    });
+
+    /** A refused second tap is what stops the shares being milked twice. */
+    it('cannot be collected twice in one day', () => {
+      const first = claimBonus(holding(DAY - 1), NOON, '');
+      if (!first.ok) return;
+      expect(claimBonus(first.held, NOON + 60_000, '').ok).toBe(false);
+    });
+
+    /** The salt is the Worker's, and a different one is a different market. */
+    it('prices the shares with the salt it is given', () => {
+      const h = holding(DAY - 1);
+      const plain = claimBonus(h, NOON, '');
+      const salted = claimBonus(h, NOON, 'a-different-market');
+      if (!plain.ok || !salted.ok) return;
+      expect(plain.held.dollars).not.toBe(salted.held.dollars);
+    });
   });
 });
 

@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { COMPANIES, TRAIT_LABEL, companyById, type Company } from '../sim/companies';
 import type { Daily } from '../daily/protocol';
 import {
+  DIVIDEND_YIELD,
   affordable,
   askOf,
   bidOf,
   costOf,
+  dividendFor,
+  dividendOn,
   overnight,
   prevPriceIn,
   priceIn,
@@ -159,6 +162,19 @@ function TradeRow({
         <Spark series={market.prices[company.id] ?? []} color={company.color} />
       </div>
 
+      {/* What it pays for being held, BEFORE anything is bought — a yield read
+          after the purchase is a yield that did not help anybody choose. A
+          company that pays nothing says so: that is information too, and it is
+          the other half of what BUBBLE and MOONSHOT are. */}
+      <div className="trade-yield">
+        {DIVIDEND_YIELD[company.trait.kind] > 0
+          ? t('market.pays', {
+              pct: (DIVIDEND_YIELD[company.trait.kind] * 100).toFixed(2),
+              n: money(dividendFor(company, price, Math.max(held, size))),
+            })
+          : t('market.paysNothing')}
+      </div>
+
       {held > 0 && (
         <div className="trade-held">
           {t('market.youHold', { n: money(held), avg: money(avg) })}
@@ -310,6 +326,7 @@ function PortfolioTab({ market, portfolio, dollars }: CounterProps) {
   const value = valueOf(portfolio, (id) => priceIn(market, id));
   const cost = costOf(portfolio);
   const since = overnight(portfolio, market);
+  const pays = dividendOn(portfolio, market.day, (id) => priceIn(market, id));
 
   return (
     <div className="folio">
@@ -326,10 +343,19 @@ function PortfolioTab({ market, portfolio, dollars }: CounterProps) {
         </span>
       </div>
 
+      {/* The cash on one side and what the book pays on the other: the row was
+          already a space-between, and these are the two things a holder wants
+          under the total. The payout is the same `dividendOn` the Worker runs,
+          so what is promised here is what the day card collects. */}
       <div className="folio-cash">
         <span>
           {t('market.cash')} <b>{money(dollars)}</b>
         </span>
+        {pays > 0 && (
+          <span>
+            {t('market.paysDaily')} <b>{money(pays)}</b>
+          </span>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -351,9 +377,19 @@ function PortfolioTab({ market, portfolio, dollars }: CounterProps) {
                       n: money(held.shares),
                       avg: money(Math.round(held.cost / held.shares)),
                     })}
-                    {/* Why this row added nothing to the number at the top:
+                    {/* What this row pays tonight, on the same line as what it
+                        is — one number about one position, rather than a
+                        column that is empty on the rows bought today. */}
+                    {!tradedOn(portfolio, id, market.day) &&
+                      price !== null &&
+                      dividendFor(company, price, held.shares) > 0 &&
+                      ` · ${t('market.rowPays', {
+                        n: money(dividendFor(company, price, held.shares)),
+                      })}`}
+                    {/* Why this row added nothing to either number at the top:
                         it was bought at today's price, so the overnight move
-                        happened without it. */}
+                        happened without it — and so did the night it would
+                        have been paid rent for. */}
                     {tradedOn(portfolio, id, market.day) && (
                       <em className="folio-new">{t('market.boughtToday')}</em>
                     )}

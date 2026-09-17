@@ -52,13 +52,23 @@ function untilTomorrow(now: number): string {
 export default function DailyScreen({
   daily,
   dollars,
+  dividend,
   onClaimBonus,
   onClaimQuest,
   onBack,
 }: {
   daily: Daily;
-  /** shown in the corner, so the thousand the bonus pays lands somewhere visible */
+  /** shown in the corner, so what the bonus pays lands somewhere visible */
   dollars: number;
+  /**
+   * What the shares pay today, which the same tap collects.
+   *
+   * Zero for anybody who holds nothing, and then the card says what it has
+   * always said: a split line reading "500 for turning up · 0 from shares" is a
+   * sentence about an absence, and the day screen is not where somebody should
+   * first be told they own no shares.
+   */
+  dividend: number;
   onClaimBonus: () => void;
   onClaimQuest: (id: string) => void;
   onBack: () => void;
@@ -100,11 +110,21 @@ export default function DailyScreen({
         <img className="bonus-art" src={tex('DailyBonus.png')} alt="" />
         <span className="bonus-text">
           <b>{t('daily.bonusTitle')}</b>
-          <i>{ready ? t('daily.bonusReady') : t('daily.bonusBackIn', { time: untilTomorrow(now) })}</i>
+          {/* While it is there to be taken, the useful sentence is what it will
+              pay and where that comes from; once it is gone, the useful
+              sentence is when it comes back. Both live on the same line
+              because only one of them is ever true. */}
+          <i>
+            {!ready
+              ? t('daily.bonusBackIn', { time: untilTomorrow(now) })
+              : dividend > 0
+                ? t('daily.bonusSplit', { bonus: money(DAILY_BONUS), div: money(dividend) })
+                : t('daily.bonusReady')}
+          </i>
         </span>
         <span className="bonus-pay">
           <Dollar size={16} />
-          {money(DAILY_BONUS)}
+          {money(DAILY_BONUS + dividend)}
         </span>
       </button>
 

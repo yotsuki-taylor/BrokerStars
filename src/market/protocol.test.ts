@@ -12,6 +12,9 @@ import {
   cleanMarket,
   cleanPortfolio,
   costOf,
+  DIVIDEND_YIELD,
+  dividendFor,
+  dividendOn,
   marketFor,
   NEVER_TRADED,
   overnight,
@@ -267,5 +270,82 @@ describe('a book off the wire', () => {
     const old = cleanPortfolio({ nova: { shares: 2, cost: 500 } });
     expect(old.nova.day).toBe(NEVER_TRADED);
     expect(tradedOn(old, 'nova', DAY)).toBe(false);
+  });
+});
+
+/**
+ * The dividend: what a position pays for being held through a night.
+ *
+ * The arithmetic is one line; the rules around it are what these check. The
+ * yields themselves are a balance decision and are deliberately not asserted
+ * value by value — a test that copies the table only proves the table was
+ * copied. What is pinned is the shape of it: dull pays, gamblers do not, and
+ * nothing pays for a night it was not held.
+ */
+describe('dividends', () => {
+  const held = (id: string, shares: number, day: number): Portfolio => ({
+    [id]: { shares, cost: 1, day },
+  });
+  const at = (price: number) => () => price;
+
+  it('pays a share of what the position is worth, by the company it is in', () => {
+    const paid = dividendOn(held('postal', 10, NEVER_TRADED), DAY, at(100));
+    // POSTAL is a DIVIDEND company: 10 shares at 100 is 1000 of book
+    expect(paid).toBe(Math.round(1000 * DIVIDEND_YIELD.dividend));
+    expect(paid).toBeGreaterThan(0);
+  });
+
+  it('pays the dull more than the exciting, and the gamblers nothing', () => {
+    expect(DIVIDEND_YIELD.dividend).toBeGreaterThan(DIVIDEND_YIELD.regulated);
+    expect(DIVIDEND_YIELD.regulated).toBeGreaterThan(DIVIDEND_YIELD.plain);
+    expect(DIVIDEND_YIELD.plain).toBeGreaterThan(DIVIDEND_YIELD.headline);
+    expect(DIVIDEND_YIELD.bubble).toBe(0);
+    expect(DIVIDEND_YIELD.moonshot).toBe(0);
+    expect(dividendOn(held('yeti', 100, NEVER_TRADED), DAY, at(1000))).toBe(0);
+  });
+
+  /**
+   * The rule that makes the whole thing safe, and the same one `overnight`
+   * keeps: bought at today's price, so no night was spent holding it. Without
+   * this, a share bought at one minute to midnight and sold at one past would
+   * collect a day of rent.
+   */
+  it('pays nothing on a position traded today', () => {
+    expect(dividendOn(held('postal', 10, DAY), DAY, at(100))).toBe(0);
+    expect(dividendOn(held('postal', 10, DAY - 1), DAY, at(100))).toBeGreaterThan(0);
+  });
+
+  it('pays nothing on an empty book, and nothing it cannot price', () => {
+    expect(dividendOn({}, DAY, at(100))).toBe(0);
+    expect(dividendOn(held('postal', 10, NEVER_TRADED), DAY, () => null)).toBe(0);
+    expect(dividendOn(held('no-such-company', 10, NEVER_TRADED), DAY, at(100))).toBe(0);
+  });
+
+  it('rounds once over the whole book rather than once per position', () => {
+    const book: Portfolio = {
+      postal: { shares: 1, cost: 1, day: NEVER_TRADED },
+      civic: { shares: 1, cost: 1, day: NEVER_TRADED },
+      tet: { shares: 1, cost: 1, day: NEVER_TRADED },
+    };
+    const price = 33;
+    const exact =
+      price * DIVIDEND_YIELD.dividend +
+      price * DIVIDEND_YIELD.regulated +
+      price * DIVIDEND_YIELD.plain;
+    expect(dividendOn(book, DAY, at(price))).toBe(Math.round(exact));
+  });
+
+  it('agrees with the per-row figure a screen draws', () => {
+    const postal = companyById('postal')!;
+    expect(dividendFor(postal, 200, 5)).toBe(
+      dividendOn(held('postal', 5, NEVER_TRADED), DAY, at(200)),
+    );
+  });
+
+  it('knows a yield for every company on the board', () => {
+    for (const c of COMPANIES) {
+      expect(DIVIDEND_YIELD[c.trait.kind]).toBeTypeOf('number');
+      expect(DIVIDEND_YIELD[c.trait.kind]).toBeGreaterThanOrEqual(0);
+    }
   });
 });

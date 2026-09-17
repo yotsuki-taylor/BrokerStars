@@ -31,7 +31,7 @@
  * no process to keep alive anywhere.
  */
 
-import { dayOf, DAILY_BONUS } from '../../src/daily/protocol';
+import { dayOf } from '../../src/daily/protocol';
 import { NAME_MAX, seasonOf, type Metric } from '../../src/corp/protocol';
 import { DUEL_CODE_LENGTH, DUEL_TTL_MS, normalizeCode } from '../../src/duel/protocol';
 import { cleanCode } from '../../src/friends/protocol';
@@ -610,7 +610,7 @@ async function daily(request: Request, env: Env) {
   const now = Date.now();
   const applied = await profiles.change(env, caller, (held) =>
     claim === 'bonus'
-      ? profiles.claimBonus(held, now)
+      ? profiles.claimBonus(held, now, env.MARKET_SALT ?? '')
       : profiles.claimQuest(held, claim, now),
   );
 
@@ -630,11 +630,22 @@ async function daily(request: Request, env: Env) {
    * coins off the player board: two players with identical match records should
    * not be separated by which of them remembered to tap a button.
    *
+   * THE DIVIDENDS GO IN WITH IT, which is why this credits what was paid rather
+   * than the constant it used to name. They are dollars the game handed over,
+   * on the day it handed them over, which is the whole of the rule this line
+   * has always followed. What it costs is worth being honest about: a dividend
+   * is paid for owning rather than for doing, so a member with a large book
+   * contributes every day without playing, and a season is that much less a
+   * measure of this month. The season already answers most of that by taking
+   * the average rather than the sum — thirty quiet members cannot be carried by
+   * one rich one — and the rest is a deliberate choice that shares are part of
+   * how this game is played.
+   *
    * Only when the claim actually succeeded — a refused bonus is a bonus that
    * was already taken today, and paying a season for it would pay twice.
    */
-  if (claim === 'bonus' && !applied.error) {
-    await corps.credit(env, caller.id, { dollars: DAILY_BONUS }, now);
+  if (!applied.error && applied.dollars) {
+    await corps.credit(env, caller.id, { dollars: applied.dollars }, now);
   }
   return sent(applied);
 }

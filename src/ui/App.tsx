@@ -84,6 +84,7 @@ import {
 import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
 import {
   buyShares,
+  dividendOn,
   priceIn,
   sellShares,
   type Market,
@@ -2209,19 +2210,36 @@ export default function App() {
   };
 
   /**
+   * What the shares pay today, drawn from the prices this browser was sent.
+   *
+   * The same arithmetic the Worker runs (`dividendOn`), against the same
+   * portfolio, so the split on the day card is the real one rather than an
+   * estimate. It can differ by a day at the seam — this end's market is
+   * whatever `/market` last answered — and that is the ordinary bargain every
+   * optimistic draw here makes: the server's number is what lands.
+   */
+  const dividendToday = useMemo(
+    () => dividendOn(portfolio, market.day, (id) => priceIn(market, id)),
+    [portfolio, market],
+  );
+
+  /**
    * Today's bonus, drawn here and settled on the server.
    *
-   * Same shape as a purchase: the thousand appears at once so the button feels
+   * Same shape as a purchase: the payout appears at once so the button feels
    * like a button, and whatever the server answers replaces it. The guard is
    * this end's own picture of the day and is only there to stop a double tap —
    * a browser whose clock is a day out gets its answer from `/profile/daily`,
    * which counts days off its own.
+   *
+   * The shares are paid with it and by the same tap, so what is added here is
+   * both (`claimBonus` in `worker/src/profile.ts`).
    */
   const takeDailyBonus = () => {
     const today = rolled(daily, Date.now());
     if (!bonusReady(today)) return;
     setDollars((prev) => {
-      const next = prev + DAILY_BONUS;
+      const next = prev + DAILY_BONUS + dividendToday;
       saveDollars(next);
       return next;
     });
@@ -2577,6 +2595,7 @@ export default function App() {
         <DailyScreen
           daily={daily}
           dollars={dollars}
+          dividend={dividendToday}
           onClaimBonus={takeDailyBonus}
           onClaimQuest={takeQuest}
           onBack={() => setScreen('menu')}

@@ -43,7 +43,7 @@
  * `npm run dev` would be worse.
  */
 
-import { COMPANIES, companyById, type Company } from '../sim/companies';
+import { COMPANIES, companyById, type Company, type TraitKind } from '../sim/companies';
 import { Rng, hashSeed } from '../sim/rng';
 import type { Daily } from '../daily/protocol';
 
@@ -382,6 +382,99 @@ export function overnight(p: Portfolio, m: Market): number {
   }
   return Math.round(sum);
 }
+
+/* ------------------------------------------------------------ dividends */
+
+/**
+ * What a company pays a holder for sitting through one day, as a share of what
+ * the position is worth at today's price.
+ *
+ * ONE DIAL, MODULATED BY CHARACTER, and the character is the one the game
+ * already speaks in: `sim/traits.ts` says what a quirk does to a tick, `step`
+ * above says what it does to a day, and this says what it pays for a day. The
+ * tagline the market already prints becomes advice about two things instead of
+ * one.
+ *
+ * WHY THIS IS NOT COMPENSATION FOR ANYTHING. The obvious worry when these
+ * numbers were picked was that a company which bleeds by design would become a
+ * trap once it also paid nothing. It was measured rather than argued: forty
+ * thousand days per company across four salts, buying on a random day and
+ * holding thirty. Every kind comes out at a mean log return of zero within
+ * noise. The walk reverts, so the drift terms in `step` never accumulate into a
+ * trend, and there is nothing to compensate for.
+ *
+ * WHAT THE MEASUREMENT DID SHOW is that the kinds differ enormously in SHAPE
+ * rather than in expectation. Over a thirty-day hold the tenth and ninetieth
+ * percentiles run ±12% for STATE money and −72%/+61% for a BUBBLE, and the
+ * medians are not zero either: a BUBBLE is up 8.5% in the median month and
+ * ruinous in the tail, a MOONSHOT down 2.5% in the median month and
+ * occasionally triple.
+ *
+ * So the yield is set against that shape. What is dull pays rent; what swings
+ * pays only if you were right about the price, and pays it in the price. Two
+ * companies with the same expected return become a real choice, which is the
+ * whole reason for having eleven kinds of them.
+ *
+ * THE LEVEL IS TIED TO THE BONUS, and that is worth knowing before either is
+ * moved. Dollars buy nothing but shares, so a player reinvests everything, and
+ * the balance grows as `B(n+1) = B(n)·(1+r) + DAILY_BONUS`. Dividends catch up
+ * with the bonus at `ln2 / ln(1+r)` days — which does not depend on the bonus
+ * at all. At the 0.48% these weights average to, that is 145 days: inside the
+ * three-to-seven-month horizon the wardrobe is already priced against, which is
+ * where a second income stream belongs.
+ */
+export const DIVIDEND_YIELD: Record<TraitKind, number> = {
+  /** it is the company's whole personality; the match pays out too */
+  dividend: 0.012,
+  /** state money, the tightest band on the board: dull, safe, pays rent */
+  regulated: 0.008,
+  /** a floor under it is most of a bond */
+  floor: 0.006,
+  plain: 0.005,
+  stall: 0.005,
+  /** it bleeds slowly against its own ratchet, and the band is narrow */
+  ratchet: 0.005,
+  /** a direction it holds is already a way to be paid */
+  locked: 0.004,
+  /** up 5.7% in the median month already, and the crash is the price of that */
+  luxury: 0.003,
+  headline: 0.003,
+  /** nothing is paid out of a run-up: these two pay in the price or not at all */
+  bubble: 0,
+  moonshot: 0,
+};
+
+/**
+ * What the whole book pays today.
+ *
+ * A POSITION TRADED TODAY PAYS NOTHING, which is the rule `overnight` keeps and
+ * is kept here for the same reason and against the same trick: a share bought
+ * at one minute to midnight and sold at one minute past would otherwise collect
+ * a day of rent for having been owned across no nights at all. Bought today,
+ * paid from tomorrow — the same sentence the counter has always said.
+ *
+ * Rounded once at the end rather than per position, so the total is what is
+ * actually paid rather than the sum of eleven roundings.
+ */
+export function dividendOn(
+  p: Portfolio,
+  day: number,
+  priceFor: (id: string) => number | null,
+): number {
+  let sum = 0;
+  for (const [id, held] of Object.entries(p)) {
+    if (held.day === day) continue;
+    const company = companyById(id);
+    const price = priceFor(id);
+    if (!company || price === null) continue;
+    sum += price * held.shares * DIVIDEND_YIELD[company.trait.kind];
+  }
+  return Math.round(sum);
+}
+
+/** What one position pays, for the row that has to show it. Never negative. */
+export const dividendFor = (c: Company, price: number, shares: number): number =>
+  Math.round(price * shares * DIVIDEND_YIELD[c.trait.kind]);
 
 /* -------------------------------------------------------------- trading */
 

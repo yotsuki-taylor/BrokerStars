@@ -4516,7 +4516,8 @@ a.big-btn {
   opacity: 0.9;
 }
 
-.trade-held {
+.trade-held,
+.trade-yield {
   font-size: 10px;
   letter-spacing: 0.6px;
   opacity: 0.7;

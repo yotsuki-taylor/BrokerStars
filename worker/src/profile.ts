@@ -52,6 +52,7 @@ import {
 import {
   buyShares,
   cleanPortfolio,
+  dividendOn,
   priceOn,
   sellShares,
   type Portfolio,
@@ -384,12 +385,37 @@ export function withToday(h: Held, now: number): Held {
   return daily === h.daily && offer === h.offer ? h : { ...h, daily, offer };
 }
 
-export function claimBonus(h: Held, now: number): Bought {
+/**
+ * The bonus and the dividends, which are one payment because they are one tap.
+ *
+ * WHY THE SHARES ARE PAID HERE rather than behind a button of their own. A
+ * second claim would need a second flag, a second refusal and a second thing to
+ * forget; and its amount would depend on the minute it was tapped, so claiming
+ * and then buying would quietly cost a day. Folded into the bonus it needs no
+ * new state at all — `daily.bonus` is already idempotent and already rolls with
+ * the day — and the reason to own shares is written on the same card that pays
+ * for turning up, which is where somebody will actually read it.
+ *
+ * The price is `priceOn` with the Worker's salt, exactly as `trade` takes it:
+ * the browser is told prices, never the means to make them, so it can draw this
+ * number but cannot predict tomorrow's.
+ *
+ * What was paid goes back in `dollars` so the caller can credit a corporation's
+ * season with the real figure rather than with a constant that used to be right.
+ */
+export function claimBonus(h: Held, now: number, salt: string): Bought {
   const daily = rolled(h.daily, now);
   if (daily.bonus) return { ok: false, error: 'the bonus is taken today' };
+  const today = dayOf(now);
+  const shares = dividendOn(h.portfolio, today, (id) => {
+    const company = companyById(id);
+    return company ? priceOn(company, today, salt) : null;
+  });
+  const paid = DAILY_BONUS + shares;
   return {
     ok: true,
-    held: { ...h, dollars: h.dollars + DAILY_BONUS, daily: { ...daily, bonus: true } },
+    held: { ...h, dollars: h.dollars + paid, daily: { ...daily, bonus: true } },
+    dollars: paid,
   };
 }
 
