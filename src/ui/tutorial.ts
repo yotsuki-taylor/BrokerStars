@@ -2,12 +2,12 @@
  * The guided tour of the main menu.
  *
  * Everything this game does is behind a button on one screen, and none of the
- * buttons say what they are for: SHOP and EQUIP look like the same errand until
- * somebody notices that clothes carry perks, the counter where dollars buy a
- * piece of a company is two taps inside ARCHIVE, and DUEL needs a friend at the
- * other end of a link nobody has been told about. HOW TO PLAY covers the eighty
- * seconds of a match and nothing around it, which is the half a player works
- * out on their own anyway.
+ * buttons say what they are for: SHOP looks like a wardrobe until somebody
+ * notices that clothes carry perks and only count while worn, the counter where
+ * dollars buy a piece of a company is inside MARKET under the company's own
+ * card, and DUEL needs a friend at the other end of a link nobody has been told
+ * about. HOW TO PLAY covers the eighty seconds of a match and nothing around
+ * it, which is the half a player works out on their own anyway.
  *
  * So this is a list of steps rather than a page of text: each one names a mark
  * in the menu's markup, and the overlay lights that button up and dims the rest

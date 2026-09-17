@@ -5,8 +5,15 @@
  * bundle at build time, so anyone can read it, and it is checked against the
  * host's unverified idea of who is playing — `platform().userId()`, which
  * inside Telegram is `initDataUnsafe` and is trivially forged. It only keeps
- * the buttons out of ordinary players' way. Anything that must not be cheated
- * has to be enforced on a server, which this prototype does not have.
+ * the buttons out of ordinary players' way.
+ *
+ * WHAT ACTUALLY STOPS A FORGED ID is the Worker. Free purchases and refunds are
+ * checked there against `ADMIN_ID` in `worker/wrangler.toml`, and against the
+ * SIGNED caller rather than whatever the client says about itself. So
+ * `VITE_ADMIN_ID` here decides only whether a button is drawn; what the button
+ * does is decided on the other side. An `ADMIN_ID` left unset means nobody has
+ * developer prices at all, which is the right answer for somebody else's
+ * deployment.
  */
 
 import { platform } from '../platform';
