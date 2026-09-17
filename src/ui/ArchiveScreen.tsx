@@ -23,6 +23,22 @@ import { LEAGUES, leagueName } from './leagues';
 import { t, tr, type Key } from './i18n';
 
 /**
+ * THE SCREEN IS CALLED THE MARKET, THE CODE IS CALLED THE ARCHIVE.
+ *
+ * `menu.archive` says MARKET / РЫНОК and this file, its component and its
+ * `arch-*` class names still say archive. That is deliberate rather than a
+ * half-finished rename: the file name is not something a player can see, and
+ * renaming a component, a stylesheet section and a dozen selectors to change a
+ * word on one button is a large diff that can only introduce mistakes. The
+ * same bargain `players.stars` is kept under — the column that the leaderboard
+ * ranks coins on and has never been renamed.
+ *
+ * Why the name moved: what is on this screen is companies and the counter
+ * where their shares are bought. Both are the market. The awards are here too
+ * and are the odd one out — they belong to the player rather than to the
+ * market, and they are waiting for a profile screen to move into.
+ */
+/**
  * The archive: what the player has collected, under three tabs.
  *
  * COMPANIES is everything the game can put on a board, unlocked by playing a

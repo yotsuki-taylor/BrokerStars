@@ -1052,7 +1052,6 @@ export default function App() {
   const [screen, setScreen] = useState<
     | 'menu'
     | 'shop'
-    | 'equip'
     | 'archive'
     | 'rating'
     | 'daily'
@@ -2566,11 +2565,10 @@ export default function App() {
     );
   }
 
-  if (screen === 'shop' || screen === 'equip') {
+  if (screen === 'shop') {
     return (
       <div className="app">
         <Shop
-          mode={screen}
           coins={coins}
           owned={owned}
           offer={offer}
@@ -2607,7 +2605,6 @@ export default function App() {
           onPlay={() => setScreen('leagues')}
           onDuel={() => void startDuel()}
           onShop={() => setScreen('shop')}
-          onEquip={() => setScreen('equip')}
           onArchive={() => setScreen('archive')}
           onRating={() => setScreen('rating')}
           onDaily={() => setScreen('daily')}

@@ -58,7 +58,10 @@ export const TUTORIAL: TutorialStep[] = [
   { id: 'archive', marks: ['archive'] },
   { id: 'shares', marks: ['archive'] },
   { id: 'shop', marks: ['shop'] },
-  { id: 'equip', marks: ['equip'] },
+  // Same button as the step before it: buying and wearing are two tabs of one
+  // screen now, so the tour points twice at the one door rather than at a
+  // button that is not there.
+  { id: 'equip', marks: ['shop'] },
   { id: 'room', marks: ['room'] },
   { id: 'rating', marks: ['rating'] },
   { id: 'settings', marks: ['settings'] },

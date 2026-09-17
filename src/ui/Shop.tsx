@@ -60,7 +60,6 @@ function thumbStyle(slot: Slot, rarity: Rarity): React.CSSProperties {
  * gone, nothing else says a TEN GALLON goes on your head.
  */
 export default function Shop({
-  mode,
   coins,
   owned,
   offer,
@@ -72,7 +71,6 @@ export default function Shop({
   onRefund,
   onBack,
 }: {
-  mode: 'shop' | 'equip';
   coins: number;
   owned: Set<string>;
   offer: Offer;
@@ -84,13 +82,29 @@ export default function Shop({
   onRefund: (slot: Slot, rarity: Rarity) => void;
   onBack: () => void;
 }) {
+  /**
+   * Buying and wearing, under two tabs of one screen.
+   *
+   * They were two buttons in the menu and have always been ONE component with a
+   * flag: the shelf and the wardrobe are the same grid of the same cards, and
+   * the only difference is which garments are in it and what the corner of a
+   * card says. Two doors into one room is a menu describing the code's
+   * plumbing rather than the player's world — and the trip they actually make
+   * is "buy a hat, put the hat on", which was two trips back through the menu.
+   *
+   * `pickedId` deliberately survives the switch: buy something and step across
+   * to the wardrobe, and the thing you just bought is the thing under your
+   * thumb. A garment that is not in the new list simply falls back to the
+   * first one (`selectedId` below), so nothing has to be cleared.
+   */
+  const [tab, setTab] = useState<'shop' | 'equip'>('shop');
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   // The shop shows today's shelf and nothing else; the wardrobe shows the whole
   // of what has been bought, cheapest first so the eye runs the same way.
   const ids =
-    mode === 'shop'
+    tab === 'shop'
       ? showing(offer, owned)
       : ALL_ITEMS.filter((it) => owned.has(it.id))
           .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity))
@@ -127,6 +141,21 @@ export default function Shop({
         </div>
       </header>
 
+      {/* The same tab strip the archive and the two rating tables use, in the
+          same place, so a screen with tabs looks like a screen with tabs
+          wherever it turns up. */}
+      <div className="arch-tabs">
+        {(['shop', 'equip'] as const).map((id) => (
+          <button
+            key={id}
+            className={`slot-tab${id === tab ? ' on' : ''}`}
+            onClick={() => setTab(id)}
+          >
+            {t(id === 'shop' ? 'menu.shop' : 'menu.equip')}
+          </button>
+        ))}
+      </div>
+
       {/* The preview always wears whatever is highlighted, which is the point
           of a fitting room — but on a bare slot that puts an unbought garment
           on the biggest thing on screen, and it reads as already owned. */}
@@ -138,7 +167,7 @@ export default function Shop({
       {/* What the day put out, and how long it is there for. The line is what
           makes an empty shelf legible: a shop with nothing in it and no
           explanation reads as broken rather than as sold out. */}
-      {mode === 'shop' && (
+      {tab === 'shop' && (
         <p className="shelf-note">
           {ids.length > 0 ? t('shop.today') : t('shop.cleanedOut')}
         </p>
@@ -151,7 +180,7 @@ export default function Shop({
           return (
             <button
               key={id}
-              className={`item${id === selectedId ? ' picked' : ''}${mode === 'equip' ? ' owned' : ''}`}
+              className={`item${id === selectedId ? ' picked' : ''}${tab === 'equip' ? ' owned' : ''}`}
               style={{ borderColor: RARITY_COLOR[it.rarity] }}
               onClick={() => pick(id)}
             >
@@ -161,7 +190,7 @@ export default function Shop({
                   garment goes, so it is on the card rather than over the grid. */}
               <span className="slot-tag">{tr(`slot.${it.slot}.label`, SLOT_LABEL[it.slot])}</span>
               <span className="tag" style={{ color: RARITY_COLOR[it.rarity] }}>
-                {mode === 'equip' ? (
+                {tab === 'equip' ? (
                   worn ? (
                     t('shop.worn')
                   ) : (
@@ -178,7 +207,7 @@ export default function Shop({
         })}
         {ids.length === 0 && (
           <p className="empty-note">
-            {mode === 'shop' ? t('shop.comeBack') : t('shop.nothingOwned')}
+            {tab === 'shop' ? t('shop.comeBack') : t('shop.nothingOwned')}
           </p>
         )}
       </div>

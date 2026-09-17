@@ -132,7 +132,7 @@ const EN = {
   'menu.play': 'PLAY',
   'menu.shop': 'SHOP',
   'menu.equip': 'EQUIP',
-  'menu.archive': 'ARCHIVE',
+  'menu.archive': 'MARKET',
   'menu.duel': 'DUEL',
   'menu.nextUpgrade': 'NEXT UPGRADE · {n}/{of}',
   'menu.renovate': 'RENOVATE?',
@@ -299,13 +299,13 @@ const EN = {
   'tut.daily.body':
     'Your daily bonus in dollars, and three quests drawn fresh at midnight — play so many matches, win one, trade well. Whatever is not collected goes at midnight with them. The case lights up on its own when something is waiting behind it.',
 
-  'tut.archive.title': 'ARCHIVE',
+  'tut.archive.title': 'THE MARKET',
   'tut.archive.body':
-    'Every company you have traded against is filed here with the habit it has: one commits to a trend, one goes dead for seconds at a time, one climbs until the day it doesn’t. Knowing which is which is worth real money at the desk. The awards you have collected are on the same shelf.',
+    'Every company you have traded against is filed here with the habit it has: one commits to a trend, one goes dead for seconds at a time, one climbs until the day it doesn’t. Knowing which is which is worth real money at the desk. The awards you have collected are on the last tab.',
 
   'tut.shares.title': 'THE SHARE COUNTER',
   'tut.shares.body':
-    'The second tab of the archive is a market of its own, and the reason dollars exist. They buy real shares in any company you have met — one price a day for everybody, drawn at midnight, so you buy today and look tomorrow. Trade as often as you like; the house takes its cut on both sides, so churning is its own punishment. The DOLLARS ladder ranks everyone by what their book is worth.',
+    'The second tab is the counter itself, and the reason dollars exist. They buy real shares in any company you have met — one price a day for everybody, drawn at midnight, so you buy today and look tomorrow. Trade as often as you like; the house takes its cut on both sides, so churning is its own punishment. The DOLLARS ladder ranks everyone by what their book is worth.',
 
   'tut.shop.title': 'SHOP',
   'tut.shop.body':
@@ -313,7 +313,7 @@ const EN = {
 
   'tut.equip.title': 'EQUIP · CLOTHES ARE PERKS',
   'tut.equip.body':
-    'This is the part to take seriously: what you wear changes the match itself. Cheaper trading, a floor under a ruined book, a look at what the market is about to do, an ability to fire at your rival. Owning a garment does nothing on its own — it has to be worn, and only what is worn counts.',
+    'The second tab of the same screen is your wardrobe. This is the part to take seriously: what you wear changes the match itself. Cheaper trading, a floor under a ruined book, a look at what the market is about to do, an ability to fire at your rival. Owning a garment does nothing on its own — it has to be worn, and only what is worn counts.',
 
   'tut.room.title': 'THE RENOVATION',
   'tut.room.body':
@@ -769,7 +769,7 @@ const RU: Record<Key, string> = {
   'menu.play': 'ИГРАТЬ',
   'menu.shop': 'МАГАЗИН',
   'menu.equip': 'НАДЕТЬ',
-  'menu.archive': 'АРХИВ',
+  'menu.archive': 'РЫНОК',
   'menu.duel': 'ДУЭЛЬ',
   'menu.nextUpgrade': 'СЛЕДУЮЩЕЕ · {n}/{of}',
   'menu.renovate': 'ОБНОВИТЬ?',
@@ -905,13 +905,13 @@ const RU: Record<Key, string> = {
   'tut.daily.body':
     'Ежедневный бонус в долларах и три задания, новые каждую полночь: сыграть столько-то матчей, выиграть, хорошо оторговать. Что не забрал — уходит вместе с ними в полночь. Кейс сам загорается, когда за ним что-то есть.',
 
-  'tut.archive.title': 'АРХИВ',
+  'tut.archive.title': 'РЫНОК',
   'tut.archive.body':
-    'Каждая компания, против которой ты играл, попадает сюда вместе со своей повадкой: одна держит тренд, другая замирает на несколько секунд, третья растёт до самого обвала. Знать, кто есть кто, стоит вполне реальных денег за столом. Там же полка с наградами.',
+    'Каждая компания, против которой ты играл, попадает сюда вместе со своей повадкой: одна держит тренд, другая замирает на несколько секунд, третья растёт до самого обвала. Знать, кто есть кто, стоит вполне реальных денег за столом. На последней вкладке — полка с наградами.',
 
   'tut.shares.title': 'БИРЖА · ПОКУПКА АКЦИЙ',
   'tut.shares.body':
-    'Вторая вкладка архива — отдельный рынок, ради которого доллары и придуманы. На них покупаются настоящие акции любой встреченной компании: одна цена в день на всех, новая в полночь, — купил сегодня, посмотрел завтра. Торгуй сколько хочешь: дом берёт своё с обеих сторон, так что метание наказывает себя само. А рейтинг ДОЛЛАРЫ считает, сколько стоит твой портфель.',
+    'Вторая вкладка — сама стойка, ради которого доллары и придуманы. На них покупаются настоящие акции любой встреченной компании: одна цена в день на всех, новая в полночь, — купил сегодня, посмотрел завтра. Торгуй сколько хочешь: дом берёт своё с обеих сторон, так что метание наказывает себя само. А рейтинг ДОЛЛАРЫ считает, сколько стоит твой портфель.',
 
   'tut.shop.title': 'МАГАЗИН',
   'tut.shop.body':
@@ -919,7 +919,7 @@ const RU: Record<Key, string> = {
 
   'tut.equip.title': 'НАДЕТЬ · ОДЕЖДА ДАЁТ ПЕРКИ',
   'tut.equip.body':
-    'Вот это стоит воспринимать всерьёз: то, что на тебе надето, меняет сам матч. Дешевле сделки, страховка от разорения, подсказки о том, куда пойдёт рынок, способность, которую можно применить против соперника. Просто купить вещь мало — она работает, только пока надета, и считается только надетое.',
+    'Вторая вкладка того же экрана — твой гардероб. Вот это стоит воспринимать всерьёз: то, что на тебе надето, меняет сам матч. Дешевле сделки, страховка от разорения, подсказки о том, куда пойдёт рынок, способность, которую можно применить против соперника. Просто купить вещь мало — она работает, только пока надета, и считается только надетое.',
 
   'tut.room.title': 'РЕМОНТ',
   'tut.room.body':

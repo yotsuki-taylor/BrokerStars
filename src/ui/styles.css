@@ -4043,12 +4043,6 @@ a.big-btn {
   top: calc(22% + 68px);
 }
 
-/* And the third, at the same pitch. Three is as many as this rail takes: at
-   22% down a 375pt screen the last one lands just above the renovation card,
-   and a fourth would be under it. */
-.menu > .corps-btn {
-  top: calc(22% + 136px);
-}
 
 /* Something behind it. Gold rather than grey, and breathing rather than
    blinking: this is a button the player passes every single session, and a

@@ -36,7 +36,6 @@ export default function Menu({
   onPlay,
   onDuel,
   onShop,
-  onEquip,
   onArchive,
   onRating,
   onDaily,
@@ -60,7 +59,6 @@ export default function Menu({
   onPlay: () => void;
   onDuel: () => void;
   onShop: () => void;
-  onEquip: () => void;
   onArchive: () => void;
   onRating: () => void;
   onDaily: () => void;
@@ -143,7 +141,14 @@ export default function Menu({
           is a thing to look at, not one of the four places to go. It never
           lights up — nothing arrives on it that will be gone tomorrow, so a
           second button competing for the corner of the eye would be buying
-          attention it has no news to spend. */}
+          attention it has no news to spend.
+
+          THE RAIL IS TWO AGAIN, and the rule it was built on is true again with
+          it. Corporations sat here for a while and should not have: a
+          corporation is somewhere you GO, which is what the column below is
+          for. Three round buttons also said that the rail was the overflow for
+          anything that did not fit, which is not a rule anybody can read off a
+          screen. */}
       <button
         className="rail-btn friends-btn"
         data-tut="friends"
@@ -151,24 +156,6 @@ export default function Menu({
         aria-label={t('friends.title')}
       >
         <People size={28} />
-      </button>
-
-      {/* Third on the rail, under the friends, because a corporation is the
-          same kind of thing they are: people rather than a place to play.
-
-          Under rather than over, and not lit. FRIENDS is the one somebody uses
-          on their first evening — a corporation is a thing to join once they
-          know somebody — so the older button keeps the higher slot. It does not
-          glow either, for the reason FRIENDS does not: the feed changes, but
-          nothing arrives on it that is gone by tomorrow, and a rail of three
-          blinking buttons is a rail nobody looks at. */}
-      <button
-        className="rail-btn corps-btn"
-        data-tut="corps"
-        onClick={onCorps}
-        aria-label={t('corp.title')}
-      >
-        <Tower size={28} />
       </button>
 
       <div className={`hero${seated ? ' hero-seated' : ''}`}>
@@ -264,13 +251,16 @@ export default function Menu({
             <Cart />
             <span>{t('menu.shop')}</span>
           </button>
-          <button className="menu-btn" data-tut="equip" onClick={onEquip}>
-            <Tie />
-            <span>{t('menu.equip')}</span>
-          </button>
           <button className="menu-btn" data-tut="archive" onClick={onArchive}>
             <Cards />
             <span>{t('menu.archive')}</span>
+          </button>
+          {/* People you play with, between what you buy and where you stand:
+              the column now reads spend · study · belong · rank, which is the
+              order somebody actually meets them in. */}
+          <button className="menu-btn" data-tut="corps" onClick={onCorps}>
+            <Tower />
+            <span>{t('corp.title')}</span>
           </button>
           <button className="menu-btn" data-tut="rating" onClick={onRating}>
             <Trophy />
