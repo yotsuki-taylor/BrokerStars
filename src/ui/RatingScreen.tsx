@@ -217,7 +217,7 @@ export default function RatingScreen({ onBack }: { onBack: () => void }) {
         <div className="arch-count">{t('rating.title')}</div>
       </header>
 
-      <div className="arch-tabs rating-tabs">
+      <div className="arch-tabs">
         {TABS.map((x) => (
           <button
             key={x.id}

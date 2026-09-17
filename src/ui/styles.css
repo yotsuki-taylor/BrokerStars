@@ -2930,13 +2930,24 @@ a.big-btn {
 /* ---------- archive tabs ---------- */
 
 /* Same tab as the shop wears, two across instead of five. */
+/* A tab strip that fits however many tabs it is given, in equal shares of the
+   whole width.
+ 
+   It used to say `repeat(3, 1fr)`, from when the archive had three tabs. The
+   awards left for the profile and the shop grew a strip of its own, so every
+   strip in the game now has two — and a two-tab row in a three-column grid is
+   two tabs pushed into the left two thirds with a hole beside them. The
+   rating had been quietly overriding the three for exactly that reason, which
+   was the clue.
+ 
+   `grid-auto-columns` rather than a number: nothing here has to be told how
+   many tabs there are, so a third one can be added or taken away without a
+   stylesheet knowing about it. */
 .arch-tabs {
   flex: 0 0 auto;
   display: grid;
-  /* Three now that the share counter has its own tab. КОМПАНИИ and ПОРТФЕЛЬ
-     are the long words in Russian, so the row is sized to fit them at a
-     narrower letter-spacing rather than allowed to wrap to a second line. */
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 4px;
 }
 
@@ -3316,13 +3327,22 @@ a.big-btn {
 
 /* Scrolls as a whole: the shelf of awards under the career is longer than any
    phone, and the header is not worth pinning on a screen nobody acts on. */
+/* Scrolls up and down and NEVER sideways.
+ 
+   The sideways scroll was mine: the screen centred its children and then a
+   blanket `width: 100%` put them back, which is fine until a child has a
+   margin — 100% plus twelve pixels either side is wider than the screen, and
+   a phone will happily let you drag it. Nothing needs centring that does not
+   centre its own contents (`.profile-name` is text-align, `.profile-hero` is
+   a flex row), so the rule went and the children stretch the way a flex
+   column stretches them by default.
+ 
+   `overflow-x: hidden` stays as the guarantee rather than as the fix: this
+   screen grows sections, and the next one to arrive should not be able to
+   reintroduce a drag nobody notices in a desktop browser. */
 .archive.profile {
   overflow-y: auto;
-  align-items: center;
-}
-
-.archive.profile > * {
-  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Bigger than the menu's figure and with nothing drawn over him: this is the
@@ -3394,7 +3414,6 @@ a.big-btn {
   align-items: center;
   gap: 10px;
   margin: 10px 12px 0;
-  width: auto;
   border: 2px solid var(--ink);
   border-radius: 12px;
   background: rgba(8, 34, 70, 0.55);
@@ -4750,10 +4769,6 @@ a.big-btn {
 
 /* Two tabs rather than the archive's three, so the words get room to breathe
    at the size the rest of the tab row uses. */
-.rating-tabs {
-  grid-template-columns: repeat(2, 1fr);
-}
-
 /* ---------- the tutorial ---------- */
 
 /* Over everything, including the dev panel at 30, and it swallows every tap:

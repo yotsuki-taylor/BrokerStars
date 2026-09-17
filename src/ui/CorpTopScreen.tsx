@@ -148,7 +148,7 @@ export default function CorpTopScreen({
         <div className="arch-count">{t('corp.topTitle')}</div>
       </header>
 
-      <div className="arch-tabs rating-tabs">
+      <div className="arch-tabs">
         {TABS.map((x) => (
           <button
             key={x.id}
