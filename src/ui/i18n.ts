@@ -297,7 +297,7 @@ const EN = {
 
   'tut.friends.title': 'YOUR PROFILE',
   'tut.friends.body':
-    'Your awards, what you have won, and the friends you send that link to.',
+    'Your awards, what you have won, and the friends you can call in for a game.',
 
   'tut.money.title': 'TWO CURRENCIES',
   'tut.money.body':
@@ -893,7 +893,7 @@ const RU: Record<Key, string> = {
 
   'tut.friends.title': 'ТВОЙ ПРОФИЛЬ',
   'tut.friends.body':
-    'Награды, что ты выиграл, и друзья, которым эта ссылка уходит.',
+    'Награды, что ты выиграл, и друзья, которых можно позвать играть.',
 
   'tut.money.title': 'ДВЕ ВАЛЮТЫ',
   'tut.money.body':
