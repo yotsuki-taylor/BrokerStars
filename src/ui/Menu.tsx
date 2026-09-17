@@ -10,7 +10,7 @@ import {
   Dollar,
   Gear,
   Coin,
-  People,
+  Person,
   Tie,
   Tower,
   Trophy,
@@ -39,7 +39,7 @@ export default function Menu({
   onArchive,
   onRating,
   onDaily,
-  onFriends,
+  onProfile,
   onCorps,
   onSettings,
 }: {
@@ -62,7 +62,7 @@ export default function Menu({
   onArchive: () => void;
   onRating: () => void;
   onDaily: () => void;
-  onFriends: () => void;
+  onProfile: () => void;
   onCorps: () => void;
   onSettings: () => void;
 }) {
@@ -137,25 +137,26 @@ export default function Menu({
         <Briefcase size={30} />
       </button>
 
-      {/* Under it, on the same rail and for the same reason: a list of people
-          is a thing to look at, not one of the four places to go. It never
-          lights up — nothing arrives on it that will be gone tomorrow, so a
-          second button competing for the corner of the eye would be buying
-          attention it has no news to spend.
-
-          THE RAIL IS TWO AGAIN, and the rule it was built on is true again with
-          it. Corporations sat here for a while and should not have: a
-          corporation is somewhere you GO, which is what the column below is
-          for. Three round buttons also said that the rail was the overflow for
-          anything that did not fit, which is not a rule anybody can read off a
-          screen. */}
+      {/* Facing it across the room: the player themselves.
+ 
+          THE LEFT RAIL IS WHAT ARRIVES, THE RIGHT ONE IS WHO YOU ARE. That is
+          the whole of why there are two now rather than a column of three on
+          one side. The day is news — it lights up, it is gone by midnight, and
+          it is the only thing in this game that behaves that way. The profile
+          is the opposite: it never changes without the player changing it, and
+          it is where they are rather than where they are going.
+ 
+          The friends went inside it. They were a round button here for a long
+          time and the round button was always slightly wrong: a list of people
+          is not news either, and what somebody actually wants from that screen
+          — the link, the code, the list — is a thing they go and do, once. */}
       <button
-        className="rail-btn friends-btn"
-        data-tut="friends"
-        onClick={onFriends}
-        aria-label={t('friends.title')}
+        className="rail-btn profile-btn"
+        data-tut="profile"
+        onClick={onProfile}
+        aria-label={t('profile.title')}
       >
-        <People size={28} />
+        <Person size={28} />
       </button>
 
       <div className={`hero${seated ? ' hero-seated' : ''}`}>

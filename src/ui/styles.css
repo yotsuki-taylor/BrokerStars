@@ -3312,6 +3312,142 @@ a.big-btn {
   }
 }
 
+/* ---------- the profile ---------- */
+
+/* Scrolls as a whole: the shelf of awards under the career is longer than any
+   phone, and the header is not worth pinning on a screen nobody acts on. */
+.archive.profile {
+  overflow-y: auto;
+  align-items: center;
+}
+
+.archive.profile > * {
+  width: 100%;
+}
+
+/* Bigger than the menu's figure and with nothing drawn over him: this is the
+   one screen where the trader is the subject rather than somebody standing in
+   a room. */
+.profile-hero {
+  flex: 0 0 auto;
+  height: clamp(150px, 26vh, 230px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.profile-hero > * {
+  height: 100%;
+}
+
+.profile-name {
+  text-align: center;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+
+/* Six figures, two rows of three. A grid rather than a list because they are
+   read as a set — nobody wants the fourth number, they want the shape of all
+   six. */
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.stat b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* The label under the number, small and quiet: the figure is what is being
+   read, the word is what it means once. */
+.stat span {
+  font-size: 8px;
+  letter-spacing: 0.4px;
+  line-height: 1.25;
+  opacity: 0.55;
+}
+
+/* One line and a way through, drawn like a row rather than like a button so
+   that it reads as part of the profile and not as an action on it. */
+.profile-friends {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px 0;
+  width: auto;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: rgba(8, 34, 70, 0.55);
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-friends:active {
+  transform: translateY(1px);
+  filter: brightness(1.15);
+}
+
+.profile-friends-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-friends-text b {
+  font-size: 13px;
+  letter-spacing: 0.6px;
+}
+
+.profile-friends-text i {
+  font-style: normal;
+  font-size: 11px;
+  opacity: 0.6;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+
+.profile-chev {
+  font-size: 22px;
+  opacity: 0.45;
+}
+
+.profile-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+
+.profile-shelf .corp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ---------- corporations ---------- */
 
 /* The screen scrolls as a whole rather than holding the header and the buttons
@@ -4037,10 +4173,17 @@ a.big-btn {
   top: 22%;
 }
 
-/* One button's height and a gap below the daily bonus, so the two read as a
-   rail rather than as two buttons that happen to be near each other. */
-.menu > .friends-btn {
-  top: calc(22% + 68px);
+/* The other rail, and it is one button on the far side rather than a second
+   one under the first.
+ 
+   Left is what ARRIVES — the day, which lights up and is gone by midnight.
+   Right is WHO YOU ARE, which never changes unless the player changes it. Two
+   sides, two meanings, one button each; a column of two on the left said only
+   that there were two of them. */
+.menu > .profile-btn {
+  top: 22%;
+  left: auto;
+  right: 0;
 }
 
 

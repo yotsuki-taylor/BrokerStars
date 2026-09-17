@@ -34,6 +34,7 @@ import DailyScreen from './DailyScreen';
 import DuelScreen, { type DuelPhase } from './DuelScreen';
 import DevPanel from './DevPanel';
 import CorpScreen from './CorpScreen';
+import ProfileScreen from './ProfileScreen';
 import CorpTopScreen from './CorpTopScreen';
 import FriendsScreen from './FriendsScreen';
 import LeagueSelect from './LeagueSelect';
@@ -1056,6 +1057,7 @@ export default function App() {
     | 'rating'
     | 'daily'
     | 'friends'
+    | 'profile'
     | 'corp'
     | 'corpTop'
     | 'leagues'
@@ -2483,6 +2485,20 @@ export default function App() {
     );
   }
 
+  if (screen === 'profile') {
+    return (
+      <div className="app">
+        <ProfileScreen
+          name={duelName()}
+          outfit={outfit}
+          profile={profile}
+          onFriends={() => setScreen('friends')}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'friends') {
     return (
       <div className="app">
@@ -2513,7 +2529,11 @@ export default function App() {
             // news over again.
             setFriendCode(null);
             setFriendOffer(null);
-            setScreen('menu');
+            // Back to the profile, which is where this screen lives now — even
+            // when it was opened by an invitation link rather than from there.
+            // One predictable destination beats remembering which door was
+            // used, and the profile is one tap from the menu.
+            setScreen('profile');
           }}
         />
       </div>
@@ -2608,7 +2628,7 @@ export default function App() {
           onArchive={() => setScreen('archive')}
           onRating={() => setScreen('rating')}
           onDaily={() => setScreen('daily')}
-          onFriends={() => setScreen('friends')}
+          onProfile={() => setScreen('profile')}
           onCorps={() => setScreen('corp')}
           onSettings={() => setSettingsOpen(true)}
         />

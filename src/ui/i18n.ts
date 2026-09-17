@@ -176,6 +176,20 @@ const EN = {
   'gift.shop': 'SEE THE SHOP',
   'gift.later': 'LATER',
 
+  'profile.title': 'PROFILE',
+  // The career, in the six numbers the server has been keeping all along and
+  // has never shown anybody in one place.
+  'profile.wins': 'WINS',
+  'profile.duelWins': 'DUELS WON',
+  'profile.best': 'BEST BOOK',
+  'profile.league': 'HIGHEST LEAGUE',
+  'profile.earned': 'COINS EARNED',
+  'profile.met': 'COMPANIES MET',
+  'profile.awards': 'AWARDS',
+  'profile.friendsN': '{n} on the list',
+  // Before the list has been asked for, or in a build with no server to ask.
+  'profile.friendsUnknown': 'Who you know, and the link that adds one',
+
   'settings.title': 'SETTINGS',
   'settings.help': 'HOW TO PLAY',
   'settings.tutorial': 'WATCH THE TUTORIAL',
@@ -289,7 +303,7 @@ const EN = {
 
   'tut.friends.title': 'FRIENDS',
   'tut.friends.body':
-    'Everybody you have swapped a link with lives here. Tap a name to call them into a duel there and then, or to visit their office and see how far their renovation has got. Sending your own link from this screen is what puts the two of you on each other’s list.',
+    'Behind the figure on the right: your profile, and your friends inside it. Everybody you have swapped a link with lives here. Tap a name to call them into a duel there and then, or to visit their office and see how far their renovation has got. Sending your own link from this screen is what puts the two of you on each other’s list.',
 
   'tut.money.title': 'TWO CURRENCIES',
   'tut.money.body':
@@ -301,7 +315,7 @@ const EN = {
 
   'tut.archive.title': 'THE MARKET',
   'tut.archive.body':
-    'Every company you have traded against is filed here with the habit it has: one commits to a trend, one goes dead for seconds at a time, one climbs until the day it doesn’t. Knowing which is which is worth real money at the desk. The awards you have collected are on the last tab.',
+    'Every company you have traded against is filed here with the habit it has: one commits to a trend, one goes dead for seconds at a time, one climbs until the day it doesn’t. Knowing which is which is worth real money at the desk.',
 
   'tut.shares.title': 'THE SHARE COUNTER',
   'tut.shares.body':
@@ -802,6 +816,17 @@ const RU: Record<Key, string> = {
   'gift.shop': 'В МАГАЗИН',
   'gift.later': 'ПОТОМ',
 
+  'profile.title': 'ПРОФИЛЬ',
+  'profile.wins': 'ПОБЕД',
+  'profile.duelWins': 'ПОБЕД В ДУЭЛЯХ',
+  'profile.best': 'ЛУЧШИЙ КАПИТАЛ',
+  'profile.league': 'ВЫСШАЯ ЛИГА',
+  'profile.earned': 'МОНЕТ ЗАРАБОТАНО',
+  'profile.met': 'ВСТРЕЧЕНО КОМПАНИЙ',
+  'profile.awards': 'НАГРАДЫ',
+  'profile.friendsN': 'в списке: {n}',
+  'profile.friendsUnknown': 'Кого ты знаешь и ссылка, которая добавит ещё',
+
   'settings.title': 'НАСТРОЙКИ',
   'settings.help': 'СПРАВКА',
   'settings.tutorial': 'ПОСМОТРЕТЬ ТУТОРИАЛ',
@@ -895,7 +920,7 @@ const RU: Record<Key, string> = {
 
   'tut.friends.title': 'ДРУЗЬЯ',
   'tut.friends.body':
-    'Здесь все, с кем ты обменялся ссылкой. Нажми на имя — можно тут же позвать человека на дуэль или зайти к нему в гости и посмотреть, как далеко у него зашёл ремонт. Своя ссылка отсюда же: друг перейдёт по ней, и вы окажетесь в списках друг у друга.',
+    'За фигурой справа — твой профиль, а в нём друзья. Здесь все, с кем ты обменялся ссылкой. Нажми на имя — можно тут же позвать человека на дуэль или зайти к нему в гости и посмотреть, как далеко у него зашёл ремонт. Своя ссылка отсюда же: друг перейдёт по ней, и вы окажетесь в списках друг у друга.',
 
   'tut.money.title': 'ДВЕ ВАЛЮТЫ',
   'tut.money.body':
@@ -907,7 +932,7 @@ const RU: Record<Key, string> = {
 
   'tut.archive.title': 'РЫНОК',
   'tut.archive.body':
-    'Каждая компания, против которой ты играл, попадает сюда вместе со своей повадкой: одна держит тренд, другая замирает на несколько секунд, третья растёт до самого обвала. Знать, кто есть кто, стоит вполне реальных денег за столом. На последней вкладке — полка с наградами.',
+    'Каждая компания, против которой ты играл, попадает сюда вместе со своей повадкой: одна держит тренд, другая замирает на несколько секунд, третья растёт до самого обвала. Знать, кто есть кто, стоит вполне реальных денег за столом.',
 
   'tut.shares.title': 'БИРЖА · ПОКУПКА АКЦИЙ',
   'tut.shares.body':

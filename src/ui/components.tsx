@@ -351,6 +351,30 @@ export function People({ size = 18 }: { size?: number }) {
 }
 
 /**
+ * THE PROFILE. The friends mark with the crowd taken out of it.
+ *
+ * Deliberately the same head on the same shoulders at the same weight as
+ * `People`: the two are the same subject at two scales — one person and the
+ * people they know — and drawing them as a pair says that without a word. The
+ * head is a little larger and sits a little lower, because a single figure in
+ * a 24-box looks small beside one that is cropped by the frame.
+ */
+export function Person({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <circle cx="12" cy="8.4" r="4" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path
+        d="M4.8 20.2a7.2 7.2 0 0114.4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
  * CORPORATIONS. A tower with a lower block beside it.
  *
  * The rail already carries a briefcase and a pair of heads, so this one had to

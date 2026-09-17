@@ -52,7 +52,9 @@ export const TUTORIAL: TutorialStep[] = [
   { id: 'welcome' },
   { id: 'play', marks: ['play'] },
   { id: 'duel', marks: ['duel'] },
-  { id: 'friends', marks: ['friends'] },
+  // The friends live inside the profile now, so the step that introduces them
+  // points at the door they are behind.
+  { id: 'friends', marks: ['profile'] },
   { id: 'money', marks: ['dollars', 'coins'] },
   { id: 'daily', marks: ['daily'] },
   { id: 'archive', marks: ['archive'] },
