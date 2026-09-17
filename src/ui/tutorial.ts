@@ -19,8 +19,8 @@
  * renamed out of the menu simply drops its step (see `TutorialOverlay.tsx`)
  * instead of lighting up empty floor.
  *
- * THE MATCH ITSELF IS NOT IN HERE. One step says PLAY starts a match against a
- * bot and leaves it there. What happens inside those eighty seconds is what
+ * THE MATCH ITSELF IS NOT IN HERE. One clause says PLAY is eighty seconds
+ * against a bot and leaves it there. What happens inside those seconds is what
  * HOW TO PLAY is for, and a tour that stopped to teach shorting would be closed
  * before it reached the things nobody discovers by themselves.
  */
@@ -39,34 +39,39 @@ export interface TutorialStep {
 }
 
 /**
- * The tour, in the order it is given.
+ * The tour, in the order it is given, and it is SIX steps because it used to be
+ * thirteen.
  *
- * The shape of it is: what the two big buttons do, then where the money comes
- * from, then what it is spent on, and the settings last because that is where
- * this tour can be started again. The share counter gets a step of its own
- * rather than a clause in the ARCHIVE one — it is a whole second game played at
- * one order a day, and it is the single feature players are least likely to
- * find, being a tab behind a button named after a shelf.
+ * Thirteen steps was thirty-four hundred characters of paragraph between a
+ * player opening the game and playing it, and most of it described buttons that
+ * describe themselves. A tour is read once, by somebody who wants to start, and
+ * every sentence they skim is one that could have been the sentence they
+ * needed.
+ *
+ * WHAT SURVIVED IS WHAT NOBODY WORKS OUT ALONE. Clothes change the match and
+ * only count while worn. The office is cash at the opening bell. Dollars buy
+ * real shares in the companies you have played. A duel is against a person, and
+ * you send them a link. Those four are pinned by `tutorial.test.ts`, which is
+ * the test that stops a future tidy-up from quietly removing them.
+ *
+ * WHAT WENT. A welcome that said the tour was a tour; PLAY, which is one tap
+ * away from explaining itself; the shop's own restock rules, which the shop
+ * prints on its shelf; RATING and SETTINGS, which are a table and a gear. Where
+ * two steps described two halves of one screen — the shop and the wardrobe, the
+ * bonus and the balance — they are one step now, because they are one screen
+ * now.
  */
 export const TUTORIAL: TutorialStep[] = [
-  { id: 'welcome' },
-  { id: 'play', marks: ['play'] },
-  { id: 'duel', marks: ['duel'] },
-  // The friends live inside the profile now, so the step that introduces them
-  // points at the door they are behind.
+  { id: 'duel', marks: ['play', 'duel'] },
   { id: 'friends', marks: ['profile'] },
-  { id: 'money', marks: ['dollars', 'coins'] },
-  { id: 'daily', marks: ['daily'] },
-  { id: 'archive', marks: ['archive'] },
+  // The two counters and not the case beside them. Lighting all three drew an
+  // ellipse across the whole top of the screen, which teaches less than a tight
+  // one: the case is the only button in the game that glows on its own, and the
+  // sentence names it.
+  { id: 'money', marks: ['coins', 'dollars'] },
   { id: 'shares', marks: ['archive'] },
-  { id: 'shop', marks: ['shop'] },
-  // Same button as the step before it: buying and wearing are two tabs of one
-  // screen now, so the tour points twice at the one door rather than at a
-  // button that is not there.
   { id: 'equip', marks: ['shop'] },
   { id: 'room', marks: ['room'] },
-  { id: 'rating', marks: ['rating'] },
-  { id: 'settings', marks: ['settings'] },
 ];
 
 /* ------------------------------------------------------------- persistence */

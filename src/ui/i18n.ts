@@ -289,57 +289,36 @@ const EN = {
   'tut.next': 'NEXT',
   'tut.done': 'LET ME IN',
 
-  'tut.welcome.title': 'WELCOME TO BROKER STARS',
-  'tut.welcome.body':
-    'This office is the whole game, and every part of it is a button on this screen. Here is what each one is for. The buttons are locked while we go round, so nothing can be tapped by mistake.',
 
-  'tut.play.title': 'PLAY',
-  'tut.play.body':
-    'A match against a bot. Eighty seconds, three companies, and the bigger net worth at the whistle wins. You choose the league first: the harder it is, the more coins a win pays, and enough wins in one opens the next. HOW TO PLAY, behind the gear, covers the trading itself.',
 
-  'tut.duel.title': 'DUEL · AGAINST A FRIEND',
+  'tut.duel.title': 'PLAY · DUEL',
   'tut.duel.body':
-    'The same eighty seconds with a real person on the other side of them. It opens an invitation link — send it, your friend taps it and lands straight in your match, and from there you are both trading the same market tick for tick.',
+    'PLAY is eighty seconds against a bot. DUEL is the same match against a person — you send them a link.',
 
-  'tut.friends.title': 'FRIENDS',
+  'tut.friends.title': 'YOUR PROFILE',
   'tut.friends.body':
-    'Behind the figure on the right: your profile, and your friends inside it. Everybody you have swapped a link with lives here. Tap a name to call them into a duel there and then, or to visit their office and see how far their renovation has got. Sending your own link from this screen is what puts the two of you on each other’s list.',
+    'Your awards, what you have won, and the friends you send that link to.',
 
   'tut.money.title': 'TWO CURRENCIES',
   'tut.money.body':
-    'Coins are won by playing, and they buy clothes and the renovation. Dollars are paid for turning up, and they buy shares in the companies you play against. They are never spent on the same thing, so neither one is behind the other.',
+    'Coins are won in matches and buy clothes and the office. Dollars come from the daily case.',
 
-  'tut.daily.title': 'THE DAY',
-  'tut.daily.body':
-    'Your daily bonus in dollars, and three quests drawn fresh at midnight — play so many matches, win one, trade well. Whatever is not collected goes at midnight with them. The case lights up on its own when something is waiting behind it.',
 
-  'tut.archive.title': 'THE MARKET',
-  'tut.archive.body':
-    'Every company you have traded against is filed here with the habit it has: one commits to a trend, one goes dead for seconds at a time, one climbs until the day it doesn’t. Knowing which is which is worth real money at the desk.',
 
-  'tut.shares.title': 'THE SHARE COUNTER',
+  'tut.shares.title': 'THE MARKET',
   'tut.shares.body':
-    'The second tab is the counter itself, and the reason dollars exist. They buy real shares in any company you have met — one price a day for everybody, drawn at midnight, so you buy today and look tomorrow. Trade as often as you like; the house takes its cut on both sides, so churning is its own punishment. The DOLLARS ladder ranks everyone by what their book is worth.',
+    'Every company you have played against, and the counter where dollars buy real shares in them.',
 
-  'tut.shop.title': 'SHOP',
-  'tut.shop.body':
-    'Coins buy clothes: five slots, five grades each, from common up to legend. The shop puts out five garments a day and no more, drawn at midnight — anything on the shelf can be bought in any order, and what you already own is never offered again. A legend turns up about one shelf in three, so the day it does, the coins want to be there.',
 
-  'tut.equip.title': 'EQUIP · CLOTHES ARE PERKS',
+  'tut.equip.title': 'CLOTHES ARE PERKS',
   'tut.equip.body':
-    'The second tab of the same screen is your wardrobe. This is the part to take seriously: what you wear changes the match itself. Cheaper trading, a floor under a ruined book, a look at what the market is about to do, an ability to fire at your rival. Owning a garment does nothing on its own — it has to be worn, and only what is worn counts.',
+    'They change the match itself: cheaper trading, a floor under a ruined book, a look at the board. Only what you wear counts.',
 
-  'tut.room.title': 'THE RENOVATION',
+  'tut.room.title': 'THE OFFICE',
   'tut.room.body':
-    'The other thing coins buy: seven upgrades that turn a bare office into a good one, and every one of them adds to the cash you sit down with. The first is worth 25 and the last 175, so a finished office opens every match 700 up on a rival who never renovated. It is also what friends see when they visit, and finishing it has an award on it.',
+    '7 upgrades, +25 cash at the first and +175 at the last. A finished office opens every match 700 up.',
 
-  'tut.rating.title': 'RATING',
-  'tut.rating.body':
-    'Two ladders: coins earned by playing, and what everybody’s share book is worth at today’s prices. Open the game from the bot and your own matches count towards them.',
 
-  'tut.settings.title': 'AND THAT IS THE MENU',
-  'tut.settings.body':
-    'The gear holds the language and HOW TO PLAY, which is the eighty seconds themselves — what buying, selling and shorting actually do. This tour is behind the same button whenever you want it again. Good luck out there.',
 
   'leagues.title': 'CHOOSE YOUR LEAGUE',
   'leagues.locked': 'LOCKED',
@@ -906,57 +885,36 @@ const RU: Record<Key, string> = {
   'tut.next': 'ДАЛЕЕ',
   'tut.done': 'НАЧАТЬ ИГРАТЬ',
 
-  'tut.welcome.title': 'ДОБРО ПОЖАЛОВАТЬ В BROKER STARS',
-  'tut.welcome.body':
-    'Этот офис — вся игра, и каждая её часть спрятана за кнопкой на этом экране. Сейчас покажу, зачем нужна каждая. Пока идёт обучение, кнопки заблокированы — случайно ничего не нажмётся.',
 
-  'tut.play.title': 'ИГРАТЬ',
-  'tut.play.body':
-    'Матч против бота. Восемьдесят секунд, три компании, побеждает тот, у кого к финалу больше капитал. Сначала выбираешь лигу: чем она сложнее, тем больше монет за победу, а набрав достаточно побед — откроешь следующую. Как торговать, подробно написано в СПРАВКЕ под шестерёнкой.',
 
-  'tut.duel.title': 'ДУЭЛЬ · ИГРА С ДРУГОМ',
+  'tut.duel.title': 'ИГРАТЬ · ДУЭЛЬ',
   'tut.duel.body':
-    'Те же восемьдесят секунд, но с живым человеком напротив. Игра выдаёт ссылку-приглашение: отправь её другу, он нажмёт — и попадёт прямо в твой матч. Дальше вы оба торгуете на одном и том же рынке, тик в тик.',
+    'ИГРАТЬ — восемьдесят секунд против бота. ДУЭЛЬ — тот же матч против человека: ему отправляется ссылка.',
 
-  'tut.friends.title': 'ДРУЗЬЯ',
+  'tut.friends.title': 'ТВОЙ ПРОФИЛЬ',
   'tut.friends.body':
-    'За фигурой справа — твой профиль, а в нём друзья. Здесь все, с кем ты обменялся ссылкой. Нажми на имя — можно тут же позвать человека на дуэль или зайти к нему в гости и посмотреть, как далеко у него зашёл ремонт. Своя ссылка отсюда же: друг перейдёт по ней, и вы окажетесь в списках друг у друга.',
+    'Награды, что ты выиграл, и друзья, которым эта ссылка уходит.',
 
   'tut.money.title': 'ДВЕ ВАЛЮТЫ',
   'tut.money.body':
-    'Монеты зарабатываются игрой и тратятся на одежду и ремонт. Доллары дают просто за то, что ты зашёл, и на них покупают акции тех самых компаний, против которых играешь. Они никогда не тратятся на одно и то же, так что одно другому не мешает.',
+    'Монеты выигрываются в матчах и идут на одежду и ремонт. Доллары приходят из ежедневного кейса.',
 
-  'tut.daily.title': 'ДЕНЬ',
-  'tut.daily.body':
-    'Ежедневный бонус в долларах и три задания, новые каждую полночь: сыграть столько-то матчей, выиграть, хорошо оторговать. Что не забрал — уходит вместе с ними в полночь. Кейс сам загорается, когда за ним что-то есть.',
 
-  'tut.archive.title': 'РЫНОК',
-  'tut.archive.body':
-    'Каждая компания, против которой ты играл, попадает сюда вместе со своей повадкой: одна держит тренд, другая замирает на несколько секунд, третья растёт до самого обвала. Знать, кто есть кто, стоит вполне реальных денег за столом.',
 
-  'tut.shares.title': 'БИРЖА · ПОКУПКА АКЦИЙ',
+  'tut.shares.title': 'РЫНОК',
   'tut.shares.body':
-    'Вторая вкладка — сама стойка, ради которого доллары и придуманы. На них покупаются настоящие акции любой встреченной компании: одна цена в день на всех, новая в полночь, — купил сегодня, посмотрел завтра. Торгуй сколько хочешь: дом берёт своё с обеих сторон, так что метание наказывает себя само. А рейтинг ДОЛЛАРЫ считает, сколько стоит твой портфель.',
+    'Все компании, против которых ты играл, и стойка, где на доллары покупаются их настоящие акции.',
 
-  'tut.shop.title': 'МАГАЗИН',
-  'tut.shop.body':
-    'На монеты покупается одежда: пять слотов, в каждом пять ступеней — от обычной до легендарной. Магазин выкладывает пять вещей в день, не больше, и меняет их в полночь: бери в любом порядке, а то, что уже куплено, больше не появится. Легендарное выпадает примерно на каждой третьей витрине — так что к этому дню монеты лучше иметь при себе.',
 
-  'tut.equip.title': 'НАДЕТЬ · ОДЕЖДА ДАЁТ ПЕРКИ',
+  'tut.equip.title': 'ОДЕЖДА ДАЁТ ПЕРКИ',
   'tut.equip.body':
-    'Вторая вкладка того же экрана — твой гардероб. Вот это стоит воспринимать всерьёз: то, что на тебе надето, меняет сам матч. Дешевле сделки, страховка от разорения, подсказки о том, куда пойдёт рынок, способность, которую можно применить против соперника. Просто купить вещь мало — она работает, только пока надета, и считается только надетое.',
+    'Она меняет сам матч: дешевле сделки, страховка от разорения, видно доску. Считается только надетое.',
 
-  'tut.room.title': 'РЕМОНТ',
+  'tut.room.title': 'ОФИС',
   'tut.room.body':
-    'Второе, на что уходят монеты: семь улучшений, которые превращают пустой офис в приличный, и каждое добавляет денег на старте матча. Первое стоит 25 к капиталу, последнее — 175, так что законченный офис начинает каждый забег на 700 впереди соперника без ремонта. Его ещё и видят друзья, когда заходят в гости, а за полностью законченный ремонт дают награду.',
+    '7 улучшений: +25 к капиталу на первом и +175 на последнем. Законченный офис начинает каждый матч на 700 впереди.',
 
-  'tut.rating.title': 'РЕЙТИНГ',
-  'tut.rating.body':
-    'Две таблицы: заработанные игрой монеты и то, сколько стоит портфель акций по сегодняшним ценам. Открой игру из бота — и твои матчи начнут в них попадать.',
 
-  'tut.settings.title': 'ВОТ И ВСЁ МЕНЮ',
-  'tut.settings.body':
-    'Под шестерёнкой — язык и СПРАВКА про сами восемьдесят секунд: что делают покупка, продажа и шорт. Это обучение живёт за той же кнопкой — можно пересмотреть в любой момент. Удачи за столом.',
 
   'leagues.title': 'ВЫБЕРИ ЛИГУ',
   'leagues.locked': 'ЗАКРЫТА',
