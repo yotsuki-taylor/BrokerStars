@@ -6,10 +6,11 @@ Russian is a second locale added under **Store listing → Manage translations**
 Every claim here is read off the game rather than remembered. Eighty seconds is
 `durationSec` in `src/sim/config.ts`; the leagues and their blurbs are
 `src/ui/leagues.ts`; what the five abilities actually do is `src/sim/abilities.ts`
-and the item text in `src/ui/i18n.ts`; three orders a day is `ORDERS_A_DAY`;
-seven upgrades and the 700 they add to the opening book are `ROOM_STEPS` and
-`ROOM_CASH_TOTAL`; the 10 000 everybody starts on is `startingCash`;
-twenty-eight companies and twenty-two awards are their catalogues. If any of
+and the item text in `src/ui/i18n.ts`; what a share pays for being held is
+`DIVIDEND_YIELD` in `src/market/protocol.ts`; seven upgrades and the 700 they
+add to the opening book are `ROOM_STEPS` and `ROOM_CASH_TOTAL`; the 10 000
+everybody starts on is `startingCash`; twenty-eight companies and twenty awards
+are their catalogues. If any of
 those change, this file is wrong and should change with them.
 
 THE OFFICE PARAGRAPH IS THE PROOF OF THAT. It described the renovation as
@@ -17,6 +18,13 @@ decoration — "somewhere worth sitting" and nothing else — for as long as the
 renovation was decoration, and stayed that way for a release after it started
 paying out. A description that undersells the thing coins are actually for is a
 description that costs installs.
+
+THE SHARE COUNTER IS THE SECOND PROOF, and a worse one. It promised three
+orders a day for a release after the limit was taken out, and said nothing at
+all about dividends for the release that added them — so it was advertising a
+restriction the game no longer has while hiding the reward it had just gained.
+A description that names a rule the game does not have teaches a new player,
+on their first day, that the text cannot be trusted.
 
 THE RUSSIAN NAMES ARE THE GAME'S OWN, not translations of the English ones. The
 first draft of this file translated BRONZE PIT as "Бронзовая яма" and the game
@@ -36,7 +44,7 @@ player deciding whether to install it, or by a reviewer deciding what it is.
 80 seconds. Three stocks. One rival. Trade fast, read the board, cash out.
 ```
 
-## English — full description (2482 / 4000)
+## English — full description (2786 / 4000)
 
 ```
 Eighty seconds. Three companies. One rival across the table.
@@ -73,8 +81,12 @@ renovated. Clothes too: five things to wear, five grades of each, and the good
 ones are not just for looking at.
 
 A SHARE COUNTER
-Between matches there is a slower game: three orders a day, prices that move
-overnight, and a portfolio ranked on a board of its own. The coins you win are
+Between matches there is a slower game. Dollars buy a piece of a company you
+have actually played against, the price moves once a night, and everything you
+held overnight pays a dividend in the morning — more from the dull companies
+than from the exciting ones, which pay in their price or not at all. Trade as
+often as you like: the house takes its cut on both sides and the price only
+moves at midnight, so nothing here is won by hurrying. The coins you win are
 one table; what your shares are worth is another, and they reward opposite
 habits.
 
@@ -83,7 +95,7 @@ Play a friend rather than the house. Same eighty seconds, same three companies,
 both of you watching one market — the server runs the match, so neither side
 can be looking at a different chart. Invite by link or by code.
 
-TWENTY-TWO AWARDS
+TWENTY AWARDS
 For winning without trading. For going broke and coming back. For the trade
 nobody would have made.
 
@@ -100,7 +112,7 @@ faster than the person across from you.
 80 секунд. Три акции. Один соперник. Кто прочёл рынок быстрее, тот и богаче.
 ```
 
-## Русский — полное описание (2304 / 4000)
+## Русский — полное описание (2580 / 4000)
 
 ```
 Восемьдесят секунд. Три компании. Один соперник напротив.
@@ -135,16 +147,20 @@ faster than the person across from you.
 пять уровней каждая, и хорошие нужны не только для вида.
 
 СТОЙКА АКЦИЙ
-Между матчами идёт медленная игра: три заявки в сутки, цены меняются за ночь, а
-портфель попадает в отдельную таблицу. Заработанные монеты — один рейтинг,
-стоимость акций — другой, и они поощряют противоположные привычки.
+Между матчами идёт медленная игра. Доллары покупают кусок компании, против
+которой ты уже играл, цена меняется раз за ночь, а всё, что пролежало ночь в
+портфеле, наутро платит дивиденды — скучные компании больше, чем яркие: те
+зарабатывают ценой или не платят вовсе. Заявок сколько угодно: дом берёт своё с
+обеих сторон, а цена двигается только в полночь, так что спешкой тут ничего не
+выигрывается. Заработанные монеты — один рейтинг, стоимость акций — другой, и
+они поощряют противоположные привычки.
 
 ДУЭЛИ
 Сыграй с другом, а не с машиной. Те же восемьдесят секунд, те же три компании,
 один рынок на двоих — матч считает сервер, так что смотреть в разные графики
 не выйдет. Позвать можно ссылкой или кодом.
 
-ДВАДЦАТЬ ДВЕ НАГРАДЫ
+ДВАДЦАТЬ НАГРАД
 За победу без единой сделки. За то, что обанкротился и вернулся. За сделку,
 которую никто бы не сделал.
 
