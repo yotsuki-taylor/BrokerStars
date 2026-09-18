@@ -89,6 +89,37 @@ export type { Env } from './results';
 const canAuth = (env: Env): boolean => Boolean(env.BOT_TOKEN || env.SESSION_SECRET);
 
 /**
+ * The oldest Android package this server will still talk to, by `versionCode`.
+ * Announced on `/health`; a package below it puts up a wall and sends the
+ * player to Play (`src/ui/update.ts`).
+ *
+ * NOT "the latest build". The latest build is published every time anything
+ * ships, and a game that demanded an update on every routine release would
+ * teach people to tap through the demand. This is the floor: the number below
+ * which a package is not merely old but WRONG — it talks to a route that no
+ * longer exists, or holds a bug bad enough that playing on it is worse than not
+ * playing. Raising it is a decision about a specific broken build, not
+ * housekeeping.
+ *
+ * ZERO MEANS NOBODY IS BLOCKED, and that is the resting state. It is also the
+ * way back: this is a wall with no door in it for the player, so a number set
+ * higher than what Play is actually serving locks out everybody who obeys it
+ * until a deploy fixes the number. That deploy is about forty seconds from a
+ * push, which is the only reason a hard wall is defensible here at all.
+ *
+ * ONLY ANDROID CAN BE STALE. The mini app and the browser fetch the bundle from
+ * Pages at every launch, so there is no old copy of them to find. The client
+ * checks the platform before it checks this number.
+ *
+ * THIS CANNOT RESCUE A PACKAGE THAT CANNOT REACH US. The number travels over
+ * the network; a build that has no route to this Worker never asks and never
+ * hears. 1.1.1 shipped pointing at a developer's own machine and was exactly
+ * that case. The wall is for builds that are old, not for builds that are
+ * broken — `.env.android` is what stops the second kind.
+ */
+const MIN_BUILD = 0;
+
+/**
  * Nothing can be handed in faster than a match can be played. A match is 80
  * seconds; 45 leaves room for a slow clock without leaving room for a script.
  *
@@ -1369,6 +1400,9 @@ export default {
         // sign anybody in finds out from the server rather than from a 401
         telegram: Boolean(env.BOT_TOKEN),
         google: Boolean(env.SESSION_SECRET && env.GOOGLE_CLIENT_ID),
+        // and what it expects OF a client, which is the other half of the same
+        // question this route already answers — see MIN_BUILD
+        minBuild: MIN_BUILD,
       });
     }
 

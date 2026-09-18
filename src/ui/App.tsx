@@ -82,6 +82,7 @@ import {
   type DayFacts,
 } from '../daily/protocol';
 import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
+import { mustUpdate, openStore } from './update';
 import {
   buyShares,
   dividendOn,
@@ -1071,6 +1072,28 @@ export default function App() {
   const [rerollsLeft, setRerollsLeft] = useState(0);
   const forcedRef = useRef<readonly string[] | null>(null);
   const [coins, setStars] = useState(loadStars);
+  /**
+   * Has the server disowned this package? Asked once, on the way in.
+   *
+   * ONE-WAY: it is only ever set to true. A session that started while the
+   * floor was below this build carries on even if the floor moves under it —
+   * walling somebody off mid-match would cost them the match, and the next
+   * launch is soon enough for a number that changes at most once a release.
+   *
+   * The whole of the decision is in `ui/update.ts`, including the part where
+   * every unknown answers "carry on".
+   */
+  const [outdated, setOutdated] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void mustUpdate().then((yes) => {
+      if (alive && yes) setOutdated(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   /** the hard currency, and the day it is paid out by — see `src/daily/protocol.ts` */
   const [dollars, setDollars] = useState(loadDollars);
   const [daily, setDaily] = useState(loadDaily);
@@ -2341,6 +2364,33 @@ export default function App() {
   const cheapestShare = Math.min(...st.stocks.map((s) => s.price));
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(Math.floor(remaining % 60)).padStart(2, '0');
+
+  /**
+   * The wall, and it comes before every screen on purpose.
+   *
+   * A package the server has disowned should not be able to play a match, hand
+   * a result in or spend anything — so this is not an overlay laid over the
+   * menu but a return that happens instead of it. There is no dismiss: the
+   * number that put it here means "this build is wrong", and a wall with a way
+   * round it is a sign (`ui/update.ts`, `MIN_BUILD` in the Worker).
+   *
+   * It can only appear on Android, and only after the server has answered.
+   * Everything unknown reads as "carry on", so a phone with no signal sees the
+   * game rather than this.
+   */
+  if (outdated) {
+    return (
+      <div className="app">
+        <div className="overlay update">
+          <h2>{t('update.title')}</h2>
+          <p>{t('update.body')}</p>
+          <button className="big-btn" onClick={openStore}>
+            {t('update.go')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === 'leagues') {
     return (

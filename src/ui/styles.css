@@ -621,6 +621,37 @@ body {
   letter-spacing: 1px;
 }
 
+/* The wall a disowned package puts up. Centred rather than stacked from the
+   top like the settings sheet: there is nothing else on this screen and
+   nothing to scroll to, so the three things on it belong in the middle of it
+   rather than pinned under a notch. */
+.overlay.update {
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+/* No `align-items: center`: that shrinks the children to their contents, and
+   the button would come out a chip in the middle of an empty screen while the
+   same button is full width in every other sheet. Stretched like the rest of
+   them, with the prose held to a readable measure by its own margins. */
+.overlay.update p {
+  margin: 0 auto;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* `.big-btn` carries `margin-top: auto` so that a sheet's CLOSE sits at the
+   bottom of it. An auto margin eats the free space, which is the same space
+   `justify-content` needs to do anything — so the three things here would
+   centre as two at the top and one at the floor. Only on this overlay: every
+   other one wants the button where it is. */
+.overlay.update .big-btn {
+  margin-top: 0;
+}
+
 .overlay .sub {
   text-align: center;
   font-size: 12px;

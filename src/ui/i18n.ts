@@ -229,6 +229,10 @@ const EN = {
 
   'settings.privacy': 'PRIVACY POLICY',
   'settings.close': 'CLOSE',
+  /** The wall a package below `MIN_BUILD` puts up. See `ui/update.ts`. */
+  'update.title': 'TIME TO UPDATE',
+  'update.body': 'This version of the game can no longer play. The new one is waiting in the store.',
+  'update.go': 'GET THE NEW ONE',
 
   // The Android build only. A mini app never asks any of this: Telegram has
   // already said who is playing by the time the game draws.
@@ -836,6 +840,9 @@ const RU: Record<Key, string> = {
 
   'settings.privacy': 'КОНФИДЕНЦИАЛЬНОСТЬ',
   'settings.close': 'ЗАКРЫТЬ',
+  'update.title': 'ПОРА ОБНОВИТЬСЯ',
+  'update.body': 'Эта версия игры больше не может играть. Новая уже лежит в магазине.',
+  'update.go': 'ЗАБРАТЬ НОВУЮ',
 
   'account.title': 'АККАУНТ',
   'account.out': 'ВХОД НЕ ВЫПОЛНЕН',
