@@ -232,7 +232,8 @@ const EN = {
 
   // A name of one's own, in the account drawer.
   'nick.change': 'CHANGE YOUR NAME',
-  'nick.what': 'What other players will call you. {min} to {max} characters, capitals and digits.',
+  'nick.what':
+    'What other players will call you. {min} to {max} characters: letters, digits, spaces and . - _ &',
   'nick.placeholder': 'YOUR NAME',
   'nick.save': 'TAKE IT',
   'nick.badname': 'NOT A NAME THIS GAME WILL SHOW.',
@@ -564,7 +565,7 @@ const EN = {
      this feature a player runs into without being told, and "letters and
      numbers" is the whole of it — the reason (there is nobody here to moderate
      a name) is not the player's problem. */
-  'corp.letters': 'Capitals, digits and spaces. {min}–{max} characters.',
+  'corp.letters': 'Letters, digits, spaces and . - _ & — {min}–{max} characters.',
   'corp.tagLetters': '{min}–{max} characters, no spaces.',
   'corp.found2': 'FOUND IT',
 
@@ -636,7 +637,7 @@ const EN = {
   'corp.err.already': 'YOU ARE ALREADY IN ONE.',
   'corp.err.notmember': 'YOU ARE NOT IN A CORPORATION.',
   'corp.err.notowner': 'ONLY THE OWNER CAN DO THAT.',
-  'corp.err.badname': 'CAPITALS, DIGITS AND SPACES ONLY.',
+  'corp.err.badname': 'NOT A NAME THIS GAME WILL SHOW.',
   'corp.err.taken': 'SOMEBODY HAS THAT NAME.',
   'corp.err.renamed': 'RENAMED TOO RECENTLY.',
   'corp.err.cooldown': 'YOU LEFT A CORPORATION TODAY. TRY AGAIN IN {time}.',
@@ -862,7 +863,8 @@ const RU: Record<Key, string> = {
   'settings.close': 'ЗАКРЫТЬ',
 
   'nick.change': 'ИЗМЕНИТЬ НИКНЕЙМ',
-  'nick.what': 'Как вас будут звать другие игроки. От {min} до {max} символов, заглавные и цифры.',
+  'nick.what':
+    'Как вас будут звать другие игроки. От {min} до {max} символов: буквы, цифры, пробелы и . - _ &',
   'nick.placeholder': 'ВАШЕ ИМЯ',
   'nick.save': 'ЗАНЯТЬ',
   'nick.badname': 'ТАКОЕ ИМЯ ИГРА НЕ ПОКАЖЕТ.',
@@ -1146,7 +1148,7 @@ const RU: Record<Key, string> = {
   'corp.policyClosed': 'ПО ЗАЯВКЕ',
   // Про латиницу сказано прямо: это единственное место, где игрок упрётся в
   // правило, ничего о нём не зная, и «латиница и цифры» — весь ответ.
-  'corp.letters': 'Латиница, цифры и пробелы, {min}–{max} символа.',
+  'corp.letters': 'Буквы, цифры, пробелы и . - _ & — {min}–{max} символа.',
   'corp.tagLetters': '{min}–{max} символа, без пробелов.',
   'corp.found2': 'ОСНОВАТЬ',
 
@@ -1207,7 +1209,7 @@ const RU: Record<Key, string> = {
   'corp.err.already': 'ТЫ УЖЕ В КОРПОРАЦИИ.',
   'corp.err.notmember': 'ТЫ НЕ СОСТОИШЬ В КОРПОРАЦИИ.',
   'corp.err.notowner': 'ЭТО МОЖЕТ ТОЛЬКО ВЛАДЕЛЕЦ.',
-  'corp.err.badname': 'ТОЛЬКО ЛАТИНИЦА, ЦИФРЫ И ПРОБЕЛЫ.',
+  'corp.err.badname': 'ТАКОЕ ИМЯ ИГРА НЕ ПОКАЖЕТ.',
   'corp.err.taken': 'ТАКОЕ НАЗВАНИЕ УЖЕ ЗАНЯТО.',
   'corp.err.renamed': 'ПЕРЕИМЕНОВЫВАЛИ СЛИШКОМ НЕДАВНО.',
   'corp.err.cooldown': 'ТЫ СЕГОДНЯ ВЫШЕЛ ИЗ КОРПОРАЦИИ. ПОПРОБУЙ ЧЕРЕЗ {time}.',

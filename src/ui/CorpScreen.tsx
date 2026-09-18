@@ -34,6 +34,7 @@ import {
   TAG_MIN,
   cleanName,
   cleanTag,
+  keepAllowed,
   nextSeasonAt,
   type Corp,
   type CorpError,
@@ -235,13 +236,16 @@ function Picker({
   );
 }
 
-/** What a player may type into a name box: the alphabet, as it is typed. */
-const keepLetters = (raw: string, max: number): string =>
-  raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, '')
-    .replace(/\s+/g, ' ')
-    .slice(0, max);
+/**
+ * What a player may type into a name box: the alphabet, as it is typed.
+ *
+ * It comes out of the protocol now rather than being spelled here. The box and
+ * the check have to be the same rule — a keyboard that swallows a character the
+ * server would have accepted is as wrong as one that lets through a character
+ * it would refuse — and two copies of a character class is exactly how that
+ * stops being true the first time one of them is widened.
+ */
+const keepLetters = keepAllowed;
 
 /* ------------------------------------------------------ having none yet */
 

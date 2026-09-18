@@ -230,13 +230,17 @@ describe('a name of one’s own', () => {
   it('takes a name and squares it up', () => {
     expect(cleanNick('  max   power ')).toBe('MAX POWER');
     expect(cleanNick('JO')).toBe('JO');
+    // the alphabet a game that is half in Russian ought to let a player type
+    expect(cleanNick('макс')).toBe('МАКС');
+    expect(cleanNick('max-power')).toBe('MAX-POWER');
   });
 
   it('refuses what it cannot show, rather than tidying it into something else', () => {
     expect(cleanNick('J')).toBeNull();
     expect(cleanNick('A'.repeat(NICK_MAX + 1))).toBeNull();
-    expect(cleanNick('Макс')).toBeNull();
     expect(cleanNick('max!')).toBeNull();
+    expect(cleanNick('😀😀')).toBeNull();
+    expect(cleanNick('--')).toBeNull();
     expect(cleanNick(null)).toBeNull();
   });
 

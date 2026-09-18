@@ -85,6 +85,7 @@ import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
 import { mustUpdate, openStore } from './update';
 import { loadNick, saveNick } from './nick';
 import { NICK_MAX, NICK_MIN, cleanNick } from '../profile/protocol';
+import { keepAllowed } from '../corp/protocol';
 import {
   buyShares,
   dividendOn,
@@ -597,7 +598,7 @@ function NickPanel({ onNamed }: { onNamed: (nick: string) => void }) {
       <input
         className="friend-code-input"
         value={text}
-        onChange={(e) => setText(keepNickLetters(e.target.value))}
+        onChange={(e) => setText(keepAllowed(e.target.value, NICK_MAX))}
         placeholder={t('nick.placeholder')}
         autoComplete="off"
         autoCorrect="off"
@@ -620,18 +621,6 @@ function NickPanel({ onNamed }: { onNamed: (nick: string) => void }) {
     </div>
   );
 }
-
-/**
- * The alphabet, on the way in rather than after the fact: the box simply will
- * not take a character a name cannot have, which is the same bargain the
- * corporation's founding form makes (`keepLetters` in `CorpScreen.tsx`).
- */
-const keepNickLetters = (raw: string): string =>
-  raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, '')
-    .replace(/\s+/g, ' ')
-    .slice(0, NICK_MAX);
 
 /**
  * Signing in, signing out, the one door that only goes one way, and the second

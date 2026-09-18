@@ -309,7 +309,30 @@ export type CorpError =
  * it is over a corporation or over a person, and two copies of the alphabet
  * would be two places to widen it and one place to forget.
  */
-export const ALLOWED = /^[A-Z0-9 ]+$/;
+export const ALLOWED = /^[A-Z0-9А-ЯЁ'&._ -]+$/;
+
+/**
+ * ...and a name may not be made ENTIRELY of the punctuation above. `---` and
+ * `. . .` pass the alphabet and are not names; one letter or digit anywhere is
+ * the whole of the rule.
+ */
+const HAS_SUBSTANCE = /[A-Z0-9А-ЯЁ]/;
+
+/**
+ * The same alphabet, applied to what somebody is typing rather than to what
+ * they have typed.
+ *
+ * Both forms in this game use it — the corporation's founding form and the
+ * nickname box — and they use THIS one rather than each keeping a copy, which
+ * is how the box and the check stay the same rule. A character a name cannot
+ * have simply does not appear, and nothing has to be explained afterwards.
+ */
+export const keepAllowed = (raw: string, max: number): string =>
+  raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9А-ЯЁ'&._ -]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, max);
 
 /**
  * Words a corporation may not be called.
@@ -332,6 +355,13 @@ export const BANNED: string[] = [
   'ADMIN',
   'MODERATOR',
   'BROKERSTARS',
+  // The same three again, in the alphabet that was opened up beside them. The
+  // list is not a profanity filter and was never going to be one; what it is
+  // for is somebody trying to look like this game speaking, and that works in
+  // either script.
+  'АДМИН',
+  'МОДЕРАТОР',
+  'БРОКЕРСТАРС',
 ];
 
 /** Tidy first: one run of spaces, none at either end, capitals throughout. */
@@ -363,7 +393,7 @@ export function banned(text: string): boolean {
 export function cleanName(raw: unknown): string | null {
   const s = squash(raw);
   if (s.length < NAME_MIN || s.length > NAME_MAX) return null;
-  if (!ALLOWED.test(s)) return null;
+  if (!ALLOWED.test(s) || !HAS_SUBSTANCE.test(s)) return null;
   if (banned(s)) return null;
   return s;
 }
@@ -372,7 +402,7 @@ export function cleanName(raw: unknown): string | null {
 export function cleanTag(raw: unknown): string | null {
   const s = squash(raw).replace(/ /g, '');
   if (s.length < TAG_MIN || s.length > TAG_MAX) return null;
-  if (!ALLOWED.test(s)) return null;
+  if (!ALLOWED.test(s) || !HAS_SUBSTANCE.test(s)) return null;
   if (banned(s)) return null;
   return s;
 }

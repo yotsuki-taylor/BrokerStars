@@ -89,7 +89,8 @@ describe('founding one', () => {
 
   it('refuses a name this game will not show a stranger', async () => {
     const { env } = db();
-    expect(await found(env, who('a'), { name: 'ГАЗПРОМ' })).toEqual({ error: 'badname' });
+    // Cyrillic is a name now rather than a refusal; the emoji is what is left.
+    expect(await found(env, who('a'), { name: 'BULL 🐂 RUN' })).toEqual({ error: 'badname' });
     expect(await found(env, who('a'), { name: 'AB' })).toEqual({ error: 'badname' });
     expect(await found(env, who('a'), { name: 'FUCK INC' })).toEqual({ error: 'badname' });
   });

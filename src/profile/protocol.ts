@@ -399,7 +399,10 @@ export const RENAME_EVERY_MS = 7 * 24 * 60 * 60 * 1000;
 export function cleanNick(raw: unknown): string | null {
   const s = squash(raw);
   if (s.length < NICK_MIN || s.length > NICK_MAX) return null;
-  if (!ALLOWED.test(s)) return null;
+  // `ALLOWED` is the corporation's alphabet and carries its own rule about a
+  // name made of nothing but punctuation; `cleanName` applies both and so does
+  // this, which is the point of importing rather than copying.
+  if (!ALLOWED.test(s) || !/[A-Z0-9А-ЯЁ]/.test(s)) return null;
   if (banned(s)) return null;
   return s;
 }

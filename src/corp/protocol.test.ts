@@ -43,15 +43,34 @@ describe('what a corporation may be called', () => {
     expect(cleanTag('br')).toBe('BR');
   });
 
-  it('takes nothing but capitals, digits and the space', () => {
-    // The alphabet IS the moderation. See the note on `ALLOWED`: no homoglyph,
-    // no invisible character and no emoji can be typed into a name, so there is
-    // nothing clever left to catch.
-    expect(cleanName('ГАЗПРОМ')).toBeNull();
+  it('takes capitals, digits, Cyrillic, the space and a little punctuation', () => {
+    expect(cleanName('NIGHT SHIFT')).toBe('NIGHT SHIFT');
+    expect(cleanName('ГАЗПРОМ')).toBe('ГАЗПРОМ');
+    expect(cleanName('BULL-RUN')).toBe('BULL-RUN');
+    expect(cleanName("MAX'S DESK")).toBe("MAX'S DESK");
+    expect(cleanName('B&B')).toBe('B&B');
+  });
+
+  /**
+   * What the alphabet still refuses, and the one thing it stopped refusing.
+   *
+   * Invisible characters and emoji are out: the first cannot be seen at all and
+   * the second cannot be drawn in a table row. Mixing scripts to LOOK like
+   * somebody else is possible now — РАУРАL is five Cyrillic letters and an L —
+   * and that is a trade made on purpose. The alternative was refusing Russian
+   * players their own language in a game that is half in Russian.
+   */
+  it('still refuses what cannot be seen or drawn', () => {
     expect(cleanName('PAYPAL​')).toBeNull();
-    expect(cleanName('РАУРАL')).toBeNull();
     expect(cleanName('BULL 🐂 RUN')).toBeNull();
-    expect(cleanName('BULL-RUN')).toBeNull();
+    expect(cleanName('РАУРАL')).not.toBeNull();
+  });
+
+  /** A name has to be a name, not a row of punctuation. */
+  it('refuses a name made of nothing but punctuation', () => {
+    expect(cleanName('---')).toBeNull();
+    expect(cleanName('. . .')).toBeNull();
+    expect(cleanName('-A-')).toBe('-A-');
   });
 
   it('holds both ends of the length', () => {
