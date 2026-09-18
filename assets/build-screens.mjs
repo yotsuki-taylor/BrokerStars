@@ -44,12 +44,17 @@ const ORDER = [
   ['menu', '3-office'],
   ['shop', '4-wardrobe'],
   ['leagues', '5-leagues'],
-  // The archive, on its COMPANIES tab: the collection counter, a company's own
+  // The player themselves: the trader in what they are wearing, six figures of
+  // career, and the shelf of awards under them. Next to the leagues rather than
+  // at the end because it is the same subject — what accumulates — and because
+  // it is the one picture in the set that is nobody else's.
+  ['profile', '6-profile'],
+  // The market, on its COMPANIES tab: the collection counter, a company's own
   // character written out, and the share counter under it. Last because it is
   // the slowest thing in the game and the least of what a first look is for —
   // but it is the half of the game the store never showed, and Play takes up
   // to eight.
-  ['archive', '6-companies'],
+  ['archive', '7-companies'],
 ];
 
 /**
