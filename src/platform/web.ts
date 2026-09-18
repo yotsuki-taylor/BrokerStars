@@ -53,12 +53,12 @@ export const WEB: Platform = {
     (globalThis as any).window?.open(url, '_blank', 'noopener');
   },
 
-  share(text: string, url: string): void {
+  share(text: string, url?: string): void {
     // A browser tab has no contact list of its own, so it borrows Telegram's:
     // the same sheet a mini app opens, in a tab rather than in the app. Which
     // is what this has always done, from back when it was the fallback branch
     // of an `if` in ui/duel.ts.
-    WEB.openLink(shareSheet(text, url));
+    WEB.openLink(shareSheet(text, url ?? ''));
   },
 
   onLink(): () => void {

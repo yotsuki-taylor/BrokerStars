@@ -89,8 +89,14 @@ export interface Platform {
   /**
    * Hand a link to somebody. Whose contact list opens is the host's business:
    * Telegram's own share sheet inside Telegram, the system one on Android.
+   *
+   * THE LINK IS OPTIONAL, because one invitation in this game has no link to
+   * send: a corporation is joined by typing its code, so the message is the
+   * code and nothing else. Leaving it out is not the same as passing an empty
+   * string — Android's share plugin refuses any url it cannot recognise, and
+   * an empty string is a url it cannot recognise.
    */
-  share(text: string, url: string): void;
+  share(text: string, url?: string): void;
 
   /**
    * An invitation arriving at a game that is already running, rather than one

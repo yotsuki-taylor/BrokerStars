@@ -984,7 +984,9 @@ export default function CorpScreen({
         <div className="friend-actions">
           <button
             className="menu-btn"
-            onClick={() => shareInvite('', `${t('corp.inviteText')} — ${corp.code.toUpperCase()}`)}
+            onClick={() =>
+              shareInvite(undefined, `${t('corp.inviteText')} — ${corp.code.toUpperCase()}`)
+            }
           >
             {t('corp.invite')}
           </button>

@@ -117,10 +117,15 @@ export const TELEGRAM: Platform = {
     else (globalThis as any).window?.open(url, '_blank', 'noopener');
   },
 
-  share(text: string, url: string): void {
+  share(text: string, url?: string): void {
     // Telegram's own share sheet IS the contact picker: it opens the chat list,
     // and the message lands in whichever chat is tapped. Nothing to invent.
-    TELEGRAM.openLink(shareSheet(text, url));
+    //
+    // An absent link becomes an empty `url=` rather than a missing one, which
+    // is what this has always sent and what Telegram has always accepted: the
+    // sheet opens on the text alone. Android is the host that could not take
+    // it, and it is fixed where it broke rather than here.
+    TELEGRAM.openLink(shareSheet(text, url ?? ''));
   },
 
   onLink(): () => void {

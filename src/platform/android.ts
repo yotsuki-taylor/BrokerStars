@@ -230,6 +230,27 @@ function paramFromUrl(url: string): string {
 /** Exported for the tests, which are the only thing that may call it. */
 export const __paramFromUrl = paramFromUrl;
 
+/**
+ * What the share plugin is handed, and the whole of a bug worth a name.
+ *
+ * The url is OMITTED when there is none rather than sent empty. The plugin
+ * refuses any url that is neither a file nor an http address — `SharePlugin.java`
+ * answers "Unsupported url" — and an empty string is neither. So a
+ * corporation's invitation, which is a code with no link behind it, was
+ * rejected before the sheet could open; the `catch` around the call then
+ * swallowed that rejection as if the player had changed their mind, and a dead
+ * button looked exactly like a cancelled one.
+ *
+ * Exported for the test, like `paramFromUrl` above: the plugin cannot be
+ * imported outside a WebView, so the only part that can be checked on this side
+ * is the shape of what it would have been given.
+ */
+export const __shareOptions = (
+  text: string,
+  url?: string,
+): { text: string; dialogTitle: string; url?: string } =>
+  url ? { text, url, dialogTitle: text } : { text, dialogTitle: text };
+
 /** The three questions the settings screen asks, and nothing else. */
 const ACCOUNT: Account = { signedIn, signIn, signOut };
 
@@ -298,11 +319,11 @@ export const ANDROID: Platform = {
    * is indistinguishable from one that failed. Neither is worth an error the
    * player has to dismiss — the link is still on the screen behind it.
    */
-  share(text: string, url: string): void {
+  share(text: string, url?: string): void {
     void (async () => {
       try {
         const { Share } = await import('@capacitor/share');
-        await Share.share({ text, url, dialogTitle: text });
+        await Share.share(__shareOptions(text, url));
       } catch {
         /* dismissed, or no sheet to open */
       }

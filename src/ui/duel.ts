@@ -283,8 +283,8 @@ export function selfLink(key: 'd' | 'f', code: string): string {
  * one on Android, a browser tab pointed at Telegram's sheet in a plain page.
  * Which is which is `src/platform/`'s business, not this module's.
  */
-export function shareInvite(link: string, text: string): void {
-  platform().share(text, link);
+export function shareInvite(link: string | undefined, text: string): void {
+  platform().share(text, link || undefined);
 }
 
 /** How a shout into the group chat ended. */

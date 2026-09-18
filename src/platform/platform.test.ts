@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { platform } from './index';
-import { __paramFromUrl as paramFromUrl } from './android';
+import { __paramFromUrl as paramFromUrl, __shareOptions as shareOptions } from './android';
 
 /**
  * Put a fake Telegram on the window, the way the script tag in index.html puts
@@ -165,5 +165,34 @@ describe('an invitation arriving at the Android app', () => {
     expect(paramFromUrl('tel:+1234')).toBe('');
     expect(paramFromUrl('not a url at all')).toBe('');
     expect(paramFromUrl('')).toBe('');
+  });
+});
+
+/**
+ * The share sheet, and the one rule that was learned the hard way: an
+ * invitation with no link must be handed NO url, not an empty one.
+ *
+ * Android's plugin refuses any url it cannot recognise, an empty string is one
+ * of those, and the rejection was swallowed by the catch around the call — so
+ * the corporation's invite button did nothing at all and looked cancelled.
+ */
+describe('handing an invitation to somebody', () => {
+  it('omits the url entirely when there is no link', () => {
+    const opts = shareOptions('join my corporation — QX7M');
+    expect('url' in opts).toBe(false);
+    expect(opts.text).toBe('join my corporation — QX7M');
+  });
+
+  /** The shape the bug actually arrived in: a link that is an empty string. */
+  it('omits it for an empty link too, rather than passing it on', () => {
+    expect('url' in shareOptions('text', '')).toBe(false);
+  });
+
+  it('sends the url when there is one', () => {
+    expect(shareOptions('come and play', 'https://t.me/bot?start=duel_x')).toEqual({
+      text: 'come and play',
+      url: 'https://t.me/bot?start=duel_x',
+      dialogTitle: 'come and play',
+    });
   });
 });
