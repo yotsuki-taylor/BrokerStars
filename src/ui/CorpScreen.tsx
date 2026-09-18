@@ -247,14 +247,15 @@ const keepLetters = (raw: string, max: number): string =>
 
 function CorpLine({
   row,
-  onJoin,
+  onOpen,
 }: {
   row: CorpSummary;
-  onJoin: (row: CorpSummary) => void;
+  /** Opens the card. Joining is two more taps away — see `CorpCard`. */
+  onOpen: (row: CorpSummary) => void;
 }) {
   const full = row.members >= MAX_MEMBERS;
   return (
-    <button className="corp-line" disabled={full} onClick={() => onJoin(row)}>
+    <button className="corp-line" disabled={full} onClick={() => onOpen(row)}>
       <Emblem corp={row} className="corp-mark" />
       <span className="corp-tag">{row.tag}</span>
       <span className="corp-line-text">
@@ -277,6 +278,87 @@ function CorpLine({
         </span>
       </span>
     </button>
+  );
+}
+
+/**
+ * One corporation, before anybody is in it: what it is and what it would mean
+ * to join.
+ *
+ * WHY A ROW NO LONGER JOINS. Tapping a name used to put the player in it on the
+ * spot — one tap, no question asked, and a decision they cannot take back for a
+ * day (`SWITCH_COOLDOWN_MS`). Somebody browsing a list is reading it, not
+ * choosing from it, and the difference between reading and choosing should not
+ * be one tap wide.
+ *
+ * WHAT IS SHOWN, and what is deliberately not. Three numbers: how many traders
+ * are in it, and the two season averages the two tables are built on. There is
+ * no treasury to show — a corporation has none and is not going to grow one —
+ * so "how much gold" can only ever mean the number that decides its place, and
+ * the note under the figures says it is per trader rather than a total, which
+ * is the one way these numbers can be misread.
+ *
+ * It costs nothing to open: every figure came down with the listing
+ * (`CorpSummary`), so there is no request here and no spinner.
+ */
+function CorpCard({
+  row,
+  onJoin,
+  onBack,
+}: {
+  row: CorpSummary;
+  onJoin: () => void;
+  onBack: () => void;
+}) {
+  const closed = row.policy === 'closed';
+  return (
+    <div className="corp-card">
+      {/* The same header a corporation shows its own members, because it is the
+          same corporation and there is no reason for it to introduce itself
+          twice in two shapes. */}
+      <div className="corp-head">
+        <div className="corp-head-name">
+          <Emblem corp={row} className="corp-mark big" />
+          <span className="corp-tag big">{row.tag}</span>
+          <b>{row.name}</b>
+        </div>
+        {row.motto && <i className="corp-motto">{row.motto}</i>}
+      </div>
+
+      <div className="profile-stats">
+        <div className="stat">
+          <b>{t('corp.membersOf', { n: row.members, max: MAX_MEMBERS })}</b>
+          <span>{t('corp.cardTraders')}</span>
+        </div>
+        <div className="stat">
+          <b>
+            <Coin size={13} /> {row.coinAverage}
+          </b>
+          <span>{t('corp.cardCoins')}</span>
+        </div>
+        <div className="stat">
+          <b>
+            <Dollar size={13} /> {money(row.dollarAverage)}
+          </b>
+          <span>{t('corp.cardDollars')}</span>
+        </div>
+      </div>
+
+      <p className="corp-foot">{t('corp.cardAverage')}</p>
+      {/* The door, said before the button rather than discovered by pressing
+          it: in a closed corporation the button does not seat anybody, it
+          knocks. */}
+      {closed && <p className="corp-foot">{t('corp.cardClosed')}</p>}
+
+      <div className="friend-actions">
+        <button className="menu-btn" onClick={onBack}>
+          {t('common.back')}
+        </button>
+        <button className="menu-btn play" onClick={onJoin}>
+          {t(closed ? 'corp.ask' : 'corp.join')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -419,6 +501,15 @@ function NoCorp({
   const [query, setQuery] = useState('');
   const [code, setCode] = useState('');
   const [founding, setFounding] = useState(false);
+  /**
+   * The corporation being read about, and the one being joined.
+   *
+   * Two states rather than one flag on the first: the card is a place to stand
+   * and the question is a thing that happens on top of it, so backing out of
+   * the question puts the player back on the card rather than in the list.
+   */
+  const [looking, setLooking] = useState<CorpSummary | null>(null);
+  const [asking, setAsking] = useState<CorpSummary | null>(null);
 
   /**
    * The list, refetched as the box is typed in.
@@ -438,6 +529,47 @@ function NoCorp({
       window.clearTimeout(timer);
     };
   }, [query]);
+
+  if (looking) {
+    return (
+      <>
+        <CorpCard
+          row={looking}
+          onJoin={() => setAsking(looking)}
+          onBack={() => setLooking(null)}
+        />
+
+        {/* The question, over the card rather than instead of it: what is being
+            agreed to stays on screen while it is being agreed to. */}
+        {asking && (
+          <div className="overlay confirm">
+            <h2>
+              {t(asking.policy === 'closed' ? 'corp.askSure' : 'corp.joinSure', {
+                name: asking.name,
+              })}
+            </h2>
+            <p>{t('corp.joinWhy')}</p>
+            <div className="confirm-pair">
+              <button className="menu-btn" onClick={() => setAsking(null)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                className="menu-btn play"
+                onClick={async () => {
+                  const target = asking;
+                  setAsking(null);
+                  setLooking(null);
+                  onJoined(await joinCorp({ id: target.id }));
+                }}
+              >
+                {t(asking.policy === 'closed' ? 'corp.ask' : 'corp.join')}
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   if (founding) {
     return (
@@ -481,11 +613,7 @@ function NoCorp({
       ) : rows.length ? (
         <div className="corp-rows">
           {rows.map((r) => (
-            <CorpLine
-              key={r.id}
-              row={r}
-              onJoin={async (row) => onJoined(await joinCorp({ id: row.id }))}
-            />
+            <CorpLine key={r.id} row={r} onOpen={setLooking} />
           ))}
         </div>
       ) : (

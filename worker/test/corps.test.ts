@@ -606,6 +606,46 @@ describe('the table', () => {
     expect(top.map((c) => c.name)).toEqual(['REAL']);
   });
 
+  /**
+   * Out of the TABLE is not the same as earning nothing, and the card a browsed
+   * row opens has to be able to tell them apart: it prints the average, and a
+   * zero there would say a corporation had a bad month rather than that it is
+   * too small to be placed.
+   */
+  it('still knows what a corporation below the floor averages', async () => {
+    const { env } = db();
+    await team(env, 'SOLO', 'SO', MIN_RANKED - 1, 10_000);
+    await team(env, 'REAL', 'RE', MIN_RANKED, 10);
+
+    const rows = await corps.browse(env, '', 25, MAY);
+    const solo = rows.find((r) => r.name === 'SOLO')!;
+    expect(solo.rank).toBeNull();
+    expect(solo.coinAverage).toBe(10_000);
+
+    // and the placed one agrees with the table it is placed in
+    expect(rows.find((r) => r.name === 'REAL')!.coinAverage).toBe(10);
+  });
+
+  it('carries both averages, whichever table the row came out of', async () => {
+    const { env } = db();
+    const id = await team(env, 'BOTH', 'BO', MIN_RANKED, 30);
+    for (let i = 0; i < MIN_RANKED; i++) {
+      await corps.credit(env, `BOTH-${i}`, { dollars: 600 }, MAY);
+    }
+
+    const { top } = await corps.table(env, 'coins', 10, null, MAY);
+    const row = top.find((c) => c.id === id)!;
+    expect(row.coinAverage).toBe(30);
+    expect(row.dollarAverage).toBe(600);
+
+    // the same two numbers from the other table, in the same places
+    const fromDollars = (await corps.table(env, 'dollars', 10, null, MAY)).top.find(
+      (c) => c.id === id,
+    )!;
+    expect(fromDollars.coinAverage).toBe(30);
+    expect(fromDollars.dollarAverage).toBe(600);
+  });
+
   it('counts a member who has earned nothing, which is what makes a seat cost', async () => {
     const { env } = db();
     await team(env, 'KEEN', 'KE', 3, 90);

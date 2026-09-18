@@ -625,6 +625,47 @@ body {
    top like the settings sheet: there is nothing else on this screen and
    nothing to scroll to, so the three things on it belong in the middle of it
    rather than pinned under a notch. */
+/* One corporation, read before it is joined. A column like every other
+   screen in this family; the header, the figures and the note all belong to
+   things that already have rules, so the card itself only has to space them. */
+.corp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+/* The question over the card. Centred like the update wall and dimmed like
+   every other overlay, so what is being agreed to stays legible behind it. */
+.overlay.confirm {
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.overlay.confirm p {
+  margin: 0 auto;
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* `.confirm-pair` is a row of two pushed to the right edge of a card — it
+   carries `margin-left: auto` for exactly that. Here it is the whole width of
+   a sheet and the two answers should be the same size as each other, so the
+   margin goes and the buttons share what there is. */
+.overlay.confirm .confirm-pair {
+  width: 100%;
+  margin-left: 0;
+  gap: 10px;
+}
+
+.overlay.confirm .confirm-pair .menu-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .overlay.update {
   justify-content: center;
   gap: 14px;

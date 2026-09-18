@@ -200,6 +200,23 @@ export interface CorpSummary {
   rank: number | null;
   /** the season average this place was worked out from */
   average: number;
+  /**
+   * Both season averages, whichever table the row came out of.
+   *
+   * `average` above is context: it belongs to the table being looked at, and
+   * on the corporations screen that is whichever tab is open. These two are
+   * not context, and they are here so that tapping a row can open a card
+   * about that corporation without asking the server a second time — the
+   * bargain the friends list already makes with a room and an outfit, and for
+   * the same reason: nobody should watch a spinner to read six numbers that
+   * were a query away when the list was built.
+   *
+   * Averages rather than a treasury, because a corporation has no treasury
+   * and is not going to grow one (`README`, «Корпорации»). What it has is two
+   * places in two tables and the numbers they were worked out from.
+   */
+  coinAverage: number;
+  dollarAverage: number;
 }
 
 /** Somebody waiting at the door of a closed corporation. */
@@ -470,6 +487,8 @@ export function cleanSummary(raw: unknown): CorpSummary | null {
     policy: policyOf(r?.policy),
     rank: rankOf(r?.rank),
     average: num(r?.average),
+    coinAverage: num(r?.coinAverage),
+    dollarAverage: num(r?.dollarAverage),
   };
 }
 

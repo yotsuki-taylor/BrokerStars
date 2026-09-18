@@ -222,7 +222,21 @@ interface RankRow {
  * one reason: it is chosen here from a closed set of two literals and never
  * from anything that came off the wire.
  */
-async function rankRows(env: Env, metric: Metric, season: string): Promise<RankRow[]> {
+async function rankRows(
+  env: Env,
+  metric: Metric,
+  season: string,
+  /**
+   * How many traders a corporation needs before it appears here at all.
+   *
+   * `MIN_RANKED` for a table, because that is what being IN one means. But an
+   * average exists below the floor too — a corporation of two earns what it
+   * earns — and a card that showed it as zero would be saying it earned
+   * nothing rather than that it is not placed. So the card asks with a floor of
+   * one and takes the ranks from the same rows, filtered (`averagesAndPlaces`).
+   */
+  floor: number = MIN_RANKED,
+): Promise<RankRow[]> {
   const column = metric === 'dollars' ? 'm.dollars' : 'm.coins';
   const { results } = await env.DB.prepare(
     `SELECT c.id AS id,
@@ -243,7 +257,7 @@ async function rankRows(env: Env, metric: Metric, season: string): Promise<RankR
                c.created_at ASC, c.id ASC
       LIMIT ?3`,
   )
-    .bind(season, MIN_RANKED, RANK_SCAN)
+    .bind(season, floor, RANK_SCAN)
     .all<RankRow>();
   return results ?? [];
 }
@@ -263,6 +277,27 @@ const placings = (rows: RankRow[]): Map<string, Placed> => {
 };
 
 /**
+ * Both answers from one query: where everybody places, and what everybody
+ * averages — including the corporations too small to place.
+ *
+ * The rows come back with no floor under them and the places are numbered over
+ * the ones that clear `MIN_RANKED`, which is the same order the floor would
+ * have produced because the order does not depend on who was left out. What it
+ * buys is the half that used to be missing: a corporation of two has an average
+ * and now says so, instead of reporting a zero that reads as a bad month.
+ */
+async function averagesAndPlaces(
+  env: Env,
+  metric: Metric,
+  season: string,
+): Promise<{ places: Map<string, Placed>; average: (id: string) => number }> {
+  const rows = await rankRows(env, metric, season, 1);
+  const places = placings(rows.filter((r) => r.members >= MIN_RANKED));
+  const averages = new Map(rows.map((r) => [r.id, averageOf(r.total, r.members)]));
+  return { places, average: (id) => averages.get(id) ?? 0 };
+}
+
+/**
  * One page of the table, and the caller's own corporation under it when it
  * placed outside the page — the same shape and the same courtesy the player
  * boards extend (`top` in index.ts).
@@ -274,9 +309,17 @@ export async function table(
   mine: string | null,
   now: number,
 ): Promise<{ top: CorpSummary[]; me: CorpSummary | null }> {
-  const rows = await rankRows(env, metric, seasonOf(now));
-  const placed = placings(rows);
-  const ids = rows.slice(0, limit).map((r) => r.id);
+  const season = seasonOf(now);
+  const here = await averagesAndPlaces(env, metric, season);
+  // Insertion order IS rank order — `placings` numbers the rows as it walks
+  // them — so the page comes off the same map rather than a second query.
+  const placed = here.places;
+  /**
+   * The other table as well, because `CorpSummary` promises BOTH averages and
+   * a promise kept only on one screen is not one.
+   */
+  const other = await averagesAndPlaces(env, metric === 'coins' ? 'dollars' : 'coins', season);
+  const ids = [...placed.keys()].slice(0, limit);
   const wanted = new Set(ids);
   if (mine && placed.has(mine)) wanted.add(mine);
   if (wanted.size === 0) return { top: [], me: null };
@@ -306,6 +349,8 @@ export async function table(
       policy: row.policy,
       rank: at.rank,
       average: at.average,
+      coinAverage: metric === 'coins' ? here.average(id) : other.average(id),
+      dollarAverage: metric === 'dollars' ? here.average(id) : other.average(id),
     };
   };
 
@@ -465,9 +510,17 @@ export async function browse(
     .bind(...(wanted ? [like, limit] : [limit]))
     .all<CorpRow>();
 
-  const placed = placings(await rankRows(env, 'coins', seasonOf(now)));
+  /**
+   * Both tables, not one. The dollar ranking is read here so that a row can be
+   * opened into a card without a second request — see `CorpSummary`. It costs
+   * one more aggregate for the whole listing rather than one per row, which is
+   * what makes it worth doing at all.
+   */
+  const season = seasonOf(now);
+  const inCoins = await averagesAndPlaces(env, 'coins', season);
+  const inDollars = await averagesAndPlaces(env, 'dollars', season);
   return (results ?? []).map((row) => {
-    const at = placed.get(row.id);
+    const at = inCoins.places.get(row.id);
     return {
       id: row.id,
       name: row.name,
@@ -477,8 +530,13 @@ export async function browse(
       color: row.color,
       members: row.members,
       policy: row.policy,
+      // `rank` and `average` are the COINS table here, because that is the
+      // order this listing is about. The two below are neither table's: they
+      // are the corporation's own numbers, and the card shows both.
       rank: at?.rank ?? null,
       average: at?.average ?? 0,
+      coinAverage: inCoins.average(row.id),
+      dollarAverage: inDollars.average(row.id),
     };
   });
 }

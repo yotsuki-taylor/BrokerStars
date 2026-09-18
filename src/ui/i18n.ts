@@ -524,6 +524,16 @@ const EN = {
   'corp.unranked': 'UNRANKED',
   'corp.place': '#{n}',
 
+  // The card a row opens into, before anybody is in anything.
+  'corp.cardTraders': 'TRADERS',
+  'corp.cardCoins': 'COINS A SEASON',
+  'corp.cardDollars': 'DOLLARS A SEASON',
+  'corp.cardAverage': 'Per trader, averaged over the season — not the total.',
+  'corp.cardClosed': 'This one is joined by asking. The owner decides.',
+  'corp.joinSure': 'JOIN {name}?',
+  'corp.askSure': 'ASK TO JOIN {name}?',
+  'corp.joinWhy': 'One corporation at a time. If you leave, the next one has to wait a day.',
+
   // Founding one.
   'corp.newTitle': 'FOUND A CORPORATION',
   'corp.name': 'NAME',
@@ -1093,6 +1103,15 @@ const RU: Record<Key, string> = {
   'corp.membersOf': '{n}/{max}',
   'corp.unranked': 'ВНЕ ТАБЛИЦЫ',
   'corp.place': '#{n}',
+
+  'corp.cardTraders': 'ТРЕЙДЕРОВ',
+  'corp.cardCoins': 'МОНЕТ ЗА СЕЗОН',
+  'corp.cardDollars': 'ДОЛЛАРОВ ЗА СЕЗОН',
+  'corp.cardAverage': 'На трейдера, в среднем за сезон, — не сумма.',
+  'corp.cardClosed': 'Сюда вступают по заявке. Решает владелец.',
+  'corp.joinSure': 'ВСТУПИТЬ В {name}?',
+  'corp.askSure': 'ПОДАТЬ ЗАЯВКУ В {name}?',
+  'corp.joinWhy': 'Корпорация может быть только одна. Если выйти, следующей придётся ждать сутки.',
 
   'corp.newTitle': 'ОСНОВАТЬ КОРПОРАЦИЮ',
   'corp.name': 'НАЗВАНИЕ',
