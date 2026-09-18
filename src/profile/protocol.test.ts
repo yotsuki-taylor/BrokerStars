@@ -9,6 +9,9 @@ import {
   setOf,
   topOf,
   wearable,
+  NICK_MAX,
+  cleanNick,
+  nickKey,
 } from './protocol';
 import { NO_OFFER } from '../shop/protocol';
 import { ROOM_DONE } from '../ui/renovation';
@@ -186,6 +189,9 @@ describe('a profile coming back', () => {
       streak: 1,
       seen: [COMPANIES[0].id],
       dollars: 2000,
+      // nobody chose a name in this answer, which is what a player wearing the
+      // one their host gave them looks like
+      nick: null,
       // a share in a company this build does not have goes the same way
       portfolio: { [COMPANIES[0].id]: { shares: 4, cost: 3000, day: 19_990 } },
       // a quest this build does not have goes the way the award did, out of
@@ -212,5 +218,31 @@ describe('merging two ladders', () => {
 
   it('is as long as the ladder being merged into', () => {
     expect(mergeWins([0, 0], [9, 9, 9, 9])).toEqual([9, 9]);
+  });
+});
+
+/**
+ * A name somebody typed, and the rules it has to clear before anybody else
+ * sees it. The shape rules are the corporation's — same alphabet, same word
+ * list — and the lengths are a person's.
+ */
+describe('a name of one’s own', () => {
+  it('takes a name and squares it up', () => {
+    expect(cleanNick('  max   power ')).toBe('MAX POWER');
+    expect(cleanNick('JO')).toBe('JO');
+  });
+
+  it('refuses what it cannot show, rather than tidying it into something else', () => {
+    expect(cleanNick('J')).toBeNull();
+    expect(cleanNick('A'.repeat(NICK_MAX + 1))).toBeNull();
+    expect(cleanNick('Макс')).toBeNull();
+    expect(cleanNick('max!')).toBeNull();
+    expect(cleanNick(null)).toBeNull();
+  });
+
+  /** Uniqueness is decided on the key, so spacing cannot buy a second copy. */
+  it('sees through spaces when deciding whether somebody has that name', () => {
+    expect(nickKey(cleanNick('max power')!)).toBe(nickKey(cleanNick('MAXPOWER')!));
+    expect(nickKey('MAX POWER')).toBe('MAXPOWER');
   });
 });

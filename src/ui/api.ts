@@ -36,7 +36,7 @@ import type { FeedbackError } from '../feedback/protocol';
 import { cleanLinkState, type LinkError, type LinkState } from '../link/protocol';
 import { cleanMarket, type Market } from '../market/protocol';
 import { cleanList, type FriendError, type FriendList } from '../friends/protocol';
-import { cleanProfile, type Claim, type Profile } from '../profile/protocol';
+import { cleanProfile, type Claim, type NickError, type Profile } from '../profile/protocol';
 import { platform } from '../platform';
 import { guestId, guestToken } from './guest';
 import { lang } from './i18n';
@@ -707,6 +707,33 @@ export async function fetchMarket(): Promise<Market | null> {
  * player locally while the server kept them would leave an account nobody can
  * reach and nobody can delete.
  */
+/**
+ * Choose a name, or be told why not.
+ *
+ * Everything is decided on the other side — whether the name is one this game
+ * will show a stranger, whether somebody has it, and whether this player may
+ * change it yet. The box greys its own button on the same rules
+ * (`cleanNick`), so the only refusals that reach here are the two this end
+ * cannot know: taken, and too soon.
+ */
+export async function setNick(
+  nick: string,
+): Promise<{ ok: true; nick: string } | { ok: false; error: NickError; until?: number }> {
+  const answer = await post('/profile/nick', { nick });
+  const body = answer?.body as
+    | { ok?: boolean; nick?: string; error?: string; until?: number }
+    | undefined;
+  if (!answer || answer.status !== 200 || !body) return { ok: false, error: 'busy' };
+  if (body.ok && typeof body.nick === 'string') return { ok: true, nick: body.nick };
+  const error = body.error;
+  const known: NickError[] = ['badname', 'taken', 'renamed', 'busy'];
+  return {
+    ok: false,
+    error: known.includes(error as NickError) ? (error as NickError) : 'busy',
+    until: typeof body.until === 'number' ? body.until : undefined,
+  };
+}
+
 export async function deleteAccount(): Promise<boolean> {
   const answer = await post('/profile/delete', { confirm: 'delete' });
   return answer?.status === 200;

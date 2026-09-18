@@ -48,6 +48,15 @@ export interface Standing {
   bestNetWorth: number;
   /** highest league a match was ever finished in, likewise */
   topLeague: number;
+  /**
+   * The name this player CHOSE, or null for one they were given.
+   *
+   * It rides along here because `standingOf` already reads the row it is on,
+   * and because the browser has to be told: every name the client draws comes
+   * from the host (`playerName` in `ui/App.tsx`), which knows nothing about a
+   * name typed into this game.
+   */
+  nick: string | null;
 }
 
 /** The book everybody opens on; `sim/config.ts` sets it. */

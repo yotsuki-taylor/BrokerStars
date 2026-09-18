@@ -205,7 +205,10 @@ export async function record(env: Env, caller: Caller, r: Recorded): Promise<voi
                             first_seen, updated_at)
             VALUES (?1, ?2, ?3, 1, ?4, ?5, ?6, ?7, ?7)
        ON CONFLICT (id) DO UPDATE SET
-            name           = ?2,
+            -- The host's name refreshes the row, UNLESS the player has chosen
+            -- one. Without this line a nickname lived exactly until the next
+            -- whistle, which is the whole reason the named column exists.
+            name           = CASE WHEN named = 1 THEN name ELSE ?2 END,
             stars          = stars + ?3,
             matches        = matches + 1,
             wins           = wins + ?4,

@@ -27,6 +27,7 @@ const held = (over: Partial<Held> = {}): Held => ({ ...EMPTY, ...over });
 const at = (over: Partial<Standing> = {}): Standing => ({
   bestNetWorth: 0,
   topLeague: 0,
+  nick: null,
   ...over,
 });
 const match = (over: Partial<MatchFacts> = {}): MatchFacts => ({

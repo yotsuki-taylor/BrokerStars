@@ -38,7 +38,15 @@ import { cleanCode } from '../../src/friends/protocol';
 import { cleanLinkCode } from '../../src/link/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
 import { SCAN_LIMIT, priceTable, rankByWorth, type Holder } from './board';
-import { cleanClaim, cleanOutfit, cleanSeen } from '../../src/profile/protocol';
+import {
+  RENAME_EVERY_MS,
+  cleanClaim,
+  cleanNick,
+  cleanOutfit,
+  cleanSeen,
+  nickKey,
+  type NickError,
+} from '../../src/profile/protocol';
 import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate, chatShout, duelPush } from './bot';
 import { chatAvailable, markShout, mayShout, waitLeft } from './chat';
@@ -697,6 +705,68 @@ async function refund(request: Request, env: Env) {
       item ? profiles.refundItem(held, item.slot, item.rarity) : profiles.refundRoom(held),
     ),
   );
+}
+
+/**
+ * A name of the player's own, instead of the one their host handed over.
+ *
+ * DECIDED HERE, ALL OF IT. Whether the name is one this game will show a
+ * stranger, whether somebody already has it, and whether this player may change
+ * it yet: a client that asked nicely for any of those would be a client that
+ * could answer for itself. The rules are the shared ones (`cleanNick` in
+ * `src/profile/protocol.ts`), so the box greys its button on exactly the
+ * condition this would have refused it on.
+ *
+ * TAKEN IS THE DATABASE'S ANSWER, not a query of its own. Asking first and
+ * writing second leaves a gap two players can both walk through; the UNIQUE on
+ * `name_key` cannot be raced, so the write is attempted and the refusal is
+ * read off the failure. The same arrangement founding a corporation makes.
+ */
+async function nickname(request: Request, env: Env) {
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const { caller, body } = asked;
+
+  const nick = cleanNick(body.nick);
+  if (!nick) return json({ ok: false, error: 'badname' satisfies NickError });
+
+  const now = Date.now();
+  const row = await env.DB.prepare(`SELECT renamed_at, named FROM players WHERE id = ?1`)
+    .bind(caller.id)
+    .first<{ renamed_at: number; named: number }>();
+
+  // A player who has never finished a match has no row yet, and that is not a
+  // refusal: the row is made here instead, with the name already chosen.
+  const renamedAt = row?.renamed_at ?? 0;
+  const until = renamedAt + RENAME_EVERY_MS;
+  if (row?.named === 1 && now < until) {
+    return json({ ok: false, error: 'renamed' satisfies NickError, until });
+  }
+
+  try {
+    if (row) {
+      await env.DB.prepare(
+        `UPDATE players
+            SET name = ?2, name_key = ?3, named = 1, renamed_at = ?4, updated_at = ?4
+          WHERE id = ?1`,
+      )
+        .bind(caller.id, nick, nickKey(nick), now)
+        .run();
+    } else {
+      await env.DB.prepare(
+        `INSERT INTO players (id, name, named, name_key, renamed_at, first_seen, updated_at)
+              VALUES (?1, ?2, 1, ?3, ?4, ?4, ?4)`,
+      )
+        .bind(caller.id, nick, nickKey(nick), now)
+        .run();
+    }
+  } catch {
+    // The UNIQUE on `name_key`, which is the only constraint this write can
+    // break: somebody has that name, spaces notwithstanding.
+    return json({ ok: false, error: 'taken' satisfies NickError });
+  }
+
+  return json({ ok: true, nick });
 }
 
 /**
@@ -1436,6 +1506,7 @@ export default {
       if (url.pathname === '/profile/daily') return daily(request, env);
       if (url.pathname === '/profile/trade') return tradeShares(request, env);
       if (url.pathname === '/profile/refund') return refund(request, env);
+      if (url.pathname === '/profile/nick') return nickname(request, env);
       if (url.pathname === '/profile/delete') return deleteAccount(request, env);
       if (url.pathname === '/link') return linkState(request, env);
       if (url.pathname === '/link/code') return linkCode(request, env);

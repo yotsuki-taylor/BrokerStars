@@ -33,6 +33,9 @@
  * they are conveniences, and they are allowed to differ between two phones.
  */
 
+import { ALLOWED, banned, squash } from '../corp/protocol';
+
+
 import { cleanAwards } from '../awards/catalogue';
 import { cleanDaily, type Daily } from '../daily/protocol';
 import { cleanPortfolio, type Portfolio } from '../market/protocol';
@@ -124,6 +127,15 @@ export interface Profile {
   /** best match ever and highest league played, off the board's own row */
   bestNetWorth: number;
   topLeague: number;
+  /**
+   * The name this player chose for themselves, or null for one they were given.
+   *
+   * The client draws names from the host — Telegram's first name, Google's
+   * display name, GUEST 4F2A — and the host has never heard of a name typed
+   * into this game. So the server says, and `ui/nick.ts` keeps the answer for
+   * the frame before the next one arrives.
+   */
+  nick?: string | null;
 }
 
 /**
@@ -328,6 +340,9 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
     seen: cleanSeen(src.seen),
     bestNetWorth: cleanCount(src.bestNetWorth),
     topLeague: cleanCount(src.topLeague),
+    // Through the same rules it was stored by, so a row edited in the database
+    // by hand cannot put an unsayable name on a leaderboard.
+    nick: cleanNick(src.nick),
   };
 }
 
@@ -343,3 +358,60 @@ export function cleanProfile(raw: unknown, leagues: number): Profile | null {
 export const listOf = (owned: Set<string>): Owned => [...owned];
 
 export const setOf = (owned: Owned): Set<string> => new Set(owned);
+
+/* ------------------------------------------------------ a name of one's own */
+
+/**
+ * What a player may call themselves, agreed on by both ends.
+ *
+ * WHY THIS EXISTS AT ALL. Until now the name on a leaderboard row was whatever
+ * the host said: a Telegram first name, a Google display name, or GUEST 4F2A.
+ * None of those is a choice, one of them is somebody's real name, and the row
+ * they sit on is public and kept.
+ *
+ * THE RULES ARE A CORPORATION'S RULES, and they are imported rather than
+ * copied. A name typed by a person and shown to strangers is the same problem
+ * whether it is over a company or over a player: the same alphabet, so nothing
+ * can be spelled in a script the next player cannot read; the same short word
+ * list, checked with the spaces taken out so `F U C K` is the same word; and no
+ * moderation beyond that, for the reasons already written down in the README.
+ *
+ * The lengths are this file's own, and the floor is lower: a corporation is a
+ * group and can be asked for three characters, while people are called things
+ * like JO.
+ */
+export const NICK_MIN = 2;
+export const NICK_MAX = 16;
+
+/**
+ * How often a player may change it. A week, which is the corporation's own
+ * interval — a name other people learn should outlast the afternoon somebody
+ * felt like being called something else.
+ */
+export const RENAME_EVERY_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * A nickname as it can be stored, or null for one that cannot.
+ *
+ * Null rather than a tidied-up version, for the reason `cleanName` gives: being
+ * quietly renamed to something you did not type is worse than being told no.
+ */
+export function cleanNick(raw: unknown): string | null {
+  const s = squash(raw);
+  if (s.length < NICK_MIN || s.length > NICK_MAX) return null;
+  if (!ALLOWED.test(s)) return null;
+  if (banned(s)) return null;
+  return s;
+}
+
+/**
+ * The form uniqueness is decided on: the name with its spaces taken out.
+ *
+ * `keyOf` for corporations does exactly this and is not imported, because the
+ * two are equal by coincidence rather than by rule — a corporation could grow a
+ * different key tomorrow without a player's name having to follow it.
+ */
+export const nickKey = (nick: string): string => nick.replace(/ /g, '');
+
+/** Everything that can go wrong, in the one word the screen looks up. */
+export type NickError = 'badname' | 'taken' | 'renamed' | 'busy';

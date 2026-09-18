@@ -163,10 +163,17 @@ async function membersOf(env: Env, corpId: string): Promise<MemberRow[]> {
  */
 export async function feedOf(env: Env, corpId: string, now: number): Promise<FeedItem[]> {
   const { results } = await env.DB.prepare(
-    `SELECT id, kind, actor_id, actor_name, detail, expires_at, taken_name, created_at
-       FROM corp_feed
-      WHERE corp_id = ?1 AND (expires_at IS NULL OR expires_at > ?2)
-      ORDER BY id DESC
+    // `actor_name` is what the actor was called when the line was written, and
+    // the live name wins over it — the same COALESCE the member list and the
+    // request list already make. Without it a player who renames themselves
+    // stays under the old name in every line they are already in.
+    `SELECT f.id, f.kind, f.actor_id,
+            COALESCE(p.name, f.actor_name) AS actor_name,
+            f.detail, f.expires_at, f.taken_name, f.created_at
+       FROM corp_feed f
+       LEFT JOIN players p ON p.id = f.actor_id
+      WHERE f.corp_id = ?1 AND (f.expires_at IS NULL OR f.expires_at > ?2)
+      ORDER BY f.id DESC
       LIMIT ?3`,
   )
     .bind(corpId, now, FEED_KEEP)

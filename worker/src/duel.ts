@@ -35,7 +35,7 @@ import { roomCash } from '../../src/ui/renovation';
 import type { Outfit } from '../../src/ui/wardrobe';
 import { cleanOutfit } from '../../src/profile/protocol';
 import * as corps from './corps';
-import { giftFirstHat, outfitOf, roomOf, settle } from './profile';
+import { giftFirstHat, nameOf, outfitOf, roomOf, settle } from './profile';
 import { settle as settleInvite } from './invites';
 import {
   DUEL_INTRO_MS,
@@ -301,7 +301,13 @@ export class Duel implements DurableObject {
       seat = 1;
       meta.players[1] = {
         id: caller.id,
-        name: String(msg.name ?? caller.name).slice(0, 24) || caller.name,
+        // Out of the server's own row first, for the reason the outfit below
+        // is: a name is what other people see, and a client's word for it is
+        // the one thing in this message nobody else can check.
+        name:
+          (await nameOf(this.env, caller.id)) ||
+          String(msg.name ?? caller.name).slice(0, 24) ||
+          caller.name,
         // Out of the wardrobe the server keeps, not out of the hello. Clothes
         // are perks — a cheaper spread, a longer rope, an ability the other
         // side has not got — and this is a match against somebody who can open

@@ -229,6 +229,16 @@ const EN = {
 
   'settings.privacy': 'PRIVACY POLICY',
   'settings.close': 'CLOSE',
+
+  // A name of one's own, in the account drawer.
+  'nick.change': 'CHANGE YOUR NAME',
+  'nick.what': 'What other players will call you. {min} to {max} characters, capitals and digits.',
+  'nick.placeholder': 'YOUR NAME',
+  'nick.save': 'TAKE IT',
+  'nick.badname': 'NOT A NAME THIS GAME WILL SHOW.',
+  'nick.taken': 'SOMEBODY HAS THAT NAME.',
+  'nick.renamed': 'A NAME IS CHANGED ONCE A WEEK. NOT YET.',
+  'nick.busy': 'THAT DID NOT GO THROUGH. TRY AGAIN.',
   /** The wall a package below `MIN_BUILD` puts up. See `ui/update.ts`. */
   'update.title': 'TIME TO UPDATE',
   'update.body': 'This version of the game can no longer play. The new one is waiting in the store.',
@@ -850,6 +860,15 @@ const RU: Record<Key, string> = {
 
   'settings.privacy': 'КОНФИДЕНЦИАЛЬНОСТЬ',
   'settings.close': 'ЗАКРЫТЬ',
+
+  'nick.change': 'ИЗМЕНИТЬ НИКНЕЙМ',
+  'nick.what': 'Как вас будут звать другие игроки. От {min} до {max} символов, заглавные и цифры.',
+  'nick.placeholder': 'ВАШЕ ИМЯ',
+  'nick.save': 'ЗАНЯТЬ',
+  'nick.badname': 'ТАКОЕ ИМЯ ИГРА НЕ ПОКАЖЕТ.',
+  'nick.taken': 'ТАКОЕ ИМЯ УЖЕ ЗАНЯТО.',
+  'nick.renamed': 'ИМЯ МЕНЯЮТ РАЗ В НЕДЕЛЮ. ЕЩЁ РАНО.',
+  'nick.busy': 'НЕ ПРОШЛО. ПОПРОБУЙТЕ ЕЩЁ РАЗ.',
   'update.title': 'ПОРА ОБНОВИТЬСЯ',
   'update.body': 'Эта версия игры больше не может играть. Новая уже лежит в магазине.',
   'update.go': 'ЗАБРАТЬ НОВУЮ',

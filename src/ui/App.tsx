@@ -83,6 +83,8 @@ import {
 } from '../daily/protocol';
 import { loadDaily, loadDollars, saveDaily, saveDollars } from './daily';
 import { mustUpdate, openStore } from './update';
+import { loadNick, saveNick } from './nick';
+import { NICK_MAX, NICK_MIN, cleanNick } from '../profile/protocol';
 import {
   buyShares,
   dividendOn,
@@ -121,6 +123,7 @@ import {
   apiBase,
   callOutCorp,
   deleteAccount,
+  setNick,
   feedbackAvailable,
   sendFeedback,
 } from './api';
@@ -251,7 +254,9 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
  * them.
  */
 function playerName(): string {
-  const name = platform().userName();
+  // The chosen name first: it is the one the rest of the game knows them by,
+  // and the host's is what they chose it INSTEAD of.
+  const name = loadNick() ?? platform().userName();
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -265,7 +270,7 @@ function playerName(): string {
  * (`mintGuest`), which is what that name is for.
  */
 function duelName(): string {
-  const name = platform().userName() || guestName();
+  const name = loadNick() ?? (platform().userName() || guestName());
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -536,6 +541,99 @@ const keepLinkChars = (raw: string): string =>
     .slice(0, LINK_CODE_LENGTH);
 
 /**
+ * Choosing a name, instead of wearing the one the host handed over.
+ *
+ * WHY IT IS HERE AND NOT ON THE PROFILE. The profile is where somebody looks at
+ * what they have done; this is where they change who the game thinks they are,
+ * which is the same drawer as signing in, linking and deleting. It is also
+ * outside the `account &&` block on purpose: a player in Telegram has no Google
+ * account to sign into and should still be able to stop being called by their
+ * real first name.
+ *
+ * THE BOX ENFORCES WHAT IT CAN. `cleanNick` is the same function the Worker
+ * refuses on, so the button is dark for a name that would be refused for its
+ * shape — and the two refusals that only the server can know, somebody already
+ * has it and you did this too recently, come back as words.
+ */
+function NickPanel({ onNamed }: { onNamed: (nick: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(() => loadNick() ?? '');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  const nick = cleanNick(text);
+
+  async function save() {
+    if (!nick) return;
+    setBusy(true);
+    setNote(null);
+    const answer = await setNick(nick);
+    setBusy(false);
+    if (!answer.ok) {
+      // No countdown: the corporation's own refusal does not carry one either,
+      // and a name is changed rarely enough that "not this week" is the whole
+      // of what somebody needs to hear.
+      setNote(t(`nick.${answer.error}` as Parameters<typeof t>[0]));
+      return;
+    }
+    saveNick(answer.nick);
+    onNamed(answer.nick);
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <div className="settings-list">
+        <button className="big-btn ghost" onClick={() => setOpen(true)}>
+          {t('nick.change')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="settings-list">
+      <p className="settings-note">{t('nick.what', { min: NICK_MIN, max: NICK_MAX })}</p>
+      <input
+        className="friend-code-input"
+        value={text}
+        onChange={(e) => setText(keepNickLetters(e.target.value))}
+        placeholder={t('nick.placeholder')}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+      />
+      <button className="big-btn" disabled={busy || !nick} onClick={save}>
+        {busy ? t('account.working') : t('nick.save')}
+      </button>
+      <button
+        className="big-btn ghost"
+        disabled={busy}
+        onClick={() => {
+          setOpen(false);
+          setNote(null);
+        }}
+      >
+        {t('common.cancel')}
+      </button>
+      {note && <p className="settings-note">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * The alphabet, on the way in rather than after the fact: the box simply will
+ * not take a character a name cannot have, which is the same bargain the
+ * corporation's founding form makes (`keepLetters` in `CorpScreen.tsx`).
+ */
+const keepNickLetters = (raw: string): string =>
+  raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, NICK_MAX);
+
+/**
  * Signing in, signing out, the one door that only goes one way, and the second
  * door into the same account.
  *
@@ -649,6 +747,10 @@ function AccountPanel({
 
   return (
     <>
+      {/* Above the account block and outside it: everybody who can reach this
+          drawer can choose a name, including a player in Telegram who has no
+          Google account to sign into. */}
+      <NickPanel onNamed={() => setNote(null)} />
       {account && (
         <div className="settings-list">
           <p className="settings-note">{signed ? platform().userName() : t('account.out')}</p>
@@ -1191,6 +1293,10 @@ export default function App() {
     // screen reads the awards and the numbers they are judged against straight
     // off it, so there is no second request behind the ARCHIVE button.
     setProfile(p);
+    // Before anything is drawn: the name is read by plain functions rather than
+    // out of state, so it has to be on disk by the time the next render calls
+    // one of them.
+    saveNick(p.nick ?? null);
     setSeenCompanies(new Set(p.seen));
     saveSeen(new Set(p.seen));
     setStars(p.coins);

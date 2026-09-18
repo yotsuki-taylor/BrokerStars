@@ -199,6 +199,7 @@ export const view = (h: Held, earned: number, at: Standing): Profile => ({
   daily: h.daily,
   bestNetWorth: at.bestNetWorth,
   topLeague: at.topLeague,
+  nick: at.nick,
 });
 
 /** What one garment costs, by its id — the wardrobe is a list of those now. */
@@ -668,13 +669,17 @@ export async function earnedBy(env: Env, id: string): Promise<number> {
  */
 export async function standingOf(env: Env, id: string): Promise<Standing> {
   const row = await env.DB.prepare(
-    `SELECT best_net_worth, top_league FROM players WHERE id = ?1`,
+    `SELECT best_net_worth, top_league, name, named FROM players WHERE id = ?1`,
   )
     .bind(id)
-    .first<{ best_net_worth: number; top_league: number }>();
+    .first<{ best_net_worth: number; top_league: number; name: string; named: number }>();
   return {
     bestNetWorth: Math.max(0, row?.best_net_worth ?? 0),
     topLeague: Math.max(0, row?.top_league ?? 0),
+    // Only a name they chose. The host's own is already on the client, which is
+    // where it came from, and sending it back would be this server telling a
+    // browser what the browser just told it.
+    nick: row?.named === 1 ? String(row.name) : null,
   };
 }
 
@@ -1009,6 +1014,23 @@ export async function settle(
 export async function outfitOf(env: Env, id: string): Promise<Outfit | null> {
   const stored = await read(env, id);
   return stored ? stored.held.outfit : null;
+}
+
+/**
+ * What this player is called, or null for somebody with no row yet.
+ *
+ * Asked at kick-off for the reason the outfit is: a duel is a match against
+ * somebody who can open a console, and the seat opposite should carry the name
+ * the rest of the game knows them by rather than the one their client felt like
+ * sending. `players.name` is that name — chosen if they chose one, the host's
+ * if they did not (`results.ts`, `named`).
+ */
+export async function nameOf(env: Env, id: string): Promise<string | null> {
+  const row = await env.DB.prepare(`SELECT name FROM players WHERE id = ?1`)
+    .bind(id)
+    .first<{ name: string }>();
+  const name = String(row?.name ?? '').slice(0, 24);
+  return name || null;
 }
 
 /**

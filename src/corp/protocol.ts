@@ -303,7 +303,13 @@ export type CorpError =
  * capitals. A corporation called ГАЗПРОМ would be the odd one out on its own
  * screen.
  */
-const ALLOWED = /^[A-Z0-9 ]+$/;
+/**
+ * Exported because a player's nickname holds the same line (`profile/protocol`).
+ * A name typed by somebody and shown to strangers is the same problem whether
+ * it is over a corporation or over a person, and two copies of the alphabet
+ * would be two places to widen it and one place to forget.
+ */
+export const ALLOWED = /^[A-Z0-9 ]+$/;
 
 /**
  * Words a corporation may not be called.
@@ -329,7 +335,7 @@ export const BANNED: string[] = [
 ];
 
 /** Tidy first: one run of spaces, none at either end, capitals throughout. */
-const squash = (raw: unknown): string =>
+export const squash = (raw: unknown): string =>
   String(raw ?? '')
     .toUpperCase()
     .replace(/\s+/g, ' ')

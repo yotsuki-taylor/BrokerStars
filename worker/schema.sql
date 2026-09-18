@@ -10,7 +10,19 @@
 CREATE TABLE IF NOT EXISTS players (
   -- Telegram user id, and only ever one Telegram has signed for
   id            TEXT PRIMARY KEY,
+  -- What every screen that names this player shows. It arrives from the host --
+  -- Telegram's first name, Google's display name, GUEST XXXX -- and handing a
+  -- match in refreshes it, UNLESS `named` says the player chose it themselves.
   name          TEXT NOT NULL,
+  -- Did they choose it? The one thing standing between a nickname and the next
+  -- whistle, which used to overwrite the column (`results.ts`).
+  named         INTEGER NOT NULL DEFAULT 0,
+  -- The chosen name with its spaces taken out, or NULL for a name nobody chose.
+  -- The UNIQUE below is the whole of "somebody has that name"; NULLs do not
+  -- collide, so two players the host both calls PLAYER are not a collision.
+  name_key      TEXT,
+  -- When they may choose again. 0 is a moment in 1970, therefore "now".
+  renamed_at    INTEGER NOT NULL DEFAULT 0,
   -- stars EARNED, which is what a table of players should rank on: spending
   -- them in the shop is a choice, and a choice should not cost you your place
   stars         INTEGER NOT NULL DEFAULT 0,
@@ -25,6 +37,9 @@ CREATE TABLE IF NOT EXISTS players (
 
 -- the board is this query and nothing else
 CREATE INDEX IF NOT EXISTS players_by_stars ON players (stars DESC, updated_at ASC);
+
+-- one chosen name each; see `name_key` above for why NULLs are exempt
+CREATE UNIQUE INDEX IF NOT EXISTS players_by_name_key ON players (name_key);
 
 CREATE TABLE IF NOT EXISTS results (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
