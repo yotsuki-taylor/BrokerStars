@@ -249,4 +249,33 @@ describe('a name of one’s own', () => {
     expect(nickKey(cleanNick('max power')!)).toBe(nickKey(cleanNick('MAXPOWER')!));
     expect(nickKey('MAX POWER')).toBe('MAXPOWER');
   });
+
+  /**
+   * Nor can a keyboard layout. Thirteen Cyrillic capitals are the same picture
+   * as Latin ones, so without this a name could be taken twice and nobody
+   * looking at the two rows could say which was which.
+   */
+  it('sees through the alphabet a name was typed in', () => {
+    // every letter of МАКС is Cyrillic; every letter of MAKC is Latin
+    expect(nickKey('МАКС')).toBe(nickKey('MAKC'));
+    expect(nickKey('РАУРАL')).toBe(nickKey('PAYPAL'));
+    // and a name that only LOOKS different is still different
+    expect(nickKey('МАКС')).not.toBe(nickKey('MAX'));
+  });
+
+  /**
+   * Digits are left alone on purpose: M4X reads differently from MAX, so it is
+   * a stylised name rather than a forged one, and folding it would cost real
+   * names to catch nobody.
+   */
+  it('leaves a digit standing in for a letter alone', () => {
+    expect(nickKey('M4X')).not.toBe(nickKey('MAX'));
+    expect(nickKey('MAX 100')).not.toBe(nickKey('MAX IOO'));
+  });
+
+  /** The word list reads the folded form too, or one Cyrillic С undoes it. */
+  it('catches a banned word spelled in two alphabets', () => {
+    expect(cleanNick('FUСK')).toBeNull();
+    expect(cleanNick('АДМИН')).toBeNull();
+  });
 });

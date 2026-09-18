@@ -372,15 +372,56 @@ export const squash = (raw: unknown): string =>
     .trim();
 
 /**
+ * Letters that are the SAME PICTURE in two alphabets, folded onto one of them.
+ *
+ * Thirteen Cyrillic capitals are drawn identically to Latin ones — А В Е К М Н
+ * О Р С Т У Х and Ё — so РАУРАL and PAYPAL are different strings that nobody
+ * can tell apart on a screen. That did not matter while a name could only be
+ * written in one alphabet. It matters now: names are unique, and a name that
+ * can be forged is a name that means nothing.
+ *
+ * WHAT THIS IS NOT FOR. Only for deciding whether somebody ALREADY HAS a name.
+ * What is stored and shown is what was typed, letter for letter — a player who
+ * writes their name in Russian sees it in Russian. This decides one question
+ * and the answer never reaches a screen.
+ *
+ * DIGITS ARE LEFT ALONE, deliberately. M4X is not MAX to anybody looking at it:
+ * substituting a digit for a letter makes a name that reads DIFFERENTLY, which
+ * is a stylised name rather than a forged one. Folding those would cost real
+ * names — MAX 100 and MAX IOO would collide — to catch something nobody is
+ * fooled by.
+ */
+const LOOKALIKE: Record<string, string> = {
+  А: 'A',
+  В: 'B',
+  Е: 'E',
+  Ё: 'E',
+  К: 'K',
+  М: 'M',
+  Н: 'H',
+  О: 'O',
+  Р: 'P',
+  С: 'C',
+  Т: 'T',
+  У: 'Y',
+  Х: 'X',
+};
+
+export const foldLook = (s: string): string =>
+  s.replace(/[АВЕЁКМНОРСТУХ]/g, (c) => LOOKALIKE[c] ?? c);
+
+/**
  * Is there a banned word in here?
  *
- * Checked against the text AND against the text with its spaces taken out, so
- * `F U C K` is the same word as `FUCK`. That is the one evasion cheap enough to
- * be worth closing; the rest are not worth pretending about.
+ * Checked against the text, against the text with its spaces taken out, and
+ * against both of those with the lookalikes folded — so `F U C K` and `FUСK`
+ * with a Cyrillic С are the same word as `FUCK`. Those are the evasions cheap
+ * enough to be worth closing; the rest are not worth pretending about.
  */
 export function banned(text: string): boolean {
   const flat = text.replace(/ /g, '');
-  return BANNED.some((word) => text.includes(word) || flat.includes(word));
+  const forms = [text, flat, foldLook(text), foldLook(flat)];
+  return BANNED.some((word) => forms.some((form) => form.includes(word)));
 }
 
 /**
@@ -429,7 +470,7 @@ export function cleanMotto(raw: unknown): string {
  * differ by a space, which is not a naming scheme — it is a way of taking
  * somebody else's name while being able to say you did not.
  */
-export const keyOf = (name: string): string => name.replace(/ /g, '');
+export const keyOf = (name: string): string => foldLook(name.replace(/ /g, ''));
 
 /* ---------------------------------------------------------- the season */
 

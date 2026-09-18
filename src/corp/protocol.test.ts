@@ -66,6 +66,17 @@ describe('what a corporation may be called', () => {
     expect(cleanName('РАУРАL')).not.toBeNull();
   });
 
+  /**
+   * A corporation's name is unique too, so it gets the same protection: two
+   * names that are the same picture are the same name, whichever alphabet each
+   * letter came out of.
+   */
+  it('will not let a second corporation take the same picture', () => {
+    expect(keyOf('РАУРАL')).toBe(keyOf('PAYPAL'));
+    expect(keyOf('НОЧНАЯ СМЕНА')).toBe(keyOf('НОЧНАЯСМЕНА'));
+    expect(keyOf('NIGHT')).not.toBe(keyOf('N1GHT'));
+  });
+
   /** A name has to be a name, not a row of punctuation. */
   it('refuses a name made of nothing but punctuation', () => {
     expect(cleanName('---')).toBeNull();

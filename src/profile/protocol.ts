@@ -33,7 +33,7 @@
  * they are conveniences, and they are allowed to differ between two phones.
  */
 
-import { ALLOWED, banned, squash } from '../corp/protocol';
+import { ALLOWED, banned, foldLook, squash } from '../corp/protocol';
 
 
 import { cleanAwards } from '../awards/catalogue';
@@ -408,13 +408,17 @@ export function cleanNick(raw: unknown): string | null {
 }
 
 /**
- * The form uniqueness is decided on: the name with its spaces taken out.
+ * The form uniqueness is decided on: the name with its spaces taken out and its
+ * lookalikes folded onto one alphabet.
  *
- * `keyOf` for corporations does exactly this and is not imported, because the
- * two are equal by coincidence rather than by rule — a corporation could grow a
- * different key tomorrow without a player's name having to follow it.
+ * `keyOf` for corporations comes out the same today and is still not imported,
+ * for the reason it was not before: the two are equal by coincidence rather
+ * than by rule, and a corporation could grow a different key tomorrow without a
+ * player's name having to follow it. What IS shared is `foldLook`, because that
+ * part is not a coincidence — two letters being the same picture is a fact
+ * about letters, not about corporations.
  */
-export const nickKey = (nick: string): string => nick.replace(/ /g, '');
+export const nickKey = (nick: string): string => foldLook(nick.replace(/ /g, ''));
 
 /** Everything that can go wrong, in the one word the screen looks up. */
 export type NickError = 'badname' | 'taken' | 'renamed' | 'busy';
