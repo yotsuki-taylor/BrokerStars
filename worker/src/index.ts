@@ -125,7 +125,7 @@ const canAuth = (env: Env): boolean => Boolean(env.BOT_TOKEN || env.SESSION_SECR
  * that case. The wall is for builds that are old, not for builds that are
  * broken — `.env.android` is what stops the second kind.
  */
-const MIN_BUILD = 0;
+const MIN_BUILD = 25;
 
 /**
  * Nothing can be handed in faster than a match can be played. A match is 80
