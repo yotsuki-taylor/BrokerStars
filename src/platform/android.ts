@@ -352,4 +352,25 @@ export const ANDROID: Platform = {
       stop?.();
     };
   },
+
+  onVisibility(listener: (visible: boolean) => void): () => void {
+    const handles: { remove(): Promise<void> }[] = [];
+    let dropped = false;
+    void (async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        const paused = await App.addListener('pause', () => listener(false));
+        const resumed = await App.addListener('resume', () => listener(true));
+        handles.push(paused, resumed);
+        // unsubscribed before the listeners finished attaching: attach and go
+        if (dropped) for (const h of handles) await h.remove();
+      } catch {
+        /* no native App plugin means nothing to hear */
+      }
+    })();
+    return () => {
+      dropped = true;
+      for (const h of handles) void h.remove();
+    };
+  },
 };

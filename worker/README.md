@@ -573,6 +573,7 @@ npm run migrate -- ./migrations/013-profiles-opens.sql   # если profiles у�
 npm run migrate -- ./migrations/014-feedback-sent.sql    # новая таблица; хватит и schema
 npm run migrate -- ./migrations/015-corporations.sql     # новые таблицы; хватит и schema
 npm run migrate -- ./migrations/016-corp-emblem.sql      # если corps уже была
+npm run migrate -- ./migrations/018-events.sql           # новая таблица; хватит и schema
 npm run schema                                          # таблицы; безопасно повторять
 ```
 
@@ -610,6 +611,12 @@ npm run schema                                          # таблицы; без
 
 Всё это — до `npm run deploy`. Без `profiles` ручка `/profile` упадёт на
 отсутствующей таблице, и игра молча останется на `localStorage`.
+
+`018` (таблица `events`) строже остальных новых таблиц. Без неё падает не
+только `/events`, который игра и так молча переживает: к `events` обращаются
+**внутри** пачек связывания аккаунтов и удаления аккаунта, и обе операции
+откатятся целиком. Так что таблица должна появиться на боевой базе до пуша,
+который выкатывает этот воркер.
 
 Перед миграцией на боевой базе забирайте её целиком:
 

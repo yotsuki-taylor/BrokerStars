@@ -19,6 +19,7 @@ import {
   LINK_CODE_TTL_MS,
   type LinkError,
 } from '../../src/link/protocol';
+import * as events from './events';
 import type { Env } from './results';
 import type { Caller } from './telegram';
 
@@ -158,11 +159,17 @@ export async function adopt(env: Env, alias: Caller, playerId: string): Promise<
   // quietly is worse than refusing and saying why.
   if (await hasGame(env, alias.id)) return 'busy';
 
-  await env.DB.prepare(
-    `INSERT INTO identities (alias_id, player_id, linked_at) VALUES (?1, ?2, ?3)`,
-  )
-    .bind(alias.id, playerId, Date.now())
-    .run();
+  // The one thing that DOES move. An empty account still has a history — it
+  // opened the game, it signed in — and left behind under the alias that
+  // history would be a second person who came once and never returned
+  // (`events.ts`). Events are not a game, so they are not what `busy` asks
+  // about; they are carried over in the same batch as the link itself.
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO identities (alias_id, player_id, linked_at) VALUES (?1, ?2, ?3)`,
+    ).bind(alias.id, playerId, Date.now()),
+    events.moving(env, alias.id, playerId),
+  ]);
   return null;
 }
 

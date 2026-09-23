@@ -1,6 +1,7 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, type Key } from './i18n';
 import { TUTORIAL, type TutorialStep } from './tutorial';
+import { track } from './analytics';
 
 /**
  * The tour itself: one button lit at a time, everything else dimmed, and a card
@@ -107,6 +108,12 @@ export default function Tutorial({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const step = steps?.[i] ?? null;
+
+  // Numbered by the whole tour rather than by what was left of it on this
+  // screen, so step 3 is the same step for everybody in the funnel.
+  useEffect(() => {
+    if (step) track('tour_step', { step: TUTORIAL.indexOf(step) });
+  }, [step]);
 
   useLayoutEffect(() => {
     if (!step) return;

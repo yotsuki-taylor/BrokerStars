@@ -9,7 +9,8 @@
     "schema:local": "wrangler d1 execute broker-stars --local --file=./schema.sql",
     "migrate": "wrangler d1 execute broker-stars --remote --file",
     "migrate:local": "wrangler d1 execute broker-stars --local --file",
-    "test": "vitest run"
+    "test": "vitest run",
+    "stats": "node stats/run.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260903.1",

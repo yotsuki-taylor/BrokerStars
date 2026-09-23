@@ -10,6 +10,7 @@
     "sim": "tsx src/headless/run.ts",
     "bot": "node bot/bot.mjs",
     "test": "vitest run",
+    "stats": "node worker/stats/run.mjs",
     "test:watch": "vitest",
     "build:android": "tsc -b && vite build --mode android",
     "android": "npm run build:android && cap sync android",

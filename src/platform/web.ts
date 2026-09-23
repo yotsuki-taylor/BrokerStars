@@ -16,6 +16,7 @@
  */
 
 import type { Platform } from './index';
+import { onDocumentVisibility } from './visibility';
 import { shareSheet } from './telegram';
 
 export const WEB: Platform = {
@@ -64,5 +65,9 @@ export const WEB: Platform = {
   onLink(): () => void {
     // A link handed to a browser is a page load, and a page load is a launch.
     return () => {};
+  },
+
+  onVisibility(listener: (visible: boolean) => void): () => void {
+    return onDocumentVisibility(listener);
   },
 };

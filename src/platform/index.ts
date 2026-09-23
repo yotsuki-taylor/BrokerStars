@@ -114,6 +114,17 @@ export interface Platform {
   onLink(listener: (param: string) => void): () => void;
 
   /**
+   * The game going to the background (`false`) and coming back (`true`).
+   * Returns the way to stop listening.
+   *
+   * What the analytics queue sends on, and what counts as opening the game a
+   * second time (`ui/analytics.ts`). A page hears it as `visibilitychange`;
+   * an Android app hears the native `pause` and `resume`, because the moment
+   * the app is swiped away is exactly the moment a WebView may not be told.
+   */
+  onVisibility(listener: (visible: boolean) => void): () => void;
+
+  /**
    * Signing in, where signing in is a thing the player does.
    *
    * Absent on every host that already knows who is playing before the game

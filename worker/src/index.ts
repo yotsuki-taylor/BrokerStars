@@ -51,6 +51,8 @@ import { RARITIES, SLOTS, type Rarity, type Slot } from '../../src/ui/wardrobe';
 import { answerUpdate, chatShout, duelPush } from './bot';
 import { chatAvailable, markShout, mayShout, waitLeft } from './chat';
 import { cleanFeedback } from '../../src/feedback/protocol';
+import { MAX_BATCH, cleanBatch } from '../../src/analytics/protocol';
+import * as analytics from './events';
 import {
   cleanAbout,
   deliver,
@@ -813,6 +815,10 @@ async function deleteAccount(request: Request, env: Env) {
     // rather than mostly gone -- and a stale cooldown would otherwise be the
     // one thing a deleted account left behind to be counted against the next.
     env.DB.prepare(`DELETE FROM feedback_sent WHERE player_id = ?1`).bind(id),
+    // What the game recorded about how they played (`events.ts`). The privacy
+    // policy keeps it ninety days, and "until the account is deleted" is the
+    // shorter of the two for anybody who asks.
+    env.DB.prepare(`DELETE FROM events WHERE player_id = ?1`).bind(id),
     // The corporation: their membership, their season, anything they asked
     // for, and every line of every feed with their name on it. `forgetting`
     // hands back statements rather than running them, so this route keeps its
@@ -824,6 +830,39 @@ async function deleteAccount(request: Request, env: Env) {
   // stored — so the client is told to throw it away. The next thing it sends
   // will simply open a new and empty account, which is what a deleted one is.
   return json({ ok: true, signOut: true });
+}
+
+/* ------------------------------------------------------------- analytics */
+
+/**
+ * The largest body `/events` will read. Fifty of the biggest events the
+ * catalogue allows come to well under half of this; anything larger was not
+ * built by this game, and is refused before it is parsed.
+ */
+const MAX_EVENTS_BODY = 32 * 1024;
+
+/**
+ * What the game says about how it is being played (`src/analytics/protocol.ts`).
+ *
+ * Signed like every other write, so an event belongs to the same one id the
+ * rest of the database knows this player by — a Telegram id, a Google id that
+ * `identify` has already followed to its link, or a guest. Nobody without one
+ * is written down here, exactly as nobody without one is written down anywhere.
+ *
+ * The answer is deliberately uninteresting. The client does not retry what the
+ * server dropped, because a dropped event is one that failed the catalogue and
+ * will fail it again; `taken` is there for a test to read, not for the game.
+ */
+async function events(request: Request, env: Env) {
+  const length = Number(request.headers.get('content-length') ?? 0);
+  if (length > MAX_EVENTS_BODY) return bad(413, 'too big');
+  const asked = await whoIsAsking(request, env);
+  if (asked instanceof Response) return asked;
+  const now = Date.now();
+  const batch = cleanBatch(asked.body, profiles.LEAGUES, now);
+  if (!batch) return bad(400, `not a batch of at most ${MAX_BATCH}`);
+  const taken = await analytics.record(env, asked.caller.id, batch, now);
+  return json({ ok: true, taken });
 }
 
 /**
@@ -1508,6 +1547,7 @@ export default {
       if (url.pathname === '/profile/refund') return refund(request, env);
       if (url.pathname === '/profile/nick') return nickname(request, env);
       if (url.pathname === '/profile/delete') return deleteAccount(request, env);
+      if (url.pathname === '/events') return events(request, env);
       if (url.pathname === '/link') return linkState(request, env);
       if (url.pathname === '/link/code') return linkCode(request, env);
       if (url.pathname === '/link/redeem') return linkRedeem(request, env);

@@ -143,6 +143,7 @@ import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i
 import { wipe } from './store';
 import { advance, progressOf, startLine, type Line } from './line';
 import { ensureGuest, guestName } from './guest';
+import { flushEvents, forgetEvents, startAnalytics, track } from './analytics';
 import { perksFor, wantsBoardScreen } from './perks';
 import {
   LEAGUES,
@@ -436,6 +437,9 @@ function LinkPanel({ canMint }: { canMint: boolean }) {
       setNote(t(LINK_ERROR[error]));
       return;
     }
+    // Written to the queue before the reload, which is the one thing that
+    // survives it; it goes up on the other side under the linked id.
+    track('signin', { via: 'code' });
     // The account this app speaks for has just become a different one. Every
     // screen reads its own corner of the game at mount, so the honest way to
     // show the save that has just arrived is to start again.
@@ -686,6 +690,7 @@ function AccountPanel({
       return;
     }
     setSigned(true);
+    track('signin', { via: 'google' });
     onSignedIn?.();
   }
 
@@ -701,6 +706,9 @@ function AccountPanel({
       return;
     }
     account?.signOut();
+    // What the deleted account did and has not sent yet goes with it, rather
+    // than up under whoever this phone becomes next.
+    forgetEvents();
     wipe([LANG_KEY]);
     setGone(true);
   }
@@ -1373,7 +1381,11 @@ export default function App() {
       // one the handshake below is unsigned and the server refuses it, which is
       // how a browser tab and a fresh install used to be nobody (`ui/guest.ts`).
       ensureGuest(Boolean(platform().authToken()))
-        .then(() => flushPending())
+        .then(() => {
+          // Whatever waited on the phone for an id to belong to has one now.
+          void flushEvents();
+          return flushPending();
+        })
         .then(() =>
         openProfile({
           coins: loadStars(),
@@ -1457,6 +1469,7 @@ export default function App() {
       setDollars(done.dollars);
       saveDollars(done.dollars);
       haptic('heavy');
+      if (!sell) track('stock_buy', { company: id });
       reconcile(tradeShares(id, shares, sell));
     },
     [dollars, market, portfolio, reconcile],
@@ -1539,6 +1552,11 @@ export default function App() {
         awarded.current = true;
         const me = st.traders[HUMAN];
         const li = leagueRef.current;
+        track('match_end', {
+          league: li,
+          outcome: st.winner === null ? 'draw' : st.winner === HUMAN ? 'win' : 'loss',
+          surrender: st.resigned === HUMAN,
+        });
         const a =
           st.resigned === HUMAN
             ? NO_AWARD
@@ -1820,6 +1838,9 @@ export default function App() {
             setCountdown(null);
             setScreen('match');
           } else {
+            // A fresh start and not a reconnection, which would count one
+            // duel twice.
+            track('duel_start', {});
             setScreen('vs');
           }
           rerender();
@@ -1849,6 +1870,12 @@ export default function App() {
         }
 
         case 'end': {
+          // The mirror has the final tick by now, so it knows how this ended.
+          const fin = stateRef.current;
+          track('duel_end', {
+            outcome: fin.winner === null ? 'draw' : fin.winner === HUMAN ? 'win' : 'loss',
+            surrender: fin.resigned === HUMAN,
+          });
           const a: Award = {
             win: msg.award.win,
             profit: msg.award.profit,
@@ -1990,6 +2017,10 @@ export default function App() {
       const invite = await createInvite(leagueRef.current, outfitRef.current, friend?.id);
       if (!invite) return duelRefusal('net');
       if (toCorp) void callOutCorp(invite.code, invite.expiresAt);
+      // Only the roads that reach somebody by themselves. A bare DUEL from the
+      // menu has called nobody yet; that happens when the link is sent.
+      if (friend) track('duel_invite', { via: 'friend' });
+      if (toCorp) track('duel_invite', { via: 'corp' });
       connect(invite.code, 'waiting', {
         code: invite.code,
         link: invite.link,
@@ -2099,6 +2130,9 @@ export default function App() {
    */
   const [call, setCall] = useState<DuelCall | null>(null);
   useEffect(() => onDuelCall(setCall), []);
+
+  // The launch, the timer that drains the queue, and going to the background.
+  useEffect(() => startAnalytics(), []);
 
   /**
    * It also expires on its own, without anybody tapping anything. A banner
@@ -2266,6 +2300,7 @@ export default function App() {
     // above is what this end expects to be told, drawn early so the shop feels
     // instant. The shelf is NOT touched here — the bought garment drops off it
     // by being owned, and nothing takes its place until tomorrow.
+    track('shop_buy', { item: id });
     reconcile(buyItemOnServer(slot, rarity, freeMode));
   };
 
@@ -2312,6 +2347,7 @@ export default function App() {
       return next;
     });
     haptic('heavy');
+    track('shop_buy', { item: 'room' });
     reconcile(buyRoomStep(freeMode));
   };
 
@@ -2367,6 +2403,7 @@ export default function App() {
       return next;
     });
     haptic('heavy');
+    track('daily_claim', {});
     reconcile(claimDailyBonus());
   };
 
@@ -2569,6 +2606,8 @@ export default function App() {
           stocks={duel && wantsBoardScreen(perks.ui) ? cfg.stocks : null}
           quirks={perks.ui.showQuirks}
           onReady={() => {
+            // A duel is counted when the server says it began (`duel_start`).
+            if (!duel) track('match_start', { league });
             setScreen('match');
             setCountdown(3);
           }}
@@ -2602,16 +2641,26 @@ export default function App() {
           }}
           onSend={() => {
             const send = linkToShare(duel.link, duel.webLink);
-            if (send) shareInvite(send, t('duel.inviteText'));
+            if (!send) return;
+            track('duel_invite', { via: 'link' });
+            shareInvite(send, t('duel.inviteText'));
           }}
           onCopy={() => {
             const send = linkToShare(duel.link, duel.webLink);
-            return send ? copyText(send) : Promise.resolve(false);
+            if (!send) return Promise.resolve(false);
+            track('duel_invite', { via: 'link' });
+            return copyText(send);
           }}
           // Only when the server said there is a chat to shout into: the button
           // is drawn from whether this prop is here at all.
           onShout={
-            duel.chat && duel.code ? () => shoutInvite(duel.code as string) : undefined
+            duel.chat && duel.code
+              ? async () => {
+                  const shout = await shoutInvite(duel.code as string);
+                  if (shout === 'ok') track('duel_invite', { via: 'chat' });
+                  return shout;
+                }
+              : undefined
           }
           // No button, but a reason for its absence. Only where signing in
           // would actually produce one — see `chatNeedsAccount`.

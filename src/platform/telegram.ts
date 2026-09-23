@@ -9,6 +9,7 @@
  */
 
 import type { Platform } from './index';
+import { onDocumentVisibility } from './visibility';
 
 /** The object the script tag in index.html puts on the window, if it did. */
 function webApp(): any {
@@ -132,5 +133,9 @@ export const TELEGRAM: Platform = {
     // A mini app is opened BY a link, never handed one while it runs; the
     // launch parameter has already said everything there is to say.
     return () => {};
+  },
+
+  onVisibility(listener: (visible: boolean) => void): () => void {
+    return onDocumentVisibility(listener);
   },
 };

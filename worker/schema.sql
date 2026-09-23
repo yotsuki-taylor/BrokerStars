@@ -408,3 +408,53 @@ CREATE TABLE IF NOT EXISTS corp_moves (
   player_id TEXT PRIMARY KEY,
   left_at   INTEGER NOT NULL
 );
+
+-- What the game says about how it is being played: one row per thing that
+-- happened, for counting who came back and where people stop.
+--
+-- THE LIST OF WHAT MAY BE WRITTEN HERE IS `src/analytics/protocol.ts`, and it is
+-- enforced before anything reaches this table: a name not in the catalogue, or
+-- props of any other shape, is dropped on the way in (`worker/src/events.ts`).
+-- Which is why `props` can be JSON without being a hole — it is only ever one of
+-- eleven shapes, and none of them holds a word anybody typed.
+--
+-- WHAT IS NOT HERE, AND MUST NOT BE: an address, a device, an advertising id.
+-- `player_id` is the one link to a person, and it is the same id every other
+-- table keys on, so deleting an account deletes this with it and linking two
+-- accounts moves it with them (`worker/src/link.ts`).
+--
+-- `ts` is the phone's clock, because events wait on the phone while it is
+-- offline -- but pulled into the last 48 hours of the server's, so one phone set
+-- to 2031 cannot invent a cohort. `day` is that time as `dayOf` counts it, the
+-- same UTC day the daily bonus rolls on, stored rather than worked out so every
+-- report can group and index on it.
+--
+-- Kept for ninety days and no longer. Nothing scheduled does the sweeping: each
+-- batch written deletes what has aged out, through the `(name, day)` index,
+-- in the same transaction -- the trick `profiles.daily` and `corp_members.season`
+-- play, and for their reason: a job that runs at night is a job that breaks on
+-- the one night nobody is watching.
+CREATE TABLE IF NOT EXISTS events (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- The event's own name, minted on the phone when it happened. The UNIQUE
+  -- index on it is the whole of what makes sending a batch twice harmless: a
+  -- request whose answer was lost goes again, and the copy is ignored rather
+  -- than counted as a second match in the same session.
+  eid       TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  -- 'telegram' | 'android' | 'web', as the client saw itself
+  host      TEXT NOT NULL CHECK (host IN ('telegram', 'android', 'web')),
+  -- `versionName+versionCode`, out of the bundle; '' when it did not know
+  build     TEXT NOT NULL DEFAULT '',
+  name      TEXT NOT NULL,
+  props     TEXT NOT NULL DEFAULT '{}',
+  day       INTEGER NOT NULL,
+  ts        INTEGER NOT NULL
+);
+
+-- the funnel and the sweep: how many did X on which day
+CREATE INDEX IF NOT EXISTS events_by_name ON events (name, day);
+-- retention and sessions, the delete and the move: one person's days
+CREATE INDEX IF NOT EXISTS events_by_player ON events (player_id, day);
+-- one row per event however many times it was sent; see `eid` above
+CREATE UNIQUE INDEX IF NOT EXISTS events_by_eid ON events (eid);

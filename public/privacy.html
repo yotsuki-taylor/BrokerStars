@@ -67,7 +67,7 @@
 
 <header>
   <h1>Broker Stars</h1>
-  <p class="sub" id="subtitle">Политика конфиденциальности · в силе с 14 сентября 2026 г.</p>
+  <p class="sub" id="subtitle">Политика конфиденциальности · в силе с 23 сентября 2026 г.</p>
   <div class="langs">
     <button type="button" data-lang="ru" aria-pressed="true">Русский</button>
     <button type="button" data-lang="en" aria-pressed="false">English</button>
@@ -109,13 +109,27 @@
   </ul>
   <p class="note">Ничто из перечисленного не является сведениями о вас как о человеке — это счёт в игре.</p>
 
+  <h3>События в игре</h3>
+  <p>Чтобы понимать, возвращаются ли люди в игру и на каком шаге бросают, игра отмечает несколько действий. Полный список:</p>
+  <ul>
+    <li>игра открыта или вы вернулись в неё из фона;</li>
+    <li>показан шаг обучающего тура (какой по счёту);</li>
+    <li>начался и закончился матч с ботом: лига, исход и была ли сдача;</li>
+    <li>вы позвали на дуэль и каким способом (ссылкой, в чате, в ленте корпорации, другу), началась и закончилась дуэль: исход и была ли сдача;</li>
+    <li>вход через Google или связывание аккаунтов по коду;</li>
+    <li>забран ежедневный бонус;</li>
+    <li>куплены акции (какой компании) или вещь в магазине (какая).</li>
+  </ul>
+  <p>С каждым событием записываются ваш игровой идентификатор, время, платформа (Telegram, Android или браузер) и номер сборки игры. Больше ничего: ни текста, который вы вводите, ни IP-адреса, ни модели устройства, ни рекламного идентификатора. Сервер принимает только события из этого списка и отбрасывает всё остальное.</p>
+  <p>Если сети нет, события ждут на устройстве и отправляются позже. На сервере они <strong>хранятся 90 дней</strong> и затем удаляются автоматически.</p>
+
   <h3>Если вы пишете нам через «Обратную связь»</h3>
   <p>В настройках есть кнопка, которая открывает поле для сообщения. Отправив его, вы передаёте нам: <strong>написанный вами текст</strong>, <strong>адрес почты, если вы его указали</strong> (поле необязательное), ваш игровой идентификатор и три технические подробности — на какой платформе открыта игра, какая это сборка и на каком языке вы играете.</p>
   <p><strong>Сообщение не сохраняется в базе данных игры.</strong> Оно передаётся разработчикам и на нашем сервере не остаётся; сохраняется только отметка времени «этот игрок недавно писал», без единого вашего слова, — она нужна, чтобы кнопкой нельзя было завалить канал.</p>
   <p class="note">Сегодня сообщение доставляется разработчикам через Telegram. Пишите только то, что готовы отправить: не указывайте пароли, платёжные данные и сведения о других людях. Если вы не оставили адрес, ответить нам будет некуда.</p>
 
   <h3>Что хранится на вашем устройстве</h3>
-  <p>Игра держит в памяти браузера или приложения копию того же прогресса, выбранный язык и ключ вашей сессии. Это нужно, чтобы игра открывалась быстро и работала без сети. Эти данные никуда не уходят, кроме нашего собственного сервера, и стираются вместе с данными приложения.</p>
+  <p>Игра держит в памяти браузера или приложения копию того же прогресса, выбранный язык, ключ вашей сессии и ещё не отправленные события из списка выше. Это нужно, чтобы игра открывалась быстро и работала без сети. Эти данные никуда не уходят, кроме нашего собственного сервера, и стираются вместе с данными приложения.</p>
 
   <h3>Технические данные</h3>
   <p>Наш сервер работает на Cloudflare. Как и любой сайт, при обращении к нему он получает ваш IP-адрес и сведения о браузере или устройстве. Cloudflare хранит их недолго в служебных журналах — они нужны, чтобы сервер работал и был защищён от нападений. <strong>В базу данных игры они не попадают</strong> и с вашим игровым аккаунтом не связываются.</p>
@@ -130,7 +144,7 @@
     <li>контакты, фотографии, файлы;</li>
     <li>рекламный идентификатор устройства.</li>
   </ul>
-  <p>В игре <strong>нет рекламы</strong> и <strong>нет сторонних систем аналитики и слежения</strong>.</p>
+  <p>В игре <strong>нет рекламы</strong> и <strong>нет сторонних систем аналитики и слежения</strong>. События, описанные выше, игра считает сама: они уходят только на наш сервер в Cloudflare и никому не передаются.</p>
   <p class="note">Android-приложение объявляет доступ в интернет и несколько разрешений, которые приходят вместе с входом через Google: работа с сохранёнными учётными данными и подтверждение отпечатком или лицом. Ими распоряжается система Android, а не мы, — они нужны, только если вы решите войти через Google. Рекламного идентификатора среди них нет.</p>
 </section>
 
@@ -158,8 +172,8 @@
 
 <section>
   <h2>Сколько мы это храним и как удалить</h2>
-  <p>Данные аккаунта хранятся, пока аккаунт существует.</p>
-  <p><strong>Удалить его можно из самой игры:</strong> «Настройки» → удаление аккаунта. Придётся подтвердить действие словом — чтобы такое не случалось по случайному нажатию. Удаляются: сыгранные матчи, строка в таблице лидеров, весь прогресс и покупки, код приглашения, все связи с друзьями.</p>
+  <p>Данные аккаунта хранятся, пока аккаунт существует. События в игре хранятся 90 дней, а при удалении аккаунта удаляются сразу.</p>
+  <p><strong>Удалить его можно из самой игры:</strong> «Настройки» → удаление аккаунта. Придётся подтвердить действие словом — чтобы такое не случалось по случайному нажатию. Удаляются: сыгранные матчи, строка в таблице лидеров, весь прогресс и покупки, код приглашения, все связи с друзьями и все записанные события в игре.</p>
   <p class="note">Честная оговорка: если вы связывали между собой вход через Telegram и вход через Google, служебная запись об этой связи может остаться. Напишите нам, и мы её уберём. Копии базы данных в резервных хранилищах Cloudflare могут содержать удалённые сведения ещё некоторое время, после чего перезаписываются.</p>
   <p>То же самое можно попросить письмом на <a href="mailto:brokerstarsupport@gmail.com">brokerstarsupport@gmail.com</a>.</p>
   <p>Пошаговая инструкция для всех случаев — включая игру гостем и через Telegram, где кнопки удаления в настройках нет, — на <a href="delete-account.html">отдельной странице</a>.</p>
@@ -217,13 +231,27 @@
   </ul>
   <p class="note">None of this is information about you as a person — it is a scorecard.</p>
 
+  <h3>Events in the game</h3>
+  <p>To understand whether people come back to the game and where they give up, the game notes a few actions. This is the complete list:</p>
+  <ul>
+    <li>the game was opened, or you came back to it from the background;</li>
+    <li>a step of the tutorial tour was shown (which one);</li>
+    <li>a match against a bot started and ended: the league, the outcome, and whether you surrendered;</li>
+    <li>you called someone to a duel and how (by link, in the chat, in a corporation's feed, to a friend), and a duel started and ended: the outcome, and whether you surrendered;</li>
+    <li>a sign-in with Google, or accounts linked with a code;</li>
+    <li>the daily bonus was collected;</li>
+    <li>shares were bought (in which company), or an item in the shop (which one).</li>
+  </ul>
+  <p>Each event is recorded with your game identifier, the time, the platform (Telegram, Android or a browser) and the build number of the game. Nothing else: not any text you type, not your IP address, not your device model, not an advertising identifier. The server accepts only the events on this list and discards anything else.</p>
+  <p>Without a connection, events wait on your device and are sent later. On the server they are <strong>kept for 90 days</strong> and then deleted automatically.</p>
+
   <h3>If you write to us through Feedback</h3>
   <p>The settings sheet has a button that opens a box to write in. Sending it hands us: <strong>the text you wrote</strong>, <strong>an email address if you chose to give one</strong> (the field is optional), your game identifier, and three technical details — which platform the game is open on, which build it is, and which language you are reading it in.</p>
   <p><strong>The message is not stored in the game's database.</strong> It is passed to the developers and kept nowhere on our server; the only thing written down is a timestamp saying that this player wrote recently, carrying not one word of yours, and it exists so the button cannot be used to flood the channel.</p>
   <p class="note">Today the message reaches the developers over Telegram. Send only what you are willing to send: no passwords, no payment details, nothing about other people. If you leave no address, there is nowhere for us to answer.</p>
 
   <h3>What stays on your device</h3>
-  <p>The game keeps a copy of that same progress in your browser or app storage, along with your chosen language and your session key, so that it opens quickly and works offline. None of it goes anywhere but our own server, and it is erased when you clear the app's data.</p>
+  <p>The game keeps a copy of that same progress in your browser or app storage, along with your chosen language, your session key and any events from the list above not yet sent, so that it opens quickly and works offline. None of it goes anywhere but our own server, and it is erased when you clear the app's data.</p>
 
   <h3>Technical data</h3>
   <p>Our server runs on Cloudflare. Like any website, it sees your IP address and details of your browser or device when you connect. Cloudflare keeps these briefly in operational logs, which exist so the service runs and can be defended from attack. <strong>They are never written to the game's database</strong> and are not tied to your game account.</p>
@@ -238,7 +266,7 @@
     <li>contacts, photos, or files;</li>
     <li>your device's advertising identifier.</li>
   </ul>
-  <p>There is <strong>no advertising</strong> in the game and <strong>no third-party analytics or tracking</strong>.</p>
+  <p>There is <strong>no advertising</strong> in the game and <strong>no third-party analytics or tracking</strong>. The events described above are counted by the game itself: they go only to our own server on Cloudflare and are shared with nobody.</p>
   <p class="note">The Android app declares internet access and a few permissions that come with Google Sign-In: working with saved credentials, and confirming by fingerprint or face. Those are handled by Android itself rather than by us, and are only used if you choose to sign in with Google. Your advertising identifier is not among them.</p>
 </section>
 
@@ -266,8 +294,8 @@
 
 <section>
   <h2>How long we keep it, and how to delete it</h2>
-  <p>Account data is kept for as long as the account exists.</p>
-  <p><strong>You can delete it from inside the game:</strong> Settings → delete account. You will be asked to confirm by typing a word, so that it cannot happen on a stray tap. This removes your matches, your leaderboard row, all progress and purchases, your invite code, and every friendship.</p>
+  <p>Account data is kept for as long as the account exists. Events in the game are kept for 90 days, and are deleted at once when the account is.</p>
+  <p><strong>You can delete it from inside the game:</strong> Settings → delete account. You will be asked to confirm by typing a word, so that it cannot happen on a stray tap. This removes your matches, your leaderboard row, all progress and purchases, your invite code, every friendship, and every recorded event in the game.</p>
   <p class="note">One honest caveat: if you linked a Telegram sign-in and a Google sign-in together, the internal record of that link may remain. Write to us and we will remove it. Cloudflare's database backups may hold deleted data for a while longer before they are overwritten.</p>
   <p>You can also ask for the same by writing to <a href="mailto:brokerstarsupport@gmail.com">brokerstarsupport@gmail.com</a>.</p>
   <p>Step-by-step instructions for every case — including playing as a guest or through Telegram, where the settings sheet has no delete button — are on a <a href="delete-account.html">page of their own</a>.</p>
@@ -298,8 +326,8 @@
   // Both languages are in the page, so a reader or a reviewer with no
   // JavaScript still sees the whole document rather than half of it.
   var SUB = {
-    ru: 'Политика конфиденциальности · в силе с 14 сентября 2026 г.',
-    en: 'Privacy Policy · effective 14 September 2026'
+    ru: 'Политика конфиденциальности · в силе с 23 сентября 2026 г.',
+    en: 'Privacy Policy · effective 23 September 2026'
   };
   function show(lang) {
     document.getElementById('ru').hidden = lang !== 'ru';
