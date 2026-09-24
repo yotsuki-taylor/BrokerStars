@@ -5,6 +5,17 @@ import { platform } from './platform';
 import './ui/styles.css';
 
 /**
+ * Fetch the game's face before the first frame, so the menu does not open in
+ * the system font and then jump. Capped: a font that is slow to arrive is not
+ * worth a blank screen, and `font-display: swap` fills it in when it lands.
+ */
+function fontReady(): Promise<unknown> {
+  const load = document.fonts?.load("800 16px 'BD Cartoon Shout'") ?? Promise.resolve();
+  const cap = new Promise((resolve) => setTimeout(resolve, 1500));
+  return Promise.race([load.catch(() => undefined), cap]);
+}
+
+/**
  * Let the host arrange itself, then draw.
  *
  * Inside Telegram that is full height and a locked swipe-to-close; in a browser
@@ -14,7 +25,7 @@ import './ui/styles.css';
  * first render, and an invitation that arrives after it is one nobody joins.
  */
 async function start(): Promise<void> {
-  await platform().ready();
+  await Promise.all([platform().ready(), fontReady()]);
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <App />

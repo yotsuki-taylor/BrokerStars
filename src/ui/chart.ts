@@ -14,9 +14,9 @@ export interface ChartOpts {
   peekTicks?: number;
 }
 
+/** The game's face (see the @font-face in styles.css), then the system stack. */
 const FONT_FAMILY =
-  "ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', 'Segoe UI', Roboto, " +
-  "'Trebuchet MS', system-ui, sans-serif";
+  "'BD Cartoon Shout', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif";
 /** Canvas labels carry the same heavy weight the HUD uses. */
 const font = (px: number) => `800 ${px}px ${FONT_FAMILY}`;
 

@@ -1,7 +1,33 @@
-/* System stack only — no font file to ship, license or lose. ui-rounded gives
-   Apple platforms SF Pro Rounded, which suits the cartoon art; everything else
-   falls through to its own UI face. Heavy weights do the work the display font
-   used to do. */
+/* BD Cartoon Shout, shipped with the game. Freeware ("Use however you wish!"
+   in the font's own licence field).
+
+   Its character map is a trap. It claims Cyrillic, Greek, the accented Latin,
+   dashes, arrows, guillemets and the middle dot, but every one of those glyphs
+   is EMPTY — an outline with no contours. A browser trusts the map, draws the
+   empty glyph and never falls back, so Russian text and every "—" came out as
+   blank space. The unicode-range below lists only the glyphs that are actually
+   drawn (plain Latin, digits, most ASCII punctuation, curly quotes, a few
+   symbols); anything outside it goes to the system stack behind it. That means
+   the Russian interface is still set in the system face. Regenerate the range
+   if the file is ever swapped for one that really has Cyrillic.
+
+   Bundled by Vite through a relative url() rather than dropped in public/: the
+   build uses `base: './'`, and an absolute /fonts/... path resolves against the
+   wrong root inside Telegram's webview and the Android app.
+
+   The file has one weight and the whole UI asks for 800. Declaring it for the
+   full 100-900 range makes every weight land on this file instead of having the
+   browser smear a fake bold over already-heavy lettering. */
+
+@font-face {
+  font-family: 'BD Cartoon Shout';
+  src: url('./fonts/bd-cartoon-shout.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+20-5A, U+5C, U+5F, U+61-7A, U+7E, U+A2-A3, U+A5, U+A9, U+AD-AE, U+B0, U+F7,
+    U+37E, U+2018-2019, U+201C-201D, U+2022, U+2122;
+}
 
 :root {
   --ink: #0a1f3c;
@@ -14,6 +40,7 @@
   --neutral: #b9c9df;
   --radius: 12px;
   --outline: 3px;
+  --font: 'BD Cartoon Shout', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif;
 }
 
 * {
@@ -32,7 +59,7 @@ body {
 }
 
 body {
-  font-family: ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', 'Segoe UI', Roboto, 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--white);
@@ -704,7 +731,7 @@ body {
   font-size: 12px;
   line-height: 1.5;
   margin: 6px 0;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .result-chart {
@@ -789,7 +816,7 @@ body {
   z-index: 30;
   padding: 12px;
   overflow: auto;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 12px;
 }
 
@@ -1213,7 +1240,7 @@ a.big-btn {
   font-size: 12px;
   line-height: 1.4;
   margin: 8px 0;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .duel-note.bad {
@@ -3319,7 +3346,7 @@ a.big-btn {
   text-align: center;
   font-size: 12px;
   line-height: 1.4;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .friend-note.good {
@@ -3518,7 +3545,7 @@ a.big-btn {
   font-style: normal;
   font-size: 11px;
   opacity: 0.6;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .profile-chev {
@@ -3591,7 +3618,7 @@ a.big-btn {
   font-size: 12px;
   line-height: 1.45;
   opacity: 0.8;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .corp-search {
@@ -3859,7 +3886,7 @@ a.big-btn {
   font-size: 10px;
   line-height: 1.35;
   opacity: 0.5;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 .corp-field .friend-code-input {
@@ -3905,7 +3932,7 @@ a.big-btn {
   font-size: 11px;
   line-height: 1.4;
   opacity: 0.7;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 /* The two places, side by side, because the two tables reward opposite habits
@@ -3980,7 +4007,7 @@ a.big-btn {
   font-size: 12px;
   line-height: 1.45;
   opacity: 0.6;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 /* ---------- the feed ---------- */
@@ -4168,7 +4195,7 @@ a.big-btn {
   font-size: 10px;
   line-height: 1.45;
   opacity: 0.5;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 /* The table's own row: the leaderboard's grid with the tag spliced in after
@@ -4388,7 +4415,7 @@ a.big-btn {
 
 .bonus-text i {
   font-style: normal;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 11px;
   line-height: 1.35;
   opacity: 0.8;
@@ -4451,7 +4478,7 @@ a.big-btn {
 
 .quest-text i {
   font-style: normal;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 11px;
   opacity: 0.75;
 }
@@ -4919,7 +4946,7 @@ a.big-btn {
 
 .tut-card p {
   margin: 0;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 12.5px;
   line-height: 1.5;
 }
@@ -4964,7 +4991,7 @@ a.big-btn {
 
 .friend-chat p {
   margin: 0 0 8px;
-  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 11.5px;
   line-height: 1.45;
   opacity: 0.8;
