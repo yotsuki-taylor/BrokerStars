@@ -1,6 +1,7 @@
-Copyright (c) 2024 GGBotNet.
-Opsilon. The file opsilon.woff2 is a subset of the original Opsilon.ttf,
-cut down to the characters the game prints and converted to woff2.
+Copyright (c) 2017, Jose Roses (theguybrush.com).
+Lapsus Pro Bold. The file lapsus-pro-bold.woff2 is a subset of the original
+LapsusPro-Bold.otf, cut down to the characters the game prints and
+converted to woff2.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

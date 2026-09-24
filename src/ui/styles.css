@@ -1,39 +1,23 @@
-/* GLIWA sets the game; Opsilon stands behind it for whatever GLIWA lacks.
+/* Lapsus Pro Bold by Jose Roses, under the SIL Open Font License 1.1 (the
+   licence text sits beside the file in fonts/OFL.txt, which the licence asks
+   for). Real Latin and Cyrillic, upper and lower case, Ё included, so both
+   languages are set in it. What it lacks (the arrow, the star) falls through
+   to the system stack behind it.
 
-   GLIWA is capitals only — Latin A-Z, Cyrillic А-Я and Ё, digits and a little
-   punctuation, no lowercase at all — so the body is uppercased (below) and
-   every word lands on its own glyphs rather than half of it falling through.
-   Its character map also claims $ % ( ) / " # ' @ \ ` but those glyphs are
-   EMPTY, and a browser trusts the map and draws blanks instead of falling
-   back. The unicode-range lists only the glyphs it actually draws; the rest
-   go to Opsilon. Regenerate the range if the file is ever replaced.
+   The file here is a woff2 subset of the original OTF: Latin, Latin-1,
+   Cyrillic, general punctuation and a few symbols.
 
-   Opsilon by GGBotNet, SIL Open Font License 1.1 (licence text in
-   fonts/OFL.txt, as it asks). A ~35 KB woff2 subset of the ~570 KB original:
-   Latin, Latin-1, Cyrillic, general punctuation, a few symbols.
+   Bundled by Vite through a relative url() rather than dropped in public/: the
+   build uses `base: './'`, and an absolute /fonts/... path resolves against the
+   wrong root inside Telegram's webview and the Android app.
 
-   Both are bundled by Vite through a relative url() rather than dropped in
-   public/: the build uses `base: './'`, and an absolute /fonts/... path
-   resolves against the wrong root inside Telegram's webview and the Android
-   app.
-
-   Each file has one weight and the whole UI asks for 800. Declaring them for
-   the full 100-900 range makes every weight land on the file instead of having
-   the browser smear a fake bold over it. */
+   The file has one weight and the whole UI asks for 800. Declaring it for the
+   full 100-900 range makes every weight land on this file instead of having the
+   browser smear a fake bold over an already bold face. */
 
 @font-face {
-  font-family: 'GLIWA';
-  src: url('./fonts/gliwa.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+20-21, U+26, U+2A-2E, U+30-3B, U+3F, U+41-5B, U+5D, U+401, U+410-42F,
-    U+2013-2014;
-}
-
-@font-face {
-  font-family: 'Opsilon';
-  src: url('./fonts/opsilon.woff2') format('woff2');
+  font-family: 'Lapsus Pro';
+  src: url('./fonts/lapsus-pro-bold.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -50,7 +34,7 @@
   --neutral: #b9c9df;
   --radius: 12px;
   --outline: 3px;
-  --font: 'GLIWA', 'Opsilon', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --font: 'Lapsus Pro', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif;
 }
 
 * {
@@ -71,8 +55,6 @@ body {
 body {
   font-family: var(--font);
   font-weight: 800;
-  /* GLIWA has no lowercase; see the top of this file */
-  text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--white);
   background: radial-gradient(circle at 50% 38%, #2f9bf2 0%, #0f61c0 45%, #0a3f88 100%);
