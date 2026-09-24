@@ -10,7 +10,7 @@ import './ui/styles.css';
  * worth a blank screen, and `font-display: swap` fills it in when it lands.
  */
 function fontReady(): Promise<unknown> {
-  const load = document.fonts?.load("800 16px 'BD Cartoon Shout'") ?? Promise.resolve();
+  const load = document.fonts?.load("800 16px 'Opsilon'") ?? Promise.resolve();
   const cap = new Promise((resolve) => setTimeout(resolve, 1500));
   return Promise.race([load.catch(() => undefined), cap]);
 }

@@ -1,15 +1,11 @@
-/* BD Cartoon Shout, shipped with the game. Freeware ("Use however you wish!"
-   in the font's own licence field).
+/* Opsilon by GGBotNet, under the SIL Open Font License 1.1 (the licence text
+   sits beside the file in fonts/OFL.txt, which the licence asks for). It has
+   real Latin and Cyrillic, Ё included, so both languages are set in it.
 
-   Its character map is a trap. It claims Cyrillic, Greek, the accented Latin,
-   dashes, arrows, guillemets and the middle dot, but every one of those glyphs
-   is EMPTY — an outline with no contours. A browser trusts the map, draws the
-   empty glyph and never falls back, so Russian text and every "—" came out as
-   blank space. The unicode-range below lists only the glyphs that are actually
-   drawn (plain Latin, digits, most ASCII punctuation, curly quotes, a few
-   symbols); anything outside it goes to the system stack behind it. That means
-   the Russian interface is still set in the system face. Regenerate the range
-   if the file is ever swapped for one that really has Cyrillic.
+   The file here is a subset of the original (~570 KB of TTF, most of it scripts
+   the game never prints) cut down to Latin, Latin-1, Cyrillic, general
+   punctuation and a few symbols, as woff2: about 35 KB. Anything outside that —
+   the star, say — falls through to the system stack behind it.
 
    Bundled by Vite through a relative url() rather than dropped in public/: the
    build uses `base: './'`, and an absolute /fonts/... path resolves against the
@@ -17,16 +13,14 @@
 
    The file has one weight and the whole UI asks for 800. Declaring it for the
    full 100-900 range makes every weight land on this file instead of having the
-   browser smear a fake bold over already-heavy lettering. */
+   browser smear a fake bold over it. */
 
 @font-face {
-  font-family: 'BD Cartoon Shout';
-  src: url('./fonts/bd-cartoon-shout.ttf') format('truetype');
+  font-family: 'Opsilon';
+  src: url('./fonts/opsilon.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+20-5A, U+5C, U+5F, U+61-7A, U+7E, U+A2-A3, U+A5, U+A9, U+AD-AE, U+B0, U+F7,
-    U+37E, U+2018-2019, U+201C-201D, U+2022, U+2122;
 }
 
 :root {
@@ -40,7 +34,7 @@
   --neutral: #b9c9df;
   --radius: 12px;
   --outline: 3px;
-  --font: 'BD Cartoon Shout', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif;
+  --font: 'Opsilon', ui-rounded, 'SF Pro Rounded', 'Segoe UI', Roboto, system-ui, sans-serif;
 }
 
 * {
