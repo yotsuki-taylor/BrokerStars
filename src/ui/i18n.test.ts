@@ -230,6 +230,8 @@ const KEYS = [
   'match.noCash',
   'match.frozen',
   'match.jammed',
+  'match.breaking',
+  'match.headlineSoon',
   'match.takeBack',
   'match.abilityUsed',
   'match.paused',

@@ -123,8 +123,8 @@ export default function BoardScreen({
       <div className="board-list">
         {stocks.map((s) => {
           const c = s as Company;
-          const pinned = prefs.pin === s.id;
-          const banned = prefs.ban === s.id;
+          const pinned = ui.pins > 0 && prefs.pin === s.id;
+          const banned = ui.bans > 0 && prefs.ban === s.id;
           return (
             <div className="board-row" key={s.id} style={{ borderColor: s.color }}>
               <LogoMask file={s.logo} color={s.color} className="board-logo" />
@@ -175,14 +175,15 @@ export default function BoardScreen({
         })}
       </div>
 
-      {(prefs.pin || prefs.ban) && (
+      {/* Only the orders the hat on your head still honours: see the draw in App */}
+      {((ui.pins > 0 && prefs.pin) || (ui.bans > 0 && prefs.ban)) && (
         <div className="board-standing">
-          {prefs.pin && (
+          {ui.pins > 0 && prefs.pin && (
             <span className="pay-chip">
               <Coin size={13} /> {t('board.always', { name: nameOf(prefs.pin, pool) })}
             </span>
           )}
-          {prefs.ban && (
+          {ui.bans > 0 && prefs.ban && (
             <span className="pay-chip">
               <Cross size={13} /> {t('board.never', { name: nameOf(prefs.ban, pool) })}
             </span>

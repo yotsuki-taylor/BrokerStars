@@ -1658,7 +1658,10 @@ export default function App() {
         renderedNews = st.news.length;
         const n = st.news[st.news.length - 1];
         if (n) {
-          setNewsFlash(n.text);
+          // Built here rather than shown as `n.text`: the sim writes its
+          // banner in English, and a duel's arrives from the server the same way
+          const name = st.cfg.stocks[n.stockIdx]?.name;
+          setNewsFlash(name ? t('match.breaking', { name }) : n.text);
           window.setTimeout(() => setNewsFlash(null), 2200);
         }
       }
@@ -1744,7 +1747,14 @@ export default function App() {
         p,
         li,
         perksRef.current.trader,
-        { pin: prefs.pin, ban: prefs.ban, force: forcedRef.current },
+        {
+          // Standing orders are kept in storage for good, but they are the
+          // hat's to give: taken off or sold, the draw stops obeying them, and
+          // put back on, they are there again.
+          pin: perksRef.current.ui.pins > 0 ? prefs.pin : null,
+          ban: perksRef.current.ui.bans > 0 ? prefs.ban : null,
+          force: forcedRef.current,
+        },
         perksRef.current.ui.ability,
         startCashRef.current,
       );
@@ -2581,8 +2591,23 @@ export default function App() {
             setBoardPrefs(next);
             prefsRef.current = next;
             savePrefs(next);
-            // redraw at once, so the standing order is something you can see
-            restart(undefined, undefined, league, null, true);
+            // Redraw at once, so the standing order is something you can see —
+            // but only the slot it changes. Both marks sit on rows of this
+            // board, so a pin is already here and changes nothing, and a ban
+            // swaps out that one company. A full redraw moved every row under
+            // the player's finger, and the next tap could land on a company
+            // they never meant to touch. The replacement goes into the banned
+            // company's own row, so the other two do not even shift.
+            const board = cfg.stocks.map((s) => s.id);
+            if (next.ban && board.includes(next.ban)) {
+              const drawn = pickCompanies(league, new Rng(hashSeed(seed) ^ 0x1b873593), 3, {
+                force: board.filter((id) => id !== next.ban),
+                ban: next.ban,
+              });
+              const fresh = drawn.find((c) => !board.includes(c.id));
+              if (fresh) board[board.indexOf(next.ban)] = fresh.id;
+            }
+            restart(undefined, undefined, league, board, true);
           }}
           onForce={(ids) => {
             restart(undefined, undefined, league, ids, true);
@@ -2998,7 +3023,9 @@ export default function App() {
           {newsFlash ? (
             <div className="news-flash">{newsFlash}</div>
           ) : (
-            warning && <div className="news-flash warning">{warning}: SOMETHING IS COMING</div>
+            warning && (
+              <div className="news-flash warning">{t('match.headlineSoon', { name: warning })}</div>
+            )
           )}
         </div>
       </div>

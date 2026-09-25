@@ -683,6 +683,9 @@ const EN = {
      STATIC is stopping anything new being opened. */
   'match.frozen': 'FROZEN',
   'match.jammed': 'JAMMED',
+  /* The headline banner over the chart, and the headset's warning before it. */
+  'match.breaking': '{name}: BREAKING',
+  'match.headlineSoon': '{name}: SOMETHING IS COMING',
   'match.takeBack': 'TAKE THAT BACK',
   'match.abilityUsed': '{name} · USED',
   // The row where an ability would be, for a trader wearing nothing round the
@@ -1261,6 +1264,8 @@ const RU: Record<Key, string> = {
   'match.noCash': 'НЕТ ДЕНЕГ',
   'match.frozen': 'ЗАМОРОЖЕНО',
   'match.jammed': 'ПОМЕХИ',
+  'match.breaking': '{name}: СРОЧНАЯ НОВОСТЬ',
+  'match.headlineSoon': '{name}: СКОРО НОВОСТЬ',
   'match.takeBack': 'ОТМЕНИТЬ СДЕЛКУ',
   'match.abilityUsed': '{name} · ПОТРАЧЕНО',
   'quest.play-3.name': 'ПРИЙТИ',
@@ -1451,7 +1456,7 @@ const RU_DATA: Record<string, string> = {
   'trait.locked.short': 'ТРЕНД',
   'trait.regulated.short': 'НАДЗОР',
   'trait.bubble.short': 'ПУЗЫРЬ',
-  'trait.stall.short': 'ЗАМИРА',
+  'trait.stall.short': 'ПАУЗЫ',
   'trait.floor.short': 'ПОЛ',
   'trait.moonshot.short': 'ВЫСТРЕЛ',
   'trait.luxury.short': 'ЛЮКС',
