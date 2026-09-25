@@ -581,6 +581,7 @@ export function StockRow({
   hint,
   buyNeedsCash,
   sellNeedsCash,
+  rivalPosition = null,
   onBuy,
   onSell,
 }: {
@@ -604,14 +605,32 @@ export function StockRow({
    */
   buyNeedsCash?: boolean;
   sellNeedsCash?: boolean;
+  /**
+   * What the rival holds here, once DOSSIER has opened their book; null until
+   * it has. Drawn beside the player's own badge, in the rival's red.
+   */
+  rivalPosition?: number | null;
   onBuy: () => void;
   onSell: () => void;
 }) {
   return (
     <div className="row">
-      {position !== 0 && (
-        <div className={`pos-badge ${position > 0 ? 'long' : 'short'}`}>
-          {position > 0 ? `+${position}` : `-${-position}`} {t('match.shares')}
+      {/* Both books side by side on the top edge. The rival's used to hang off
+          the bottom, where it met the next row's own badge in the gap. */}
+      {(position !== 0 || Boolean(rivalPosition)) && (
+        <div className="row-badges">
+          {position !== 0 && (
+            <div className={`pos-badge ${position > 0 ? 'long' : 'short'}`}>
+              {position > 0 ? `+${position}` : `-${-position}`} {t('match.shares')}
+            </div>
+          )}
+          {rivalPosition ? (
+            <div className={`pos-badge rival ${rivalPosition > 0 ? 'long' : 'short'}`}>
+              {t('match.rivalHolds', {
+                n: rivalPosition > 0 ? `+${rivalPosition}` : `-${-rivalPosition}`,
+              })}
+            </div>
+          ) : null}
         </div>
       )}
       {floats.map((f) => (

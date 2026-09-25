@@ -223,6 +223,7 @@ const KEYS = [
   'match.held',
   'match.bust',
   'match.shares',
+  'match.rivalHolds',
   'match.buy',
   'match.sell',
   'match.short',

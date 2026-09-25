@@ -673,6 +673,8 @@ const EN = {
   'match.held': 'HELD',
   'match.bust': 'BUST',
   'match.shares': 'SH',
+  /* What DOSSIER opens: the rival's holding in one company, under its card. */
+  'match.rivalHolds': 'RIVAL {n}',
   'match.buy': 'BUY',
   'match.sell': 'SELL',
   'match.short': 'SHORT',
@@ -1248,6 +1250,7 @@ const RU: Record<Key, string> = {
   'match.held': 'В ПОЗИЦИЯХ',
   'match.bust': 'БАНКРОТ',
   'match.shares': 'ШТ',
+  'match.rivalHolds': 'СОПЕРНИК {n}',
   'match.buy': 'КУПИТЬ',
   'match.sell': 'ПРОДАТЬ',
   'match.short': 'ШОРТ',

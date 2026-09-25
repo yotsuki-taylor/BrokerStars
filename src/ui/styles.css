@@ -510,11 +510,21 @@ body {
   font-size: 10px;
 }
 
-.pos-badge {
+/* The books held in this company, on the row's top edge: the player's own,
+   and beside it the rival's once DOSSIER has opened it. One strip rather than
+   two loose badges, so the pair stays centred and neither lands on the next
+   row down. */
+.row-badges {
   position: absolute;
   top: -8px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.pos-badge {
   border: 2px solid var(--ink);
   border-radius: 7px;
   padding: 0 6px;
@@ -522,7 +532,6 @@ body {
   line-height: 15px;
   background: #0a2c58;
   white-space: nowrap;
-  z-index: 2;
 }
 
 .pos-badge.long {
@@ -531,6 +540,11 @@ body {
 
 .pos-badge.short {
   color: var(--down);
+}
+
+/* dressed in the rival's red so nobody reads it as their own */
+.pos-badge.rival {
+  background: #5a1830;
 }
 
 /* Buy and sell differ by side, shape, label AND colour. The colour used to be

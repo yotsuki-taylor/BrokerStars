@@ -3062,6 +3062,9 @@ export default function App() {
               canSell={live && sellQty < 0}
               buyNeedsCash={live && buyQty === 0}
               sellNeedsCash={live && sellQty === 0}
+              // Read off the mirror in a duel too: the server sends the
+              // rival's book as zeros until DOSSIER opens it (duel/snapshot.ts)
+              rivalPosition={st.abilities.seesBook[HUMAN] ? rival.positions[i] : null}
               floats={floats[i] ?? []}
               kind={
                 perks.ui.showKind
