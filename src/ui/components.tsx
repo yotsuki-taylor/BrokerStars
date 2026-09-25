@@ -625,7 +625,7 @@ export function StockRow({
       ))}
 
       <button
-        className={`trade-btn sell${sellNeedsCash ? ' broke' : ''}`}
+        className={`trade-btn sell${shortSide ? ' short' : ''}${sellNeedsCash ? ' broke' : ''}`}
         onClick={onSell}
         disabled={!canSell}
       >

@@ -533,8 +533,12 @@ body {
   color: var(--down);
 }
 
-/* Buy and sell differ by side, shape and label — never by colour.
-   Colour on this row belongs to the company. */
+/* Buy and sell differ by side, shape, label AND colour. The colour used to be
+   left to the company alone, and playtesters then mixed up SELL and SHORT:
+   they are the same button with a different word on it, and a word is the
+   last thing read in the middle of a match. So BUY is the game's green, SELL
+   its red, and SHORT a violet of its own — a different act, not a stronger
+   sell. */
 .trade-btn {
   border: var(--outline) solid var(--ink);
   font-family: inherit;
@@ -552,13 +556,17 @@ body {
 
 .trade-btn.sell {
   transform: skewX(-9deg);
-  background: linear-gradient(#5b6d88, #35455d);
+  background: linear-gradient(#ff7b7b, #c9373c);
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.trade-btn.sell.short {
+  background: linear-gradient(#b98bff, #6b3fd0);
 }
 
 .trade-btn.buy {
   transform: skewX(9deg);
-  background: linear-gradient(#dfeaf7, #97acc6);
+  background: linear-gradient(#7af09a, #25a94a);
   color: var(--ink);
   text-shadow: none;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
