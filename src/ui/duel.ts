@@ -129,6 +129,22 @@ export const duelCodeIn = (param: string): string | null =>
   param.startsWith('duel_') ? normalizeCode(param.slice(5)) : null;
 
 /**
+ * A duel code out of whatever the player typed into the duel screen.
+ *
+ * Usually the ten letters a friend read out or sent — but just as often the
+ * whole invitation pasted in, because a link that would not open is exactly
+ * why somebody is typing instead of tapping. So every shape the invitation
+ * travels in is accepted: the web `?d=`, the bot's `start=duel_`, and the
+ * app's own `brokerstars://duel/`.
+ */
+export function duelCodeFromText(text: string): string | null {
+  const bare = normalizeCode(text.replace(/[\s-]/g, ''));
+  if (bare) return bare;
+  const m = /(?:[?&]d=|duel_|duel\/)([0-9a-z]{4,32})/i.exec(text);
+  return m ? normalizeCode(m[1]) : null;
+}
+
+/**
  * Which of the two links to hand somebody, and the only place that decides.
  *
  * The server mints both (worker/src/index.ts) because they are good at

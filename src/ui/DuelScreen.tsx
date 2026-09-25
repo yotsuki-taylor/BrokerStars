@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, Cross } from './components';
 import { t } from './i18n';
 import type { DuelError } from '../duel/protocol';
-import type { Shout } from './duel';
+import { duelCodeFromText, type Shout } from './duel';
 
 export type DuelPhase = 'opening' | 'waiting' | 'joining' | 'handover' | 'holding' | 'error';
 
@@ -39,6 +39,7 @@ export default function DuelScreen({
   onCopy,
   onShout,
   shoutNeedsAccount,
+  onJoinCode,
   onBack,
 }: {
   phase: DuelPhase;
@@ -87,6 +88,12 @@ export default function DuelScreen({
    * rather than a silence.
    */
   shoutNeedsAccount?: boolean;
+  /**
+   * Take a friend's duel instead of waiting on this one. Absent where the host
+   * could not sit down at one anyway, and the form is drawn from whether it is
+   * here.
+   */
+  onJoinCode?: (code: string) => void;
   onBack: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -98,6 +105,9 @@ export default function DuelScreen({
    */
   const [shouted, setShouted] = useState<Shout | null>(null);
   const [shouting, setShouting] = useState(false);
+  /** A friend's code, typed or pasted — see `duelCodeFromText`. */
+  const [typed, setTyped] = useState('');
+  const [typedOwn, setTypedOwn] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 500);
@@ -295,6 +305,46 @@ export default function DuelScreen({
       <div className="duel-status">
         {rivalName ? t('duel.rivalIn', { name: rivalName }) : t('duel.waiting')}
       </div>
+
+      {/* The other direction: the friend opened one first and sent the code
+          here. Taking theirs abandons this one, which then simply runs out —
+          nobody else holds its link yet, or they would be sitting in it. Hidden
+          once somebody is: a rival on the socket is a match about to start. */}
+      {onJoinCode && !rivalName && (
+        <>
+          <form
+            className="friend-code-row duel-join"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const theirs = duelCodeFromText(typed);
+              if (!theirs) return;
+              if (theirs === code) {
+                setTypedOwn(true);
+                return;
+              }
+              onJoinCode(theirs);
+            }}
+          >
+            <input
+              className="friend-code-input"
+              value={typed}
+              onChange={(e) => {
+                setTyped(e.target.value.slice(0, 300));
+                setTypedOwn(false);
+              }}
+              placeholder={t('duel.codeHint')}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+            />
+            <button className="menu-btn" type="submit" disabled={!duelCodeFromText(typed)}>
+              {t('duel.join')}
+            </button>
+          </form>
+          {typedOwn && <div className="duel-note bad">{t('duel.ownCode')}</div>}
+        </>
+      )}
 
       <div className="spacer" />
       <button className="big-btn ghost" onClick={onBack}>

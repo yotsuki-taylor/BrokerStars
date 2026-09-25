@@ -1217,6 +1217,11 @@ a.big-btn {
   gap: 8px;
 }
 
+/* A friend's code, under the player's own: the other way the same duel starts. */
+.duel-join {
+  margin: 12px 0 4px;
+}
+
 .duel-status {
   text-align: center;
   font-size: 13px;

@@ -2665,6 +2665,11 @@ export default function App() {
           // No button, but a reason for its absence. Only where signing in
           // would actually produce one — see `chatNeedsAccount`.
           shoutNeedsAccount={duel.chatNeedsAccount === true}
+          // Only from an invitation of our own: anybody who got this far was
+          // allowed to open one, so they are allowed to sit down at one.
+          onJoinCode={
+            duel.phase === 'waiting' ? (code) => connect(code, 'joining', { code }) : undefined
+          }
           onBack={leaveDuel}
         />
       </div>

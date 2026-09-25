@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { appLink, canHandOver, handsOffItself, linkToShare, selfLink } from './duel';
+import {
+  appLink,
+  canHandOver,
+  duelCodeFromText,
+  handsOffItself,
+  linkToShare,
+  selfLink,
+} from './duel';
 
 /**
  * Which link goes to a friend, and it matters more than it looks: a t.me
@@ -185,5 +192,27 @@ describe('rebuilding the invitation from the page it landed on', () => {
   it('answers nothing rather than throwing when there is no address to read', () => {
     delete (globalThis as any).window;
     expect(selfLink('d', 'abc123')).toBe('');
+  });
+});
+
+describe('a friend’s code typed into the duel screen', () => {
+  it('takes the code as it is read out, in any case and with spaces', () => {
+    expect(duelCodeFromText('bcdf234567')).toBe('bcdf234567');
+    expect(duelCodeFromText('  BCDF 2345-67 ')).toBe('bcdf234567');
+  });
+
+  it('takes the whole invitation pasted in, in every shape it travels', () => {
+    expect(duelCodeFromText('https://example.test/BrokerStars/?d=BCDF234567')).toBe('bcdf234567');
+    expect(duelCodeFromText('https://t.me/brokerbot?start=duel_bcdf234567')).toBe('bcdf234567');
+    expect(duelCodeFromText('brokerstars://duel/bcdf234567')).toBe('bcdf234567');
+    expect(duelCodeFromText('Go! https://x.test/?lang=ru&d=bcdf234567 good for 15 min')).toBe(
+      'bcdf234567',
+    );
+  });
+
+  it('refuses what is not a code', () => {
+    expect(duelCodeFromText('')).toBeNull();
+    expect(duelCodeFromText('hello there')).toBeNull();
+    expect(duelCodeFromText('https://example.test/')).toBeNull();
   });
 });
