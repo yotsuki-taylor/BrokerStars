@@ -48,6 +48,11 @@ export interface TraderState {
   exitAt: number[];
   /** bot scratch space: tick until which its idle cash leaves a company alone */
   coolUntil: number[];
+  /**
+   * bot scratch space: tick until which it opens nothing at all, set by a
+   * MARGIN CALL landing on it (see `abilities.ts`)
+   */
+  reopenAt: number;
   /** the terms this trader trades on; bots get NO_PERKS */
   perks: TraderPerks;
   /** what is left of the per-match allowances the perks grant */

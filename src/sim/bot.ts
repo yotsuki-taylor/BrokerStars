@@ -24,6 +24,9 @@ export function botStep(state: MatchState, t: TraderState): void {
 
   maybeFireAbility(state, t);
 
+  // just margin-called: the book is flat, so there is nothing to close either
+  if (state.tick < t.reopenAt) return;
+
   if (bc.mode === 'hold') {
     if (state.tick === 1) {
       for (let s = 0; s < state.stocks.length; s++) {

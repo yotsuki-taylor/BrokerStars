@@ -679,6 +679,10 @@ const EN = {
   'match.sell': 'SELL',
   'match.short': 'SHORT',
   'match.noCash': 'NO CASH',
+  /* Why a trade button is dead when it is not money: HALT froze the company, or
+     STATIC is stopping anything new being opened. */
+  'match.frozen': 'FROZEN',
+  'match.jammed': 'JAMMED',
   'match.takeBack': 'TAKE THAT BACK',
   'match.abilityUsed': '{name} · USED',
   // The row where an ability would be, for a trader wearing nothing round the
@@ -1255,6 +1259,8 @@ const RU: Record<Key, string> = {
   'match.sell': 'ПРОДАТЬ',
   'match.short': 'ШОРТ',
   'match.noCash': 'НЕТ ДЕНЕГ',
+  'match.frozen': 'ЗАМОРОЖЕНО',
+  'match.jammed': 'ПОМЕХИ',
   'match.takeBack': 'ОТМЕНИТЬ СДЕЛКУ',
   'match.abilityUsed': '{name} · ПОТРАЧЕНО',
   'quest.play-3.name': 'ПРИЙТИ',

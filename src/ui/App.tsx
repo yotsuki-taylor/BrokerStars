@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CONFIG, cloneConfig, type Config } from '../sim/config';
 import { TRAIT_SHORT, pickCompanies, type PickOptions } from '../sim/companies';
-import { canUseAbility, isHit, useAbility, type AbilityId } from '../sim/abilities';
+import {
+  canUseAbility,
+  isBlocked,
+  isFrozen,
+  isHit,
+  useAbility,
+  type AbilityId,
+} from '../sim/abilities';
 import { segmentAt } from '../sim/market';
 import { createMatch, resign, step } from '../sim/match';
 import type { TraderPerks } from '../sim/perks';
@@ -3042,6 +3049,8 @@ export default function App() {
         {cfg.stocks.map((s, i) => {
           const price = st.stocks[i].price;
           const short = isShortSide(st, HUMAN, i);
+          const frozen = isFrozen(st, i);
+          const jammed = isBlocked(st, HUMAN);
           const plan = (side: 'buy' | 'sell') =>
             plannedQty(st, { trader: HUMAN, stock: i, side, fraction: TRADE_FRACTION });
           const buyQty = plan('buy');
@@ -3062,6 +3071,11 @@ export default function App() {
               canSell={live && sellQty < 0}
               buyNeedsCash={live && buyQty === 0}
               sellNeedsCash={live && sellQty === 0}
+              // The same two rules `shutOut` in trading.ts applies: a frozen
+              // company is shut both ways, and STATIC only shuts the side that
+              // would open something (buying when not short, selling into one)
+              buyShut={!live ? null : frozen ? 'frozen' : jammed && me.positions[i] >= 0 ? 'jammed' : null}
+              sellShut={!live ? null : frozen ? 'frozen' : jammed && short ? 'jammed' : null}
               // Read off the mirror in a duel too: the server sends the
               // rival's book as zeros until DOSSIER opens it (duel/snapshot.ts)
               rivalPosition={st.abilities.seesBook[HUMAN] ? rival.positions[i] : null}

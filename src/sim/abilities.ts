@@ -49,6 +49,15 @@ const RUMOUR_PER_TICK = 0.012;
 /** How long a trader reads as "just hit" after something lands on them. */
 const HIT_TICKS = 4;
 
+/**
+ * How long a bot sits on its hands after a MARGIN CALL. Without it the call was
+ * a flicker: the bot's queued reactions and its idle-cash sweep bought the
+ * book back inside a second or two, and the player saw the rival's holdings
+ * dip and return. A person in a duel has to tap their way back in, which takes
+ * about this long anyway, so this only brings the bot to the same pace.
+ */
+export const MARGIN_CALL_PAUSE_SECONDS = 4;
+
 export interface AbilityState {
   /** per trader: tick until which they may not OPEN or add to a position */
   blockedUntil: number[];
@@ -153,6 +162,9 @@ export function useAbility(state: MatchState, idx: number): boolean {
         });
       }
       ab.hitUntil[foe.idx] = state.tick + HIT_TICKS;
+      // a bot forgets what it was about to do, and waits (MARGIN_CALL_PAUSE_SECONDS)
+      foe.pending = [];
+      foe.reopenAt = state.tick + ticksFor(state, MARGIN_CALL_PAUSE_SECONDS);
       break;
 
     case 'rumour': {

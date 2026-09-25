@@ -7,6 +7,7 @@ import {
   isBlocked,
   isFrozen,
   isHit,
+  MARGIN_CALL_PAUSE_SECONDS,
   useAbility,
   type AbilityId,
 } from './abilities';
@@ -148,6 +149,32 @@ describe('MARGIN CALL', () => {
     expect(isFrozen(s, 1)).toBe(true);
     useAbility(s, 0);
     expect(s.traders[1].positions[0]).toBe(0);
+  });
+
+  it('keeps a bot out for a few seconds, instead of letting it buy the book straight back', () => {
+    // It used to be back in within one to three ticks, which made the call a
+    // flicker on the rival's card. Several seeds, because a quiet board can
+    // leave a bot out for longer than the pause by itself.
+    let cameBack = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const s = createMatch(seed, CONFIG, {
+        traders: [
+          { name: 'ME', kind: 'human', preset: 'medium', ability: 'margincall' },
+          { name: 'BOT', kind: 'bot', preset: 'rookie', ability: null },
+        ],
+      });
+      while (s.tick < 40) step(s);
+      useAbility(s, 0);
+      const pause = secondsInTicks(s, MARGIN_CALL_PAUSE_SECONDS);
+      for (let i = 0; i < pause - 1; i++) {
+        step(s);
+        expect(s.traders[1].positions.every((p) => p === 0), `seed ${seed}, tick ${i}`).toBe(true);
+      }
+      for (let i = 0; i < 20; i++) step(s);
+      if (s.traders[1].positions.some((p) => p !== 0)) cameBack++;
+    }
+    // a pause, not a ban: the bot does get back into the match
+    expect(cameBack).toBeGreaterThan(0);
   });
 
   it('does nothing at all to an empty book', () => {

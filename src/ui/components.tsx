@@ -568,6 +568,11 @@ export interface FloatPnl {
   good: boolean;
 }
 
+/** Why an ability has closed one side of a row: see `buyShut` below. */
+export type Shut = 'frozen' | 'jammed' | null;
+
+const SHUT_LABEL = { frozen: 'match.frozen', jammed: 'match.jammed' } as const;
+
 export function StockRow({
   stock,
   price,
@@ -581,6 +586,8 @@ export function StockRow({
   hint,
   buyNeedsCash,
   sellNeedsCash,
+  buyShut = null,
+  sellShut = null,
   rivalPosition = null,
   onBuy,
   onSell,
@@ -605,6 +612,14 @@ export function StockRow({
    */
   buyNeedsCash?: boolean;
   sellNeedsCash?: boolean;
+  /**
+   * An ability, not money, is what stops this side: HALT has frozen the
+   * company, or STATIC is keeping the player from opening anything. Wins over
+   * the two above — a planned size of nothing looks like an empty wallet from
+   * the arithmetic's side, and NO CASH over 6 000 in cash is a lie.
+   */
+  buyShut?: Shut;
+  sellShut?: Shut;
   /**
    * What the rival holds here, once DOSSIER has opened their book; null until
    * it has. Drawn beside the player's own badge, in the rival's red.
@@ -644,12 +659,18 @@ export function StockRow({
       ))}
 
       <button
-        className={`trade-btn sell${shortSide ? ' short' : ''}${sellNeedsCash ? ' broke' : ''}`}
+        className={`trade-btn sell${shortSide ? ' short' : ''}${sellShut || sellNeedsCash ? ' broke' : ''}`}
         onClick={onSell}
         disabled={!canSell}
       >
         <span>
-          {sellNeedsCash ? t('match.noCash') : shortSide ? t('match.short') : t('match.sell')}
+          {sellShut
+            ? t(SHUT_LABEL[sellShut])
+            : sellNeedsCash
+              ? t('match.noCash')
+              : shortSide
+                ? t('match.short')
+                : t('match.sell')}
         </span>
       </button>
 
@@ -677,11 +698,13 @@ export function StockRow({
       </div>
 
       <button
-        className={`trade-btn buy${buyNeedsCash ? ' broke' : ''}`}
+        className={`trade-btn buy${buyShut || buyNeedsCash ? ' broke' : ''}`}
         onClick={onBuy}
         disabled={!canBuy}
       >
-        <span>{buyNeedsCash ? t('match.noCash') : t('match.buy')}</span>
+        <span>
+          {buyShut ? t(SHUT_LABEL[buyShut]) : buyNeedsCash ? t('match.noCash') : t('match.buy')}
+        </span>
       </button>
     </div>
   );
