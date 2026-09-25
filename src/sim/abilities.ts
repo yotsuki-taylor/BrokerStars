@@ -43,8 +43,14 @@ export const ABILITIES: Record<AbilityId, AbilitySpec> = {
  * order. What walks it back afterwards is the company's own mean reversion,
  * on its own schedule, which is why the ability is worth having and why it
  * still cannot be sat on: the push stops the moment the six seconds are up.
+ *
+ * Small, because it compounds: each tick's push is added to what is left of
+ * the last (`decayPerTick` takes only 15% off), so the move accelerates. At
+ * 0.012 the median rumour was +49% in six seconds and a price could all but
+ * double; at 0.004 it is about +16% by the end of the six, peaking a little
+ * after — a clear line on the chart, not the match decided in one tap.
  */
-const RUMOUR_PER_TICK = 0.012;
+const RUMOUR_PER_TICK = 0.004;
 
 /** How long a trader reads as "just hit" after something lands on them. */
 const HIT_TICKS = 4;
