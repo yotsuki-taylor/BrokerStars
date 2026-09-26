@@ -10,6 +10,7 @@
 import { tr } from './i18n';
 import { read, write } from './store';
 import type { RewardTable } from './progress';
+import { RARITIES, type Rarity } from './wardrobe';
 
 export interface League {
   id: string;
@@ -26,7 +27,17 @@ export interface League {
    */
   winsToNext: number;
   reward: RewardTable;
+  /**
+   * What the bot wears round its neck here, in percent, bare first and then
+   * common up to legend. The neck is the ability slot (`ui/perks.ts`), so this
+   * is the odds of the bot bringing each ability: none, STATIC, HALT, DOSSIER,
+   * MARGIN CALL, RUMOUR. Each row sums to 100.
+   */
+  rivalNeck: NeckOdds;
 }
+
+/** Six weights: bare, then common, uncommon, rare, mythic, legend. */
+export type NeckOdds = readonly [number, number, number, number, number, number];
 
 /**
  * The numbers come off 300-match headless runs (see README). What matters to
@@ -43,6 +54,8 @@ export const LEAGUES: League[] = [
     blurb: 'Trades late, small, and panics out. Finishes about where it started.',
     winsToNext: 3,
     reward: { win: 3, draw: 1, profit: 2 },
+    //         bare common uncommon rare mythic legend
+    rivalNeck: [75, 20, 5, 0, 0, 0],
   },
   {
     id: 'silver',
@@ -52,6 +65,8 @@ export const LEAGUES: League[] = [
     blurb: 'Only takes the moves nobody could miss, and sits on them too long.',
     winsToNext: 5,
     reward: { win: 5, draw: 2, profit: 3 },
+    //         bare common uncommon rare mythic legend
+    rivalNeck: [50, 30, 15, 5, 0, 0],
   },
   {
     id: 'gold',
@@ -61,6 +76,8 @@ export const LEAGUES: League[] = [
     blurb: 'Reacts inside a second and takes a trade off once the move is done.',
     winsToNext: 7,
     reward: { win: 8, draw: 3, profit: 4 },
+    //         bare common uncommon rare mythic legend
+    rivalNeck: [30, 25, 25, 15, 5, 0],
   },
   {
     id: 'global',
@@ -70,6 +87,8 @@ export const LEAGUES: League[] = [
     blurb: 'Catches almost every trend and sizes up on it. Ends near 16k.',
     winsToNext: 10,
     reward: { win: 12, draw: 4, profit: 6 },
+    //         bare common uncommon rare mythic legend
+    rivalNeck: [15, 15, 25, 25, 15, 5],
   },
   {
     id: 'crown',
@@ -79,6 +98,8 @@ export const LEAGUES: League[] = [
     blurb: 'Reads the tape before you do. Beat it and you nearly doubled the book.',
     winsToNext: 0,
     reward: { win: 18, draw: 6, profit: 9 },
+    //         bare common uncommon rare mythic legend
+    rivalNeck: [5, 10, 15, 30, 25, 15],
   },
 ];
 
@@ -90,6 +111,20 @@ export const LEAGUE_COUNT = LEAGUES.length;
  */
 export const leagueName = (l: League): string => tr(`league.${l.id}.name`, l.name);
 export const leagueBlurb = (l: League): string => tr(`league.${l.id}.blurb`, l.blurb);
+
+/**
+ * The bot's neck for one match in this league, or null for a bare one. `rand`
+ * is the match's own stream, so replaying a seed brings back the same ability.
+ */
+export function rollRivalNeck(league: number, rand: () => number): Rarity | null {
+  const odds = LEAGUES[Math.max(0, Math.min(league, LEAGUE_COUNT - 1))].rivalNeck;
+  let roll = rand() * odds.reduce((sum, w) => sum + w, 0);
+  for (let i = 0; i < odds.length; i++) {
+    roll -= odds[i];
+    if (roll < 0) return i === 0 ? null : RARITIES[i - 1];
+  }
+  return null;
+}
 
 /** Index of the league a bot preset belongs to, or -1 for the dev-only presets. */
 export function leagueOfPreset(preset: string): number {

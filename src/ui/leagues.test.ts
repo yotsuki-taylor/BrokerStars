@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../sim/config';
-import { LEAGUES, leagueOfPreset, unlockedCount, winsOwed } from './leagues';
+import { LEAGUES, leagueOfPreset, rollRivalNeck, unlockedCount, winsOwed } from './leagues';
+import { Rng } from '../sim/rng';
+import { RARITIES } from './wardrobe';
 
 const noWins = () => LEAGUES.map(() => 0);
 
@@ -57,5 +59,33 @@ describe('unlocking', () => {
 
   it('owes nothing for a league that is already open', () => {
     expect(winsOwed(0, noWins())).toBe(0);
+  });
+});
+
+describe("the rival's neck", () => {
+  it('has odds that add up to a hundred in every league', () => {
+    for (const l of LEAGUES) expect(l.rivalNeck.reduce((a, b) => a + b, 0)).toBe(100);
+  });
+
+  it('lands on each rung about as often as the table says', () => {
+    const N = 20_000;
+    LEAGUES.forEach((l, li) => {
+      const rng = new Rng(1234 + li);
+      const seen = [0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < N; i++) {
+        const neck = rollRivalNeck(li, () => rng.next());
+        seen[neck === null ? 0 : RARITIES.indexOf(neck) + 1]++;
+      }
+      l.rivalNeck.forEach((pct, i) => {
+        // a rung at zero never comes up at all; the rest within a point and a half
+        if (pct === 0) expect(seen[i]).toBe(0);
+        else expect(Math.abs((100 * seen[i]) / N - pct)).toBeLessThan(1.5);
+      });
+    });
+  });
+
+  it('reads a bare neck at the bottom of the roll and a legend at the top', () => {
+    expect(rollRivalNeck(4, () => 0)).toBeNull();
+    expect(rollRivalNeck(4, () => 0.9999)).toBe('legend');
   });
 });

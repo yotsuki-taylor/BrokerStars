@@ -157,6 +157,7 @@ import {
   LEAGUES,
   leagueName,
   loadPick,
+  rollRivalNeck,
   loadWins,
   savePick,
   saveWins,
@@ -299,23 +300,43 @@ function makeMatch(
   ability: AbilityId | null,
   /** the player's own opening book: the standard one plus their office */
   startCash: number,
+  /** what the bot's neck brings, from `rivalKit` */
+  rivalAbility: AbilityId | null,
 ): MatchState {
   const h = hashSeed(seed);
   return createMatch(h, cfg, {
     traders: [
       { name: playerName(), kind: 'human', preset: 'medium', perks, ability, startCash },
-      // The rival brings the same one. Anything else moves the ladder: the
-      // league win rates were measured with neither side holding an ability,
-      // and handing one to the player alone quietly makes every rung easier.
+      // The rival brings its own, off the neck it drew for this league
+      // (`rivalNeck` in ui/leagues.ts), and not a copy of the player's.
       //
       // It does NOT bring an office, and that asymmetry is the point: the bot
       // always sits down with the flat `startingCash`, so the renovation is
       // felt as a head start rather than cancelled out by a rival who renovated
       // too. The clothes are the same bargain and always have been.
-      { name: t('match.rival'), kind: 'bot', preset, ability },
+      { name: t('match.rival'), kind: 'bot', preset, ability: rivalAbility },
     ],
     stocks: pickCompanies(league, new Rng(h ^ 0x1b873593), 3, board),
   });
+}
+
+/**
+ * The bot's clothes for one match, and the ability its neck brings.
+ *
+ * Both are seeded off the match, so replaying a seed brings back the same
+ * opponent. The neck is rolled on a stream of its own: everything else it
+ * wears is the look it always had for that seed, and only the neck now answers
+ * to the league.
+ */
+function rivalKit(seed: string, league: number): { outfit: Outfit; ability: AbilityId | null } {
+  const look = new Rng(hashSeed(seed) ^ 0x5bd1e995);
+  const outfit = randomOutfit(() => look.next());
+  const roll = new Rng(hashSeed(seed) ^ 0x27d4eb2f);
+  const neck = rollRivalNeck(league, () => roll.next());
+  if (neck) outfit.neck = neck;
+  else delete outfit.neck;
+  // the neck is read the same way as the player's, so the two cannot disagree
+  return { outfit, ability: perksFor(outfit, 0).ui.ability };
 }
 
 /**
@@ -1159,6 +1180,7 @@ export default function App() {
     else heldRef.current[league] = seedOrNull;
     saveHeld(heldRef.current);
   };
+  const [firstRival] = useState(() => rivalKit(seed, league));
   const stateRef = useRef<MatchState>(
     makeMatch(
       baseCfg.current,
@@ -1169,6 +1191,7 @@ export default function App() {
       {},
       perks.ui.ability,
       startCash,
+      firstRival.ability,
     ),
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1258,7 +1281,7 @@ export default function App() {
   /** the last thing the server said about this player, for the shelf to draw */
   const [profile, setProfile] = useState<Profile | null>(null);
   const [freeMode, setFreeMode] = useState(loadFreeMode);
-  const [rivalOutfit, setRivalOutfit] = useState<Outfit>(() => randomOutfit(Math.random));
+  const [rivalOutfit, setRivalOutfit] = useState<Outfit>(firstRival.outfit);
   /** 3, 2, 1 before the first tick; the match is frozen while it runs */
   const [countdown, setCountdown] = useState<number | null>(null);
   const admin = isAdmin();
@@ -1778,6 +1801,7 @@ export default function App() {
       if (force !== undefined) forcedRef.current = force;
       if (!keepRerolls) setRerollsLeft(perksRef.current.ui.rerolls);
       const prefs = prefsRef.current;
+      const rival = rivalKit(s, li);
       const match = makeMatch(
         baseCfg.current,
         s,
@@ -1794,11 +1818,10 @@ export default function App() {
         },
         perksRef.current.ui.ability,
         startCashRef.current,
+        rival.ability,
       );
       stateRef.current = match;
-      // seeded off the match, so replaying a seed brings back the same opponent
-      const look = new Rng(hashSeed(s) ^ 0x5bd1e995);
-      setRivalOutfit(randomOutfit(() => look.next()));
+      setRivalOutfit(rival.outfit);
       progressRef.current = 0;
       awarded.current = false;
       setAward(null);
