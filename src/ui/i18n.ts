@@ -196,6 +196,8 @@ const EN = {
   'settings.help': 'HOW TO PLAY',
   'settings.tutorial': 'WATCH THE TUTORIAL',
   'settings.language': 'LANGUAGE',
+  'settings.soundOn': 'SOUND: ON',
+  'settings.soundOff': 'SOUND: OFF',
   'settings.account': 'ACCOUNT',
   'settings.feedback': 'FEEDBACK',
 
@@ -855,6 +857,8 @@ const RU: Record<Key, string> = {
   'settings.help': 'СПРАВКА',
   'settings.tutorial': 'ПОСМОТРЕТЬ ТУТОРИАЛ',
   'settings.language': 'ЯЗЫК',
+  'settings.soundOn': 'ЗВУК: ВКЛ',
+  'settings.soundOff': 'ЗВУК: ВЫКЛ',
   'settings.account': 'АККАУНТ',
   'settings.feedback': 'ОБРАТНАЯ СВЯЗЬ',
   'feedback.lead':

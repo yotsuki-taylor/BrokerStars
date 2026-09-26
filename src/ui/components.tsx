@@ -553,6 +553,7 @@ export function AbilityBar({
         className={`ability-btn${spent ? ' spent' : ''}`}
         onClick={onUse}
         disabled={!ready}
+        data-sfx="skill"
       >
         {spent ? t('match.abilityUsed', { name }) : name}
       </button>
@@ -662,6 +663,7 @@ export function StockRow({
         className={`trade-btn sell${shortSide ? ' short' : ''}${sellShut || sellNeedsCash ? ' broke' : ''}`}
         onClick={onSell}
         disabled={!canSell}
+        data-sfx={shortSide ? 'short' : 'sell'}
       >
         <span>
           {sellShut
@@ -701,6 +703,7 @@ export function StockRow({
         className={`trade-btn buy${buyShut || buyNeedsCash ? ' broke' : ''}`}
         onClick={onBuy}
         disabled={!canBuy}
+        data-sfx="buy"
       >
         <span>
           {buyShut ? t(SHUT_LABEL[buyShut]) : buyNeedsCash ? t('match.noCash') : t('match.buy')}

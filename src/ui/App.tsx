@@ -147,6 +147,7 @@ import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../d
 import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
+import { SFX_KEY, playSfx, setSfxMuted, sfxMuted } from './sfx';
 import { wipe } from './store';
 import { advance, progressOf, startLine, type Line } from './line';
 import { ensureGuest, guestName } from './guest';
@@ -716,7 +717,7 @@ function AccountPanel({
     // What the deleted account did and has not sent yet goes with it, rather
     // than up under whoever this phone becomes next.
     forgetEvents();
-    wipe([LANG_KEY]);
+    wipe([LANG_KEY, SFX_KEY]);
     setGone(true);
   }
 
@@ -981,6 +982,32 @@ function FeedbackPanel({ onOwnFooter, onDone }: { onOwnFooter: (own: boolean) =>
   );
 }
 
+/**
+ * Sound on or off, in the settings and on the pause screen. It says what the
+ * sound IS rather than what the tap will do, like every other switch a phone has.
+ *
+ * `data-sfx="none"` because the document's click listener runs before this
+ * handler. Left to it, turning sound off would click and turning it on would
+ * not. This way it is the other way round, which is the useful way: switching
+ * on answers with the sound that has just come back.
+ */
+function SoundToggle({ className = 'big-btn ghost' }: { className?: string }) {
+  const [on, setOn] = useState(() => !sfxMuted());
+  return (
+    <button
+      className={className}
+      data-sfx="none"
+      onClick={() => {
+        setSfxMuted(on);
+        setOn(!on);
+        if (!on) playSfx('click');
+      }}
+    >
+      {t(on ? 'settings.soundOn' : 'settings.soundOff')}
+    </button>
+  );
+}
+
 function SettingsOverlay({
   onHelp,
   onTutorial,
@@ -1042,6 +1069,7 @@ function SettingsOverlay({
           <button className="big-btn ghost" onClick={() => setView('lang')}>
             {t('settings.language')}
           </button>
+          <SoundToggle />
           {/* Signing in, or linking, or both. */}
           {hasAccount && (
             <button className="big-btn ghost" onClick={() => setView('account')}>
@@ -1490,6 +1518,7 @@ export default function App() {
     let watched: MatchState | null = null;
     let renderedTick = -1;
     let renderedNews = 0;
+    let rivalSpent = false;
 
     const frame = (now: number) => {
       const dt = Math.min(now - last, 250);
@@ -1503,6 +1532,8 @@ export default function App() {
         watched = st;
         renderedTick = -1;
         renderedNews = st.news.length;
+        // as found, so a duel rejoined after the rival's move does not replay it
+        rivalSpent = st.traders[1 - HUMAN].abilityUsed;
         acc = 0;
       }
 
@@ -1662,9 +1693,15 @@ export default function App() {
           // banner in English, and a duel's arrives from the server the same way
           const name = st.cfg.stocks[n.stockIdx]?.name;
           setNewsFlash(name ? t('match.breaking', { name }) : n.text);
+          playSfx('news');
           window.setTimeout(() => setNewsFlash(null), 2200);
         }
       }
+      // The bot's ability here, and a duel's from the mirror the server keeps
+      // up to date: either way the rival's seat turns spent, and that is the moment.
+      const spent = st.traders[1 - HUMAN].abilityUsed;
+      if (spent && !rivalSpent) playSfx('skill_opponent');
+      rivalSpent = spent;
       if (st.tick !== renderedTick) {
         renderedTick = st.tick;
         setVersion((v) => v + 1);
@@ -2922,6 +2959,7 @@ export default function App() {
               DEV · OPEN PANEL
             </button>
           )}
+          <SoundToggle className="big-btn ghost wide" />
           <div className="result-actions">
             <button className="big-btn ghost" onClick={giveUp}>
               {t('match.surrender')}
@@ -3177,6 +3215,7 @@ export default function App() {
               DEV · OPEN PANEL
             </button>
           )}
+          <SoundToggle className="big-btn ghost wide" />
           <div className="result-actions">
             <button className="big-btn ghost" onClick={giveUp}>
               {t('match.surrender')}

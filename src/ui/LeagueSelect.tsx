@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Lock, Coin, tex } from './components';
+import { playSfx } from './sfx';
 import { t } from './i18n';
 import { LEAGUES, leagueBlurb, leagueName, unlockedCount, winsOwed } from './leagues';
 
@@ -69,6 +70,8 @@ export default function LeagueSelect({
     if (best !== centerRef.current) {
       centerRef.current = best;
       setCenter(best);
+      // once per card that passes the middle, so a long fling sounds as long
+      playSfx('swish');
     }
   }, []);
 

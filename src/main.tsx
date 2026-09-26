@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App';
 import { platform } from './platform';
+import { installSfx } from './ui/sfx';
 import './ui/styles.css';
 
 /**
@@ -25,6 +26,7 @@ function fontReady(): Promise<unknown> {
  * first render, and an invitation that arrives after it is one nobody joins.
  */
 async function start(): Promise<void> {
+  installSfx();
   await Promise.all([platform().ready(), fontReady()]);
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

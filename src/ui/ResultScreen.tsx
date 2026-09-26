@@ -4,6 +4,7 @@ import { Coin, money, signed } from './components';
 import type { MatchState } from '../sim/types';
 import { t as tt } from './i18n';
 import { REWARDS, type Award } from './progress';
+import { playSfx } from './sfx';
 
 export default function ResultScreen({
   state,
@@ -28,6 +29,18 @@ export default function ResultScreen({
   useEffect(() => {
     if (ref.current) drawNetWorthChart(ref.current, state);
   }, [state]);
+
+  // Once, when the window opens. A draw is neither, so it stays quiet; giving up
+  // and going bankrupt are losses, and sound like one.
+  const won = state.winner === humanIdx && state.resigned !== humanIdx;
+  const drew = state.winner === null && state.resigned === null;
+  // The ref keeps StrictMode's second mount from playing it twice.
+  const sounded = useRef(false);
+  useEffect(() => {
+    if (sounded.current || drew) return;
+    sounded.current = true;
+    playSfx(won ? 'success' : 'fail');
+  }, [drew, won]);
 
   const me = state.traders[humanIdx];
   const rival = state.traders[1 - humanIdx];
