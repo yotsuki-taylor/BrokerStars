@@ -147,7 +147,10 @@ import type { DuelCall, DuelError, DuelProfile, DuelTick, ServerMsg } from '../d
 import { LINK_CODE_LENGTH, cleanLinkCode, type LinkState } from '../link/protocol';
 import { loadHeld, loadPrefs, saveHeld, savePrefs, type BoardPrefs } from './board';
 import { LANGS, LANG_KEY, LANG_NAME, lang, setLang, t, tr, type Lang } from './i18n';
-import { SFX_KEY, playSfx, setSfxMuted, sfxMuted } from './sfx';
+import { SFX_KEY, musicAt, playSfx, setSfxMuted, sfxMuted, stopMusic } from './sfx';
+
+/** Length of the battle track, OST1: the match's eighty seconds. */
+const MATCH_TRACK_S = 80;
 import { wipe } from './store';
 import { advance, progressOf, startLine, type Line } from './line';
 import { ensureGuest, guestName } from './guest';
@@ -1320,7 +1323,7 @@ export default function App() {
   winsRef.current = leagueWins;
 
   // latest UI values for the animation loop, which is created only once
-  const ui = useRef({ speed, showTruth, paused: false, peekTicks: 0 });
+  const ui = useRef({ speed, showTruth, paused: false, onBoard: false, peekTicks: 0 });
   ui.current.speed = speed;
   ui.current.showTruth = showTruth;
   ui.current.peekTicks = perks.ui.truthTicks;
@@ -1332,6 +1335,9 @@ export default function App() {
     tourOpen ||
     countdown !== null ||
     screen !== 'match';
+  // A duel does not stop for an open menu, so its music does not either: only
+  // the countdown and leaving the board silence it.
+  ui.current.onBoard = countdown === null && screen === 'match';
 
   /* ------------------------------------------------------------ the profile */
 
@@ -1595,6 +1601,16 @@ export default function App() {
         }
         progressRef.current = st.finished ? 1 : acc / tickMs;
       }
+
+      // The track is as long as the match and speeds up for its last quarter,
+      // so it is placed by the match clock rather than left to run. A duel's
+      // `progress` can dip below zero (see above); the floor in `musicAt`
+      // takes that.
+      const live = duelRef.current ? ui.current.onBoard : !ui.current.paused;
+      if (live && !st.finished && st.totalTicks > 0) {
+        const through = (st.tick + progressRef.current) / st.totalTicks;
+        musicAt('OST1', through * MATCH_TRACK_S);
+      } else stopMusic();
 
       if (canvasRef.current) {
         drawChart(canvasRef.current, st, {

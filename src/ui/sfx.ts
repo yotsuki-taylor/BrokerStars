@@ -1,5 +1,6 @@
 /**
- * The game's sound effects: ten short files in `public/sounds/`.
+ * The game's sound effects, ten short files in `public/sounds/`, and the
+ * battle music beside them.
  *
  * Web Audio rather than `<audio>` elements. An `<audio>` on a phone starts late
  * enough to hear, and a tap sound that lands after the finger has lifted reads
@@ -13,6 +14,8 @@
  * BUY makes no sound. Only the sounds that are not a tap (the news, the result
  * screen, the league shelf) call `playSfx` directly.
  */
+
+import { platform } from '../platform';
 
 export type Sfx =
   | 'buy'
@@ -40,7 +43,7 @@ const ALL: readonly Sfx[] = [
 ];
 
 let ctx: AudioContext | null = null;
-const buffers = new Map<Sfx, AudioBuffer>();
+const buffers = new Map<string, AudioBuffer>();
 
 const isSfx = (s: string | undefined): s is Sfx => ALL.includes(s as Sfx);
 
@@ -62,6 +65,8 @@ export const sfxMuted = (): boolean => muted;
 
 export function setSfxMuted(next: boolean): void {
   muted = next;
+  // the match loop starts it again on its next frame, from where the match is
+  if (next) stopMusic();
   try {
     globalThis.localStorage?.setItem(SFX_KEY, next ? 'off' : 'on');
   } catch {
@@ -79,7 +84,61 @@ export function playSfx(name: Sfx): void {
   src.start();
 }
 
-async function load(audio: AudioContext, name: Sfx): Promise<void> {
+/* ------------------------------------------------------------------ music */
+
+/**
+ * The battle track. Eighty seconds, like a match, and written to speed up in
+ * its last quarter, so it is only right if it stays level with the clock.
+ */
+export type Music = 'OST1';
+const MUSIC: readonly Music[] = ['OST1'];
+
+/** Under the effects: a tap has to be heard over the track, never the other way. */
+const MUSIC_GAIN = 0.35;
+/** How far the track may drift from where it should be before it is moved. */
+const MUSIC_SLACK_S = 1;
+
+let track: { name: Music; src: AudioBufferSourceNode; startedAt: number } | null = null;
+
+/**
+ * Keep `name` playing at `seconds` into the track. Called every frame while it
+ * should be heard, so it only acts when there is something to fix: nothing is
+ * playing, a different track is, or this one has drifted by more than the
+ * slack, which is what a pause, a lagging duel or a phone put away leave behind.
+ */
+export function musicAt(name: Music, seconds: number): void {
+  const buffer = buffers.get(name);
+  if (muted || !ctx || !buffer || ctx.state !== 'running') return;
+  const at = Math.max(0, seconds);
+  if (at >= buffer.duration) {
+    stopMusic();
+    return;
+  }
+  if (track && track.name === name) {
+    const heard = ctx.currentTime - track.startedAt;
+    if (Math.abs(heard - at) < MUSIC_SLACK_S) return;
+  }
+  stopMusic();
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.value = MUSIC_GAIN;
+  src.connect(gain).connect(ctx.destination);
+  src.start(0, at);
+  track = { name, src, startedAt: ctx.currentTime - at };
+}
+
+export function stopMusic(): void {
+  if (!track) return;
+  try {
+    track.src.stop();
+  } catch {
+    /* already ended */
+  }
+  track = null;
+}
+
+async function load(audio: AudioContext, name: string): Promise<void> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}sounds/${name}.mp3`);
     if (!res.ok) return;
@@ -101,6 +160,18 @@ export function installSfx(): void {
   const audio = new AC();
   ctx = audio;
   for (const name of ALL) void load(audio, name);
+  for (const name of MUSIC) void load(audio, name);
+
+  // Put away, the page keeps playing unless it is told not to: a WebView in
+  // the background is still a page. The track is picked up again, at the
+  // match's time and not the moment it stopped, by the next frame.
+  platform().onVisibility((visible) => {
+    if (visible) void audio.resume().catch(() => undefined);
+    else {
+      stopMusic();
+      void audio.suspend().catch(() => undefined);
+    }
+  });
 
   const wake = () => {
     if (audio.state === 'suspended') void audio.resume().catch(() => undefined);
