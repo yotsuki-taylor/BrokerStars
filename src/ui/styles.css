@@ -5035,3 +5035,44 @@ a.big-btn {
   opacity: 0.65;
   cursor: default;
 }
+
+/* ---------- a corporation from the table ---------- */
+
+/* A row in the corporation table opens a card, so it says so under a finger. */
+.rating-line.tappable {
+  cursor: pointer;
+}
+
+.rating-line.tappable:active {
+  filter: brightness(1.15);
+}
+
+/* The card over the table: the confirm sheet's dim and centring, with one
+   bordered card in the middle of it so the tap outside has somewhere to land. */
+.corp-popup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 18px 16px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: linear-gradient(#123f78, #0a2c58);
+}
+
+.corp-popup-card .menu-btn {
+  align-self: stretch;
+  margin-top: 4px;
+}
+
+.corp-mark.huge {
+  width: 72px;
+  height: 72px;
+}
+
+.corp-popup-card .stat {
+  align-self: stretch;
+}

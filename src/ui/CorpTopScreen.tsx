@@ -45,9 +45,31 @@ function Notice({ line }: { line: string }) {
   );
 }
 
-function Line({ row, metric, mine }: { row: CorpSummary; metric: Metric; mine: boolean }) {
+function Line({
+  row,
+  metric,
+  mine,
+  onOpen,
+}: {
+  row: CorpSummary;
+  metric: Metric;
+  mine: boolean;
+  /** Opens the card over the table — see `CorpPopup`. */
+  onOpen: (row: CorpSummary) => void;
+}) {
   return (
-    <div className={`rating-line corp-top-line${mine ? ' you' : ''}`}>
+    <div
+      className={`rating-line corp-top-line tappable${mine ? ' you' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(row)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(row);
+        }
+      }}
+    >
       <span className="rating-rank">{row.rank}</span>
       {/* The mark before the tag, so a corporation is recognised down the
           column by its colour before anybody reads a word of it. */}
@@ -66,6 +88,37 @@ function Line({ row, metric, mine }: { row: CorpSummary; metric: Metric; mine: b
 }
 
 /**
+ * Who a row is, over the table: the mark, the tag and name, the motto and how
+ * many traders it has.
+ *
+ * Read-only on purpose. The table is for looking, and joining lives on the
+ * corporations screen where the card also says what joining costs. Everything
+ * here came down with the row, so opening it asks the server nothing.
+ */
+function CorpPopup({ row, onClose }: { row: CorpSummary; onClose: () => void }) {
+  return (
+    <div className="overlay confirm corp-popup" onClick={onClose}>
+      {/* Taps inside the card stay inside it; a tap on the dimmed rest closes. */}
+      <div className="corp-popup-card" onClick={(e) => e.stopPropagation()}>
+        <LogoMask file={emblemById(row.emblem).file} color={row.color} className="corp-mark huge" />
+        <div className="corp-head-name">
+          <span className="corp-tag big">{row.tag}</span>
+          <b>{row.name}</b>
+        </div>
+        {row.motto && <i className="corp-motto">{row.motto}</i>}
+        <div className="stat">
+          <b>{t('corp.membersOf', { n: row.members, max: MAX_MEMBERS })}</b>
+          <span>{t('corp.cardTraders')}</span>
+        </div>
+        <button className="menu-btn" onClick={onClose}>
+          {t('common.back')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * One tab's table.
  *
  * Fetched on mount and never again, exactly like the player boards: the two
@@ -75,6 +128,7 @@ function Line({ row, metric, mine }: { row: CorpSummary; metric: Metric; mine: b
 function Table({ metric, mine }: { metric: Metric; mine: string | null }) {
   const [state, setState] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [board, setBoard] = useState<CorpBoard | null>(null);
+  const [open, setOpen] = useState<CorpSummary | null>(null);
 
   useEffect(() => {
     if (!boardConfigured()) {
@@ -111,7 +165,7 @@ function Table({ metric, mine }: { metric: Metric; mine: string | null }) {
       </div>
       <div className="rating-rows">
         {board.top.map((row) => (
-          <Line key={row.id} row={row} metric={metric} mine={row.id === mine} />
+          <Line key={row.id} row={row} metric={metric} mine={row.id === mine} onOpen={setOpen} />
         ))}
         {/* Somebody whose corporation placed outside the page still wants to
             know where it stands — the same courtesy the player boards extend,
@@ -119,11 +173,12 @@ function Table({ metric, mine }: { metric: Metric; mine: string | null }) {
         {board.me && (
           <>
             <div className="rating-gap">···</div>
-            <Line row={board.me} metric={metric} mine />
+            <Line row={board.me} metric={metric} mine onOpen={setOpen} />
           </>
         )}
       </div>
       <p className="corp-foot">{t('corp.topWhy')}</p>
+      {open && <CorpPopup row={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }
