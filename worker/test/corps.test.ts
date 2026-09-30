@@ -623,6 +623,20 @@ describe('the table', () => {
     expect(rows.find((r) => r.name === 'REAL')!.coinAverage).toBe(10);
   });
 
+  it('names the owner on every row, and the next one once the founder has left', async () => {
+    const { env } = db();
+    const id = await team(env, 'HEAD', 'HD', 2, 10);
+
+    const { top } = await corps.table(env, 'coins', 10, null, MAY);
+    expect(top.find((c) => c.id === id)!.ownerName).toBe('HEAD-0');
+    const listed = await corps.browse(env, '', 25, MAY);
+    expect(listed.find((c) => c.id === id)!.ownerName).toBe('HEAD-0');
+
+    await corps.leave(env, who('HEAD-0'), MAY);
+    const after = await corps.browse(env, '', 25, MAY);
+    expect(after.find((c) => c.id === id)!.ownerName).toBe('HEAD-1');
+  });
+
   it('carries both averages, whichever table the row came out of', async () => {
     const { env } = db();
     const id = await team(env, 'BOTH', 'BO', MIN_RANKED, 30);

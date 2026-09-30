@@ -5073,6 +5073,29 @@ a.big-btn {
   height: 72px;
 }
 
-.corp-popup-card .stat {
+.corp-popup-card .profile-stats {
   align-self: stretch;
+  padding: 0;
+}
+
+/* `.overlay.confirm p` would otherwise make the note as loud as a question. */
+.overlay.confirm .corp-popup-card p.corp-foot {
+  margin: 0;
+  max-width: none;
+  font-size: 10px;
+  opacity: 0.5;
+  text-align: center;
+}
+
+/* Who runs it: the label quiet, the name read. */
+.corp-popup-owner {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.corp-popup-owner span {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
 }

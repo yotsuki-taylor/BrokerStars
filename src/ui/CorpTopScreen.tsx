@@ -88,8 +88,8 @@ function Line({
 }
 
 /**
- * Who a row is, over the table: the mark, the tag and name, the motto and how
- * many traders it has.
+ * Who a row is, over the table: the mark, the tag and name, the motto, who
+ * owns it, how many traders it has and what they average in each table.
  *
  * Read-only on purpose. The table is for looking, and joining lives on the
  * corporations screen where the card also says what joining costs. Everything
@@ -106,10 +106,30 @@ function CorpPopup({ row, onClose }: { row: CorpSummary; onClose: () => void }) 
           <b>{row.name}</b>
         </div>
         {row.motto && <i className="corp-motto">{row.motto}</i>}
-        <div className="stat">
-          <b>{t('corp.membersOf', { n: row.members, max: MAX_MEMBERS })}</b>
-          <span>{t('corp.cardTraders')}</span>
+        {row.ownerName && (
+          <div className="corp-popup-owner">
+            <span>{t('corp.owner')}</span> <b>{row.ownerName}</b>
+          </div>
+        )}
+        <div className="profile-stats">
+          <div className="stat">
+            <b>{t('corp.membersOf', { n: row.members, max: MAX_MEMBERS })}</b>
+            <span>{t('corp.cardTraders')}</span>
+          </div>
+          <div className="stat">
+            <b>
+              <Coin size={13} /> {row.coinAverage}
+            </b>
+            <span>{t('corp.cardCoins')}</span>
+          </div>
+          <div className="stat">
+            <b>
+              <Dollar size={13} /> {money(row.dollarAverage)}
+            </b>
+            <span>{t('corp.cardDollars')}</span>
+          </div>
         </div>
+        <p className="corp-foot">{t('corp.cardAverage')}</p>
         <button className="menu-btn" onClick={onClose}>
           {t('common.back')}
         </button>

@@ -218,6 +218,12 @@ export interface CorpSummary {
    */
   coinAverage: number;
   dollarAverage: number;
+  /**
+   * Who runs it now, by their live name. The owner rather than whoever founded
+   * it: the seat passes on when the founder leaves, and the founder is not
+   * kept anywhere once it has.
+   */
+  ownerName: string;
 }
 
 /** Somebody waiting at the door of a closed corporation. */
@@ -566,6 +572,7 @@ export function cleanSummary(raw: unknown): CorpSummary | null {
     average: num(r?.average),
     coinAverage: num(r?.coinAverage),
     dollarAverage: num(r?.dollarAverage),
+    ownerName: str(r?.ownerName, 24),
   };
 }
 

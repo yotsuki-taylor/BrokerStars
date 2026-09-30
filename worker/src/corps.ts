@@ -121,6 +121,20 @@ interface FeedRow {
 const CORP_COLUMNS = `id, name, tag, motto, emblem, color, policy, owner_id, code,
                       members, created_at, renamed_at, updated_at`;
 
+/**
+ * The owner's name, as a column a listing can select beside `CORP_COLUMNS`.
+ *
+ * The live name from `players` first and the name stored on joining second —
+ * the same order `membersOf` reads them in. One indexed lookup per row, and
+ * the rows are a page of the table or of the listing, so it stays small.
+ */
+const OWNER_NAME = `(SELECT COALESCE(p.name, m.name)
+                       FROM corp_members m
+                       LEFT JOIN players p ON p.id = m.player_id
+                      WHERE m.player_id = corps.owner_id) AS owner_name`;
+
+type ListedRow = CorpRow & { owner_name: string | null };
+
 /* -------------------------------------------------------------- the reads */
 
 /** Which corporation this player is in, or null. One indexed lookup. */
@@ -329,10 +343,10 @@ export async function table(
 
   const marks = [...wanted].map((_, i) => `?${i + 1}`).join(', ');
   const { results } = await env.DB.prepare(
-    `SELECT ${CORP_COLUMNS} FROM corps WHERE id IN (${marks})`,
+    `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps WHERE id IN (${marks})`,
   )
     .bind(...wanted)
-    .all<CorpRow>();
+    .all<ListedRow>();
 
   const byId = new Map((results ?? []).map((r) => [r.id, r]));
   const summary = (id: string): CorpSummary | null => {
@@ -354,6 +368,7 @@ export async function table(
       average: at.average,
       coinAverage: metric === 'coins' ? here.average(id) : other.average(id),
       dollarAverage: metric === 'dollars' ? here.average(id) : other.average(id),
+      ownerName: row.owner_name || 'PLAYER',
     };
   };
 
@@ -505,13 +520,14 @@ export async function browse(
   // somebody opens the screen with an empty search box, which is everybody.
   const { results } = await env.DB.prepare(
     wanted
-      ? `SELECT ${CORP_COLUMNS} FROM corps
+      ? `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps
           WHERE name LIKE ?1 OR tag LIKE ?1
           ORDER BY members DESC, created_at ASC LIMIT ?2`
-      : `SELECT ${CORP_COLUMNS} FROM corps ORDER BY members DESC, created_at ASC LIMIT ?1`,
+      : `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps
+          ORDER BY members DESC, created_at ASC LIMIT ?1`,
   )
     .bind(...(wanted ? [like, limit] : [limit]))
-    .all<CorpRow>();
+    .all<ListedRow>();
 
   /**
    * Both tables, not one. The dollar ranking is read here so that a row can be
@@ -540,6 +556,7 @@ export async function browse(
       average: at?.average ?? 0,
       coinAverage: inCoins.average(row.id),
       dollarAverage: inDollars.average(row.id),
+      ownerName: row.owner_name || 'PLAYER',
     };
   });
 }
