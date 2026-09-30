@@ -22,7 +22,8 @@
  * day plays in `src/daily/protocol.ts`, and for the same reason.
  *
  * THE TABLE RANKS AVERAGES. Not sums. `averageOf` says why at length; the SQL
- * below is where it actually happens, and the `HAVING` is the floor under it.
+ * below is where it actually happens. Every corporation with a member in it is
+ * placed, however small (`MIN_RANKED`).
  *
  * Nothing in here is ever allowed to fail a match. `credit` and `note` run
  * beside a result being banked and swallow everything: a corporation that did
@@ -72,8 +73,7 @@ function mint(length: number): string {
  *
  * The same kind of bound `SCAN_LIMIT` puts on the dollar board and for the same
  * reason: an ORDER BY over a GROUP BY is not free, and nobody is reading past
- * the first screen of it. A corporation outside this many is simply unranked,
- * which is the same answer a corporation of two gets.
+ * the first screen of it. A corporation outside this many is simply unranked.
  */
 const RANK_SCAN = 300;
 
@@ -236,11 +236,9 @@ async function rankRows(
   /**
    * How many traders a corporation needs before it appears here at all.
    *
-   * `MIN_RANKED` for a table, because that is what being IN one means. But an
-   * average exists below the floor too — a corporation of two earns what it
-   * earns — and a card that showed it as zero would be saying it earned
-   * nothing rather than that it is not placed. So the card asks with a floor of
-   * one and takes the ranks from the same rows, filtered (`averagesAndPlaces`).
+   * `MIN_RANKED` for a table, because that is what being IN one means. The card
+   * asks with a floor of one and takes the ranks from the same rows, filtered
+   * (`averagesAndPlaces`), so the two agree even if the floor is ever raised.
    */
   floor: number = MIN_RANKED,
 ): Promise<RankRow[]> {
@@ -289,9 +287,7 @@ const placings = (rows: RankRow[]): Map<string, Placed> => {
  *
  * The rows come back with no floor under them and the places are numbered over
  * the ones that clear `MIN_RANKED`, which is the same order the floor would
- * have produced because the order does not depend on who was left out. What it
- * buys is the half that used to be missing: a corporation of two has an average
- * and now says so, instead of reporting a zero that reads as a bad month.
+ * have produced because the order does not depend on who was left out.
  */
 async function averagesAndPlaces(
   env: Env,

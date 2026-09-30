@@ -27,7 +27,6 @@ import { t } from './i18n';
 import {
   FEED_POLL_MS,
   MAX_MEMBERS,
-  MIN_RANKED,
   NAME_MAX,
   NAME_MIN,
   TAG_MAX,
@@ -1175,9 +1174,9 @@ export default function CorpScreen({
         </button>
       )}
 
-      {/* The floor under the table, said once where somebody is looking at
-          their own place in it. */}
-      <p className="corp-foot">{t('corp.topWhy', { min: MIN_RANKED })}</p>
+      {/* How the table ranks, said once where somebody is looking at their
+          own place in it. */}
+      <p className="corp-foot">{t('corp.topWhy')}</p>
     </div>
   );
 }

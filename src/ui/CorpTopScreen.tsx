@@ -3,7 +3,7 @@ import { Coin, Dollar, LogoMask, Lock, money } from './components';
 import { emblemById } from '../corp/emblems';
 import { boardConfigured, fetchCorpTop, type CorpBoard } from './api';
 import { t } from './i18n';
-import { MAX_MEMBERS, MIN_RANKED, type CorpSummary, type Metric } from '../corp/protocol';
+import { MAX_MEMBERS, type CorpSummary, type Metric } from '../corp/protocol';
 
 /**
  * The table of corporations, under two tabs, and the two things about it worth
@@ -102,7 +102,7 @@ function Table({ metric, mine }: { metric: Metric; mine: string | null }) {
   if (state === 'offline') {
     return <Notice line={boardConfigured() ? t('corp.offline') : t('corp.noServer')} />;
   }
-  if (!board?.top.length) return <Notice line={t('corp.topEmpty', { min: MIN_RANKED })} />;
+  if (!board?.top.length) return <Notice line={t('corp.topEmpty')} />;
 
   return (
     <div className="rating-board">
@@ -123,7 +123,7 @@ function Table({ metric, mine }: { metric: Metric; mine: string | null }) {
           </>
         )}
       </div>
-      <p className="corp-foot">{t('corp.topWhy', { min: MIN_RANKED })}</p>
+      <p className="corp-foot">{t('corp.topWhy')}</p>
     </div>
   );
 }
