@@ -585,16 +585,17 @@ describe("collecting a quest", () => {
     const out = claimQuest(finished(), first.id, NOON);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.granted).toBe(first.coins);
+    expect(out.coins).toBe(first.coins);
     expect(out.held.daily.taken).toEqual([first.id]);
   });
 
-  it('pays into granted, so the leaderboard never sees it', () => {
-    // the board ranks coins EARNED from matches; two players with the same
-    // match record must not be separated by who tapped a button
+  it('pays onto the board rather than into granted', () => {
+    // the coins count on the leaderboard, so they travel as `coins` for
+    // `write` to put on `players.stars`; the balance picks them up from there
     const out = claimQuest(finished(), first.id, NOON);
     if (!out.ok) return;
-    expect(balance(out.held, 10)).toBe(10 + first.coins);
+    expect(out.held.granted).toBe(0);
+    expect(balance(out.held, 10 + first.coins)).toBe(10 + first.coins);
   });
 
   it('refuses a quest that is not finished', () => {
@@ -681,9 +682,9 @@ describe('a match counted against the day', () => {
       expect(out.ok).toBe(true);
       if (!out.ok) return;
       held = out.held;
-      paid += q.coins;
+      paid += out.coins ?? 0;
     }
-    expect(held.granted).toBe(paid);
+    expect(paid).toBe(done.reduce((sum, q) => sum + q.coins, 0));
     for (const q of done) expect(claimQuest(held, q.id, NOON).ok).toBe(false);
   });
 
@@ -704,7 +705,7 @@ describe('a match counted against the day', () => {
     const out = claimQuest(held, quest.id, day.at);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.held.granted).toBe(quest.coins);
+    expect(out.coins).toBe(quest.coins);
   });
 
   it('does not let a bot match finish a duel quest', () => {

@@ -237,6 +237,13 @@ export type Bought =
        * this file.
        */
       dollars?: number;
+      /**
+       * Coins this change EARNED on the board: added to `players.stars` in the
+       * same transaction as the row is written (`write`), so the leaderboard
+       * and the balance both see them or neither does. Only a collected quest
+       * sets it; a match reaches the board through `results.ts` instead.
+       */
+      coins?: number;
     }
   | { ok: false; error: string };
 
@@ -423,17 +430,18 @@ export function claimBonus(h: Held, now: number, salt: string): Bought {
 /**
  * A finished quest, cashed in for its coins.
  *
- * WHY `granted` AND NOT THE BOARD. `players.stars` — the column kept its old
- * name — is what the leaderboard
- * ranks on, and it is a running total of what matches paid. A quest reward is
- * not that. Two players with identical match records should not be separated in
- * the table by which of them remembered to tap a button — the board is a
- * ranking of how well people play, and a daily is a reward for doing the
- * rounds. So the coins land in `granted`, which is where every coin that did
- * not come out of a match already goes, and they are spendable in the shop
- * exactly like any other. It keeps `players.stars` a pure sum of the `results`
- * table as well, which is what the replay check will one day want to verify
- * against.
+ * ON THE BOARD, NOT IN `granted`. `players.stars` — the column kept its old
+ * name — is what the leaderboard ranks on, and a quest's coins count there
+ * like a match's do: doing the day's rounds is part of playing, and the
+ * corporation's season counts them too (`daily` in index.ts). So they are
+ * handed back as `coins` rather than added to `granted`, and `write` puts
+ * them on `players.stars` in the same transaction as the `taken` list that
+ * stops them being paid twice. The balance comes out the same either way —
+ * it is earned plus granted minus spent — so they are spendable in the shop
+ * exactly like any other coin.
+ *
+ * What it costs: `players.stars` is no longer a pure sum of the `results`
+ * table. A replay check will have to add the quests back in.
  *
  * Three refusals, all of them checked here rather than trusted from the body:
  * a quest today was not dealt, a quest that is not finished, and one that has
@@ -451,9 +459,9 @@ export function claimQuest(h: Held, id: string, now: number): Bought {
     ok: true,
     held: {
       ...h,
-      granted: h.granted + quest.coins,
       daily: { ...daily, taken: [...daily.taken, id] },
     },
+    coins: quest.coins,
   };
 }
 
@@ -739,6 +747,11 @@ export async function write(
   h: Held,
   /** the version this change was worked out from, or null for a row that had none */
   version: number | null,
+  /**
+   * Coins to put on the board with it (`Bought.coins`), and the name a board
+   * row is opened under if this player has none yet.
+   */
+  board: { coins: number; name: string } = { coins: 0, name: '' },
 ): Promise<boolean> {
   const now = Date.now();
   const owned = JSON.stringify(h.owned);
@@ -750,7 +763,7 @@ export async function write(
   const portfolio = JSON.stringify(h.portfolio);
   const daily = JSON.stringify(h.daily);
 
-  const res =
+  const profile =
     version === null
       ? // A row that was not there. If one appeared in the meantime this does
         // nothing, and the caller starts again knowing about it.
@@ -765,7 +778,6 @@ export async function write(
             id, h.room, owned, outfit, offer, wins, awards, seen,
             h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now,
           )
-          .run()
       : await env.DB.prepare(
           `UPDATE profiles
               SET room       = ?2,
@@ -788,8 +800,40 @@ export async function write(
           .bind(
             id, h.room, owned, outfit, offer, wins, awards, seen,
             h.duelWins, h.streak, h.spent, h.granted, h.dollars, portfolio, daily, now, version,
-          )
-          .run();
+          );
+
+  if (board.coins <= 0) {
+    const res = await profile.run();
+    return (res.meta?.changes ?? 0) > 0;
+  }
+
+  /**
+   * Coins for the board as well: one transaction, the board first, and on the
+   * same condition the profile's write is on — so the two land together or
+   * not at all. Checked BEFORE the profile is written because that write moves
+   * `updated_at`, and the condition is the version it moves from. Inside the
+   * transaction nothing else can move it in between, so the condition is true
+   * for both statements or false for both.
+   *
+   * An upsert because a board row is opened by the first match and a quest
+   * could, in principle, be the first thing a player finishes. It opens with
+   * `matches = 0`, which keeps it off the board until a match is played, and
+   * `updated_at = 0`, which leaves the between-matches cooldown alone.
+   */
+  // `?5` only when there is a version to name: D1 refuses a statement bound
+  // with more values than it uses.
+  const same =
+    version === null
+      ? `NOT EXISTS (SELECT 1 FROM profiles WHERE id = ?1)`
+      : `EXISTS (SELECT 1 FROM profiles WHERE id = ?1 AND updated_at = ?5)`;
+  const values: unknown[] = [id, board.name || 'PLAYER', board.coins, now];
+  if (version !== null) values.push(version);
+  const onBoard = env.DB.prepare(
+    `INSERT INTO players (id, name, stars, first_seen, updated_at)
+     SELECT ?1, ?2, ?3, ?4, 0 WHERE ${same}
+     ON CONFLICT (id) DO UPDATE SET stars = stars + excluded.stars`,
+  ).bind(...values);
+  const [, res] = (await env.DB.batch([onBoard, profile])) as { meta?: { changes?: number } }[];
 
   return (res.meta?.changes ?? 0) > 0;
 }
@@ -867,6 +911,8 @@ export interface Applied {
   gained?: string[];
   /** dollars this change earned at the share counter; absent on every other */
   dollars?: number;
+  /** coins this change put on the board — a collected quest; absent on every other */
+  coins?: number;
 }
 
 /** A change, worked out against the row as it stands at the moment it is read. */
@@ -944,7 +990,8 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
     // fifth slot filled in the shop is DRESSED before the screen redraws.
     const settled = afterChange(out.held, at, Date.now());
 
-    if (await write(env, caller.id, settled, stored?.version ?? null)) {
+    const coins = out.coins ?? 0;
+    if (await write(env, caller.id, settled, stored?.version ?? null, { coins, name: caller.name })) {
       // Only once the write actually landed. An award worked out against a row
       // that then lost the race was never earned by anything, and telling
       // thirty people about it would be telling them about a change that was
@@ -953,7 +1000,17 @@ export async function change(env: Env, caller: Caller, apply: Change): Promise<A
       // What this change earned at the counter, carried out for the same
       // reason `gained` is: the caller that reports it to other people should
       // not have to work it out again from two profiles.
-      return { held: settled, earned, at, gained, dollars: out.dollars };
+      //
+      // `earned` is what the board says now, which includes any coins this
+      // very write put there — otherwise the balance sent back would lag them.
+      return {
+        held: settled,
+        earned: earned + coins,
+        at,
+        gained,
+        dollars: out.dollars,
+        ...(coins ? { coins } : {}),
+      };
     }
     last = { held, earned, at };
   }
