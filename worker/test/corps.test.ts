@@ -598,33 +598,43 @@ describe('the table', () => {
     expect(top[0].id).toBe(small);
   });
 
-  it('keeps a corporation of one prodigy out of it', async () => {
+  it('puts a corporation of one or two in the table like any other', async () => {
     const { env } = db();
-    await team(env, 'SOLO', 'SO', MIN_RANKED - 1, 10_000);
-    await team(env, 'REAL', 'RE', MIN_RANKED, 10);
+    const solo = await team(env, 'SOLO', 'SO', 1, 10_000);
+    await team(env, 'PAIR', 'PA', 2, 500);
+    await team(env, 'REAL', 'RE', 3, 10);
 
     const { top } = await corps.table(env, 'coins', 10, null, MAY);
-    expect(top.map((c) => c.name)).toEqual(['REAL']);
+    expect(top.map((c) => c.name)).toEqual(['SOLO', 'PAIR', 'REAL']);
+    expect(top[0].id).toBe(solo);
+    expect(top[0].average).toBe(10_000);
   });
 
-  /**
-   * Out of the TABLE is not the same as earning nothing, and the card a browsed
-   * row opens has to be able to tell them apart: it prints the average, and a
-   * zero there would say a corporation had a bad month rather than that it is
-   * too small to be placed.
-   */
-  it('still knows what a corporation below the floor averages', async () => {
+  it('gives a small corporation a place on the card a browsed row opens', async () => {
     const { env } = db();
-    await team(env, 'SOLO', 'SO', MIN_RANKED - 1, 10_000);
-    await team(env, 'REAL', 'RE', MIN_RANKED, 10);
+    await team(env, 'SOLO', 'SO', 1, 10_000);
+    await team(env, 'REAL', 'RE', 3, 10);
 
     const rows = await corps.browse(env, '', 25, MAY);
     const solo = rows.find((r) => r.name === 'SOLO')!;
-    expect(solo.rank).toBeNull();
+    expect(solo.rank).toBe(1);
     expect(solo.coinAverage).toBe(10_000);
-
-    // and the placed one agrees with the table it is placed in
+    expect(rows.find((r) => r.name === 'REAL')!.rank).toBe(2);
     expect(rows.find((r) => r.name === 'REAL')!.coinAverage).toBe(10);
+  });
+
+  it('names the owner on every row, and the next one once the founder has left', async () => {
+    const { env } = db();
+    const id = await team(env, 'HEAD', 'HD', 2, 10);
+
+    const { top } = await corps.table(env, 'coins', 10, null, MAY);
+    expect(top.find((c) => c.id === id)!.ownerName).toBe('HEAD-0');
+    const listed = await corps.browse(env, '', 25, MAY);
+    expect(listed.find((c) => c.id === id)!.ownerName).toBe('HEAD-0');
+
+    await corps.leave(env, who('HEAD-0'), MAY);
+    const after = await corps.browse(env, '', 25, MAY);
+    expect(after.find((c) => c.id === id)!.ownerName).toBe('HEAD-1');
   });
 
   it('carries both averages, whichever table the row came out of', async () => {

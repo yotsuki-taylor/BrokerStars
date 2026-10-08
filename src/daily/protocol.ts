@@ -138,8 +138,9 @@ export const QUESTS_A_DAY = 3;
  * doing the rounds is worth the taps, not so much that the shop is better
  * reached by turning up than by playing.
  *
- * Quest coins are `granted`, not earned: see `claimQuest` in
- * `worker/src/profile.ts` for why the leaderboard does not see them.
+ * Quest coins are EARNED: they go on the leaderboard and into a corporation's
+ * coin season like a match's coins do — see `claimQuest` in
+ * `worker/src/profile.ts`.
  */
 export const QUESTS: Quest[] = [
   { id: 'play-3', counts: 'matches', goal: 3, coins: 2 },

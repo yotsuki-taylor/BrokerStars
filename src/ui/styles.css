@@ -5035,3 +5035,67 @@ a.big-btn {
   opacity: 0.65;
   cursor: default;
 }
+
+/* ---------- a corporation from the table ---------- */
+
+/* A row in the corporation table opens a card, so it says so under a finger. */
+.rating-line.tappable {
+  cursor: pointer;
+}
+
+.rating-line.tappable:active {
+  filter: brightness(1.15);
+}
+
+/* The card over the table: the confirm sheet's dim and centring, with one
+   bordered card in the middle of it so the tap outside has somewhere to land. */
+.corp-popup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 18px 16px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: linear-gradient(#123f78, #0a2c58);
+}
+
+.corp-popup-card .menu-btn {
+  align-self: stretch;
+  margin-top: 4px;
+}
+
+.corp-mark.huge {
+  width: 72px;
+  height: 72px;
+}
+
+.corp-popup-card .profile-stats {
+  align-self: stretch;
+  padding: 0;
+}
+
+/* `.overlay.confirm p` would otherwise make the note as loud as a question. */
+.overlay.confirm .corp-popup-card p.corp-foot {
+  margin: 0;
+  max-width: none;
+  font-size: 10px;
+  opacity: 0.5;
+  text-align: center;
+}
+
+/* Who runs it: the label quiet, the name read. */
+.corp-popup-owner {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.corp-popup-owner span {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+}

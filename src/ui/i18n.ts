@@ -633,9 +633,9 @@ const EN = {
      thing about this table somebody will otherwise get wrong. */
   'corp.headCoins': 'COINS PER TRADER THIS MONTH',
   'corp.headDollars': 'DOLLARS PER TRADER THIS MONTH',
-  'corp.topEmpty': 'No corporation has {min} traders in it yet. Found one.',
+  'corp.topEmpty': 'No corporations yet. Found one.',
   'corp.topWhy':
-    'The average, not the total — a corporation of thirty does not beat one of five by being thirty. Under {min} traders it is not in the table. Earned dollars only: nothing bought counts.',
+    'The average, not the total — a corporation of thirty does not beat one of five by being thirty. Earned dollars only: nothing bought counts.',
 
   // What can go wrong, in the one sentence the screen draws.
   'corp.err.nosuch': 'THERE IS NO CORPORATION BY THAT NAME.',
@@ -1220,9 +1220,9 @@ const RU: Record<Key, string> = {
   'corp.tabDollars': 'ДОЛЛАРЫ',
   'corp.headCoins': 'МОНЕТ НА ТРЕЙДЕРА ЗА МЕСЯЦ',
   'corp.headDollars': 'ДОЛЛАРОВ НА ТРЕЙДЕРА ЗА МЕСЯЦ',
-  'corp.topEmpty': 'Ни в одной корпорации ещё нет {min} трейдеров. Основай свою.',
+  'corp.topEmpty': 'Корпораций ещё нет. Основай свою.',
   'corp.topWhy':
-    'Среднее, а не сумма: корпорация из тридцати не обгоняет корпорацию из пяти тем, что их тридцать. Меньше {min} трейдеров — в таблицу не попадает. Доллары считаются только заработанные: купленное не в счёт.',
+    'Среднее, а не сумма: корпорация из тридцати не обгоняет корпорацию из пяти тем, что их тридцать. Доллары считаются только заработанные: купленное не в счёт.',
 
   'corp.err.nosuch': 'ТАКОЙ КОРПОРАЦИИ НЕТ.',
   'corp.err.full': 'ТАМ НЕТ МЕСТ.',

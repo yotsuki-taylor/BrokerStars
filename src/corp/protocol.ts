@@ -46,11 +46,12 @@ export const MAX_MEMBERS = 30;
 /**
  * How many members a corporation needs before it is in the table at all.
  *
- * Without a floor the top of a table of averages is a corporation of one very
- * good player, which is a leaderboard of individuals wearing a hat. Three is
- * the smallest number that cannot be one person and a rounding error.
+ * One: every corporation with anybody in it is in the table, even a founder
+ * on their own. A corporation that exists but cannot find itself on the board
+ * reads as broken rather than as small, and the thirty-seat ceiling still
+ * keeps the average honest at the top end.
  */
-export const MIN_RANKED = 3;
+export const MIN_RANKED = 1;
 
 /** Name, tag and motto, in characters. See `cleanName` for why they are tight. */
 export const NAME_MIN = 3;
@@ -217,6 +218,12 @@ export interface CorpSummary {
    */
   coinAverage: number;
   dollarAverage: number;
+  /**
+   * Who runs it now, by their live name. The owner rather than whoever founded
+   * it: the seat passes on when the founder leaves, and the founder is not
+   * kept anywhere once it has.
+   */
+  ownerName: string;
 }
 
 /** Somebody waiting at the door of a closed corporation. */
@@ -509,8 +516,7 @@ export function nextSeasonAt(now: number): number {
  *
  * What it costs, spelled out because it is real: an average can be defended by
  * throwing people out, and a quiet member is a liability rather than a friend.
- * `MIN_RANKED` and the thirty-seat ceiling bound how much of a game that can
- * be, and nothing is paid for placing in this version, so the pressure is pride
+ * The thirty-seat ceiling bounds how much of a game that can be, and nothing is paid for placing in this version, so the pressure is pride
  * rather than money. If it ever pays, this is the number to look at again.
  *
  * Rounded, because a place decided in the third decimal is a place nobody can
@@ -566,6 +572,7 @@ export function cleanSummary(raw: unknown): CorpSummary | null {
     average: num(r?.average),
     coinAverage: num(r?.coinAverage),
     dollarAverage: num(r?.dollarAverage),
+    ownerName: str(r?.ownerName, 24),
   };
 }
 

@@ -213,9 +213,11 @@ describe('what the table ranks', () => {
     expect(averageOf(100, 0)).toBe(0);
   });
 
-  it('keeps a corporation of one prodigy out of the table', () => {
-    expect(ranked(MIN_RANKED - 1)).toBe(false);
-    expect(ranked(MIN_RANKED)).toBe(true);
+  it('puts a corporation of one in the table, and an empty one nowhere', () => {
+    expect(MIN_RANKED).toBe(1);
+    expect(ranked(0)).toBe(false);
+    expect(ranked(1)).toBe(true);
+    expect(ranked(2)).toBe(true);
   });
 
   it('knows when there is no seat left', () => {

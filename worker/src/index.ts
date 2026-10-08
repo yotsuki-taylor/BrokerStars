@@ -656,7 +656,7 @@ async function daily(request: Request, env: Env) {
   );
 
   /**
-   * The bonus, and only the bonus, counts towards a corporation's season.
+   * The bonus and the quests count towards a corporation's season.
    *
    * WHY THE DOLLAR TABLE IS SAFE TO HAVE AT ALL. Dollars are going to be sold
    * for Telegram Stars one day, and a table ranking dollar balances would be a
@@ -667,9 +667,10 @@ async function daily(request: Request, env: Env) {
    * at the share counter, credited where that profit is worked out
    * (`tradeShares`). See `corps.credit`.
    *
-   * A QUEST PAYS NOTHING HERE either, for the reason `claimQuest` keeps its
-   * coins off the player board: two players with identical match records should
-   * not be separated by which of them remembered to tap a button.
+   * A QUEST'S COINS COUNT TOO, into the coin table, exactly as they count on
+   * the player board (`claimQuest`): doing the day's rounds is part of playing.
+   * They are the coins the server just decided to pay, off the catalogue, not a
+   * number from the body.
    *
    * THE DIVIDENDS GO IN WITH IT, which is why this credits what was paid rather
    * than the constant it used to name. They are dollars the game handed over,
@@ -687,6 +688,9 @@ async function daily(request: Request, env: Env) {
    */
   if (!applied.error && applied.dollars) {
     await corps.credit(env, caller.id, { dollars: applied.dollars }, now);
+  }
+  if (!applied.error && applied.coins) {
+    await corps.credit(env, caller.id, { coins: applied.coins }, now);
   }
   return sent(applied);
 }

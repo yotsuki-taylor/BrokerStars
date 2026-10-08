@@ -22,7 +22,8 @@
  * day plays in `src/daily/protocol.ts`, and for the same reason.
  *
  * THE TABLE RANKS AVERAGES. Not sums. `averageOf` says why at length; the SQL
- * below is where it actually happens, and the `HAVING` is the floor under it.
+ * below is where it actually happens. Every corporation with a member in it is
+ * placed, however small (`MIN_RANKED`).
  *
  * Nothing in here is ever allowed to fail a match. `credit` and `note` run
  * beside a result being banked and swallow everything: a corporation that did
@@ -72,8 +73,7 @@ function mint(length: number): string {
  *
  * The same kind of bound `SCAN_LIMIT` puts on the dollar board and for the same
  * reason: an ORDER BY over a GROUP BY is not free, and nobody is reading past
- * the first screen of it. A corporation outside this many is simply unranked,
- * which is the same answer a corporation of two gets.
+ * the first screen of it. A corporation outside this many is simply unranked.
  */
 const RANK_SCAN = 300;
 
@@ -120,6 +120,20 @@ interface FeedRow {
 
 const CORP_COLUMNS = `id, name, tag, motto, emblem, color, policy, owner_id, code,
                       members, created_at, renamed_at, updated_at`;
+
+/**
+ * The owner's name, as a column a listing can select beside `CORP_COLUMNS`.
+ *
+ * The live name from `players` first and the name stored on joining second —
+ * the same order `membersOf` reads them in. One indexed lookup per row, and
+ * the rows are a page of the table or of the listing, so it stays small.
+ */
+const OWNER_NAME = `(SELECT COALESCE(p.name, m.name)
+                       FROM corp_members m
+                       LEFT JOIN players p ON p.id = m.player_id
+                      WHERE m.player_id = corps.owner_id) AS owner_name`;
+
+type ListedRow = CorpRow & { owner_name: string | null };
 
 /* -------------------------------------------------------------- the reads */
 
@@ -236,11 +250,9 @@ async function rankRows(
   /**
    * How many traders a corporation needs before it appears here at all.
    *
-   * `MIN_RANKED` for a table, because that is what being IN one means. But an
-   * average exists below the floor too — a corporation of two earns what it
-   * earns — and a card that showed it as zero would be saying it earned
-   * nothing rather than that it is not placed. So the card asks with a floor of
-   * one and takes the ranks from the same rows, filtered (`averagesAndPlaces`).
+   * `MIN_RANKED` for a table, because that is what being IN one means. The card
+   * asks with a floor of one and takes the ranks from the same rows, filtered
+   * (`averagesAndPlaces`), so the two agree even if the floor is ever raised.
    */
   floor: number = MIN_RANKED,
 ): Promise<RankRow[]> {
@@ -289,9 +301,7 @@ const placings = (rows: RankRow[]): Map<string, Placed> => {
  *
  * The rows come back with no floor under them and the places are numbered over
  * the ones that clear `MIN_RANKED`, which is the same order the floor would
- * have produced because the order does not depend on who was left out. What it
- * buys is the half that used to be missing: a corporation of two has an average
- * and now says so, instead of reporting a zero that reads as a bad month.
+ * have produced because the order does not depend on who was left out.
  */
 async function averagesAndPlaces(
   env: Env,
@@ -333,10 +343,10 @@ export async function table(
 
   const marks = [...wanted].map((_, i) => `?${i + 1}`).join(', ');
   const { results } = await env.DB.prepare(
-    `SELECT ${CORP_COLUMNS} FROM corps WHERE id IN (${marks})`,
+    `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps WHERE id IN (${marks})`,
   )
     .bind(...wanted)
-    .all<CorpRow>();
+    .all<ListedRow>();
 
   const byId = new Map((results ?? []).map((r) => [r.id, r]));
   const summary = (id: string): CorpSummary | null => {
@@ -358,6 +368,7 @@ export async function table(
       average: at.average,
       coinAverage: metric === 'coins' ? here.average(id) : other.average(id),
       dollarAverage: metric === 'dollars' ? here.average(id) : other.average(id),
+      ownerName: row.owner_name || 'PLAYER',
     };
   };
 
@@ -509,13 +520,14 @@ export async function browse(
   // somebody opens the screen with an empty search box, which is everybody.
   const { results } = await env.DB.prepare(
     wanted
-      ? `SELECT ${CORP_COLUMNS} FROM corps
+      ? `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps
           WHERE name LIKE ?1 OR tag LIKE ?1
           ORDER BY members DESC, created_at ASC LIMIT ?2`
-      : `SELECT ${CORP_COLUMNS} FROM corps ORDER BY members DESC, created_at ASC LIMIT ?1`,
+      : `SELECT ${CORP_COLUMNS}, ${OWNER_NAME} FROM corps
+          ORDER BY members DESC, created_at ASC LIMIT ?1`,
   )
     .bind(...(wanted ? [like, limit] : [limit]))
-    .all<CorpRow>();
+    .all<ListedRow>();
 
   /**
    * Both tables, not one. The dollar ranking is read here so that a row can be
@@ -544,6 +556,7 @@ export async function browse(
       average: at?.average ?? 0,
       coinAverage: inCoins.average(row.id),
       dollarAverage: inDollars.average(row.id),
+      ownerName: row.owner_name || 'PLAYER',
     };
   });
 }
