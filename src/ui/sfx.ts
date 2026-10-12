@@ -1,5 +1,5 @@
 /**
- * The game's sound effects, ten short files in `public/sounds/`, and the
+ * The game's sound effects, eleven short files in `public/sounds/`, and the
  * battle music beside them.
  *
  * Web Audio rather than `<audio>` elements. An `<audio>` on a phone starts late
@@ -27,7 +27,8 @@ export type Sfx =
   | 'fail'
   | 'success'
   | 'news'
-  | 'swish';
+  | 'swish'
+  | 'dailybonus';
 
 const ALL: readonly Sfx[] = [
   'buy',
@@ -40,6 +41,7 @@ const ALL: readonly Sfx[] = [
   'success',
   'news',
   'swish',
+  'dailybonus',
 ];
 
 let ctx: AudioContext | null = null;

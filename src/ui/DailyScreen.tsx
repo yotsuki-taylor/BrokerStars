@@ -105,6 +105,7 @@ export default function DailyScreen({
       <button
         className={`bonus-card${ready ? '' : ' taken'}`}
         onClick={onClaimBonus}
+        data-sfx="dailybonus"
         disabled={!ready}
       >
         <img className="bonus-art" src={tex('DailyBonus.png')} alt="" />
