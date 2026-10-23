@@ -2,12 +2,11 @@
  * Looking for somebody to play, and the whole of how two strangers are paired.
  *
  * PLAY on the menu used to be a match against a bot and nothing else; the
- * search on the versus screen was a flourish. Now it is real for a few seconds:
- * the game asks the server's one pool (`worker/src/matchmaker.ts`) whether
- * anybody else is looking in the same league, and two who are get a duel of
- * their own -- the same `Duel` object a link opens, told that this one counts
- * on the ladder. Nobody turns up in time and the game deals the bot, exactly as
- * it always did.
+ * search on the versus screen was a flourish. Now it is real: the game asks
+ * the server's one pool (`worker/src/matchmaker.ts`) whether anybody else is
+ * looking in the same league, and two who are get a duel of their own -- the
+ * same `Duel` object a link opens, told that this one counts on the ladder.
+ * Nobody turns up in time and the game deals the bot, exactly as it always did.
  *
  * WHO DECIDES THAT NOBODY CAME. The server, never the phone. A phone that gave
  * up on its own clock could do so in the very millisecond the pool paired it,
@@ -15,31 +14,19 @@
  * object answers every seeker exactly once — paired, or nobody — and the phone
  * keeps a timer of its own only for a server that says nothing at all.
  *
- * HOW LONG. Up to a minute, and only when there is somebody to wait for. A
- * minute is long, so the screen says how long it has been and offers the bot
- * at any moment (`VersusScreen`); the wait is the ceiling, not a sentence. A
- * seeker alone in a league whose last visitor left an hour ago gets the old
- * flourish's length instead, so a quiet evening costs nobody anything over
- * what PLAY always cost. "Somebody" is anyone else who looked for a match in
- * this league recently: a player in a bot match now is in the queue again in
- * about two minutes, which is what the window is sized to.
+ * HOW LONG. A minute, every time. The screen says how long it has been and,
+ * a few seconds in, offers the bot (`VersusScreen`), so the minute is the
+ * longest anybody waits rather than how long everybody does. An earlier
+ * version cut the wait short for a league nobody had visited lately; with a
+ * way out on the screen, a full minute for whoever is willing to wait is the
+ * better bet on finding them somebody.
  *
  * Both ends import this file, and the pairing itself is plain arithmetic over
  * a list so that it can be tested without a Durable Object to run it in.
  */
 
-/** The longest a seek waits, when there is somebody it might be paired with. */
+/** How long a seek waits for somebody before the answer is nobody. */
 export const SEEK_MS = 60_000;
-
-/** The wait for a seeker nobody is likely to join: the old flourish's length. */
-export const SEEK_ALONE_MS = 1400;
-
-/**
- * How recently another seeker must have looked for this league to count as
- * about. A match against a bot is eighty seconds plus the screens either side
- * of it, so a player who is playing one now looks again inside this.
- */
-export const ONLINE_WINDOW_MS = 3 * 60_000;
 
 /**
  * How long the phone waits past `SEEK_MS` for a server that has said nothing,
@@ -92,47 +79,14 @@ export type Seek<T> =
    */
   | { kind: 'wait'; ms: number; replaced: Seeker<T> | null };
 
-/** Who looked for which league and when: what the pool keeps between visits. */
-export type Seen = [id: string, last: { league: number; at: number }][];
-
 export class Pool<T> {
   private waiting: Seeker<T>[] = [];
-  /** who looked for which league and when, kept for `ONLINE_WINDOW_MS` */
-  private seen = new Map<string, { league: number; at: number }>();
-
-  /**
-   * The visitors, to be kept somewhere that outlives this object.
-   *
-   * The queue itself never needs keeping: somebody waiting holds a socket open,
-   * and an open socket holds the object in memory. The visitors are the other
-   * way round — they are exactly the players who have gone off to play a bot,
-   * leaving nothing open — so an idle pool is evicted, and without this a quiet
-   * minute would make everybody look alone. Found the hard way, on a local run.
-   */
-  snapshot(): Seen {
-    return [...this.seen];
-  }
-
-  /** Put back what `snapshot` gave, as the object wakes up. */
-  restore(seen: Seen | undefined, now: number): void {
-    for (const [id, last] of seen ?? []) {
-      if (typeof id === 'string' && Number.isFinite(last?.at)) this.seen.set(id, last);
-    }
-    this.forget(now);
-  }
 
   seek(s: Seeker<T>): Seek<T> {
-    this.forget(s.at);
-
     // The same player twice is a tab left open or a phone that dropped and came
     // back. Pairing them with themselves would be a duel for their own coins.
     const i = this.waiting.findIndex((w) => w.id === s.id);
     const replaced = i >= 0 ? this.waiting.splice(i, 1)[0] : null;
-
-    // Read before this seeker is written in, so they do not count as company
-    // for themselves.
-    const about = this.about(s);
-    this.seen.set(s.id, { league: s.league, at: s.at });
 
     const j = this.waiting.findIndex((w) => w.league === s.league);
     if (j >= 0) {
@@ -141,7 +95,7 @@ export class Pool<T> {
     }
 
     this.waiting.push(s);
-    return { kind: 'wait', ms: about ? SEEK_MS : SEEK_ALONE_MS, replaced };
+    return { kind: 'wait', ms: SEEK_MS, replaced };
   }
 
   /**
@@ -163,24 +117,10 @@ export class Pool<T> {
     return this.waiting.length;
   }
 
-  /** Is anybody else about in this league — waiting now, or looked recently? */
-  private about(s: Seeker<T>): boolean {
-    for (const [id, last] of this.seen) {
-      if (id !== s.id && last.league === s.league) return true;
-    }
-    return false;
-  }
-
   private drop(handle: T): boolean {
     const i = this.waiting.findIndex((w) => w.handle === handle);
     if (i < 0) return false;
     this.waiting.splice(i, 1);
     return true;
-  }
-
-  private forget(now: number): void {
-    for (const [id, last] of this.seen) {
-      if (now - last.at > ONLINE_WINDOW_MS) this.seen.delete(id);
-    }
   }
 }

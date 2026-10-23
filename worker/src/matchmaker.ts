@@ -14,13 +14,7 @@
  * the deadline, and opening the duel a pair sits down at.
  */
 
-import {
-  Pool,
-  type Seen,
-  type SeekClientMsg,
-  type SeekServerMsg,
-  type Seeker,
-} from '../../src/duel/pool';
+import { Pool, type SeekClientMsg, type SeekServerMsg, type Seeker } from '../../src/duel/pool';
 import { cleanOutfit } from '../../src/profile/protocol';
 import { identify } from './auth';
 import { duelStub, mintCode } from './duel';
@@ -44,22 +38,13 @@ interface Waiter {
   gone: boolean;
 }
 
-/** The storage key the pool's visitors live under; `Pool.snapshot` says why they live anywhere. */
-const SEEN_KEY = 'seen';
-
 export class Matchmaker implements DurableObject {
   private pool = new Pool<Waiter>();
 
   constructor(
-    private readonly state: DurableObjectState,
+    _state: DurableObjectState,
     private readonly env: Env,
-  ) {
-    // Before the first seek is read, so a pool that has just woken up still
-    // knows who was about a minute ago.
-    void state.blockConcurrencyWhile(async () => {
-      this.pool.restore(await state.storage.get<Seen>(SEEN_KEY), Date.now());
-    });
-  }
+  ) {}
 
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get('upgrade') !== 'websocket') {
@@ -125,9 +110,6 @@ export class Matchmaker implements DurableObject {
     const league = Math.min(4, Math.max(0, Math.floor(Number(msg.league) || 0)));
     const seeker: Seeker<Waiter> = { id: caller.id, league, at: Date.now(), handle: waiter };
     const got = this.pool.seek(seeker);
-    // One small write per PLAY, and nothing waits on it: a visitor lost to a
-    // failed write costs somebody one shorter search, never a match.
-    void this.state.storage.put(SEEN_KEY, this.pool.snapshot()).catch(() => {});
 
     if (got.kind === 'pair') {
       await this.open(got.host, got.guest);

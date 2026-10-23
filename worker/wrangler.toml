@@ -70,9 +70,10 @@ class_name = "Duel"
 tag = "v1"
 new_sqlite_classes = ["Duel"]
 
-# The pool PLAY looks for a stranger in before it deals a bot. The queue is a
-# few seconds deep and lives in memory; what goes to storage is only who was
-# about lately, which has to outlive the object being evicted between visits.
+# The pool PLAY looks for a stranger in before it deals a bot. It keeps nothing
+# in storage — the queue lives in memory, held there by the open sockets of the
+# people in it — but a class on the free plan has to be declared a SQLite one
+# all the same.
 [[durable_objects.bindings]]
 name = "MATCH"
 class_name = "Matchmaker"

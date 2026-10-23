@@ -2207,10 +2207,9 @@ export default function App() {
   /**
    * PLAY, once the bot match has been dealt: look for somebody real first.
    *
-   * The versus screen holds on "searching" while the pool decides — up to a
-   * minute when anybody else has been about in this league lately, the old
-   * flourish's length when nobody has (`src/duel/pool.ts`) — and the player
-   * may take the bot at any moment of it (`skipSearch`). A stranger turns
+   * The versus screen holds on "searching" while the pool decides — a minute
+   * (`src/duel/pool.ts`) — and from a few seconds in the player may take the
+   * bot instead (`skipSearch`). A stranger turns
    * the match into a duel that counts on the ladder; nobody, and the bot that
    * was dealt comes in. A build that cannot look plays exactly as it always
    * did, board screen and all.

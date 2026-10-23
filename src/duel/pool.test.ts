@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ONLINE_WINDOW_MS, Pool, SEEK_ALONE_MS, SEEK_MS, type Seeker } from './pool';
+import { Pool, SEEK_MS, type Seeker } from './pool';
 
 /**
  * The pool's every decision: who is paired with whom, how long a seeker waits,
@@ -58,77 +58,13 @@ describe('pairing', () => {
 });
 
 describe('how long a seeker waits', () => {
-  it('waits only the flourish when nobody has been about', () => {
+  it('waits the full minute, whoever else has or has not been about', () => {
+    // the screen offers the bot after a few seconds, so the wait itself is
+    // never cut short: a quiet league gets the same minute as a busy one
     const pool = new Pool<string>();
     const got = pool.seek(seeker('a'));
-    expect(got.kind === 'wait' && got.ms).toBe(SEEK_ALONE_MS);
-  });
-
-  it('waits the full minute when somebody looked in this league lately', () => {
-    // b is playing a bot now and will be back in the queue in a minute or two
-    const pool = new Pool<string>();
-    const b = seeker('b', 1, NOW);
-    pool.seek(b);
-    pool.expire(b.handle);
-    const got = pool.seek(seeker('a', 1, NOW + 60_000));
     expect(got.kind === 'wait' && got.ms).toBe(SEEK_MS);
-  });
-
-  it('does not count somebody about in another league', () => {
-    const pool = new Pool<string>();
-    const b = seeker('b', 4, NOW);
-    pool.seek(b);
-    pool.expire(b.handle);
-    const got = pool.seek(seeker('a', 1, NOW + 1000));
-    expect(got.kind === 'wait' && got.ms).toBe(SEEK_ALONE_MS);
-  });
-
-  it('does not count the seeker as their own company', () => {
-    const pool = new Pool<string>();
-    const a = seeker('a', 1, NOW);
-    pool.seek(a);
-    pool.expire(a.handle);
-    const got = pool.seek(seeker('a', 1, NOW + 90_000));
-    expect(got.kind === 'wait' && got.ms).toBe(SEEK_ALONE_MS);
-  });
-
-  it('forgets a visitor once the window has passed', () => {
-    const pool = new Pool<string>();
-    const b = seeker('b', 1, NOW);
-    pool.seek(b);
-    pool.expire(b.handle);
-    const got = pool.seek(seeker('a', 1, NOW + ONLINE_WINDOW_MS + 1));
-    expect(got.kind === 'wait' && got.ms).toBe(SEEK_ALONE_MS);
-  });
-});
-
-describe('waking up', () => {
-  it('remembers who was about through an eviction', () => {
-    // the visitor goes off to a bot match, nothing is left open, and the
-    // object is evicted; the next seeker must still see them
-    const before = new Pool<string>();
-    const b = seeker('b', 1, NOW);
-    before.seek(b);
-    before.expire(b.handle);
-
-    const after = new Pool<string>();
-    after.restore(JSON.parse(JSON.stringify(before.snapshot())), NOW + 50_000);
-    const got = after.seek(seeker('a', 1, NOW + 60_000));
-    expect(got.kind === 'wait' && got.ms).toBe(SEEK_MS);
-  });
-
-  it('drops what went stale while it slept, and anything it cannot read', () => {
-    const pool = new Pool<string>();
-    pool.restore(
-      [
-        ['b', { league: 1, at: NOW }],
-        ['c', { league: 1, at: Number.NaN }],
-      ],
-      NOW + ONLINE_WINDOW_MS + 1,
-    );
-    expect(pool.snapshot()).toEqual([]);
-    pool.restore(undefined, NOW);
-    expect(pool.snapshot()).toEqual([]);
+    expect(SEEK_MS).toBe(60_000);
   });
 });
 

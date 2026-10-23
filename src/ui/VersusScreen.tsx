@@ -48,6 +48,13 @@ const FOUND_TIMELINE: [Phase, number][] = [
 ];
 const FOUND_HANDOVER_MS = 2400;
 
+/**
+ * How long a search runs before the bot is offered. Most pairs that happen at
+ * all happen in the first seconds; a button there from the first frame would
+ * be pressed before anybody had a chance to turn up.
+ */
+const SKIP_AFTER_S = 5;
+
 export default function VersusScreen({
   playerName,
   playerOutfit,
@@ -94,7 +101,8 @@ export default function VersusScreen({
   onCancel: () => void;
   /**
    * Stop looking and play the bot now. Passed only while a real search is on
-   * and nobody has been found yet; the button is drawn from whether it is here.
+   * and nobody has been found yet; the button is drawn from whether it is here,
+   * once the search is `SKIP_AFTER_S` old.
    */
   onSkip?: () => void;
 }) {
@@ -187,7 +195,7 @@ export default function VersusScreen({
 
       {/* Under the status, where the eye already is. It stops the tap from
           reaching the screen behind, which would only skip the flourish. */}
-      {onSkip && !rivalIn && (
+      {onSkip && !rivalIn && waited >= SKIP_AFTER_S && (
         <button
           className="menu-btn versus-skip"
           onClick={(e) => {
