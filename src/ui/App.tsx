@@ -127,6 +127,8 @@ import {
   shoutInvite,
   type Link,
 } from './duel';
+import { seekAvailable, seekRival, type Search } from './seek';
+import { PAIR_START_MS } from '../duel/pool';
 import {
   apiBase,
   callOutCorp,
@@ -240,6 +242,12 @@ interface DuelUi {
    * nothing at all.
    */
   chatNeedsAccount?: boolean;
+  /**
+   * Two strangers the pool paired off PLAY, rather than an invitation. The
+   * match is the same; what differs is the way out of it — PLAY AGAIN looks
+   * for somebody again, as PLAY did, rather than minting a link.
+   */
+  matched?: boolean;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -1295,6 +1303,20 @@ export default function App() {
    */
   const duelRef = useRef<DuelSocket | null>(null);
   const [duel, setDuel] = useState<DuelUi | null>(null);
+  /**
+   * PLAY's search for somebody real (`ui/seek.ts`). `seeking` holds the versus
+   * screen on "searching"; `searched` says a search already came back empty, so
+   * the bot comes straight in instead of being searched for again.
+   */
+  const [seeking, setSeeking] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const searchRef = useRef<Search | null>(null);
+  /**
+   * Paired, and waiting for the duel to start. True from the pool's answer to
+   * the server's `setup`; anything that goes wrong in between is a bot match.
+   */
+  const pendingPair = useRef(false);
+  const pairTimer = useRef(0);
   /** when the last tick landed, which is all the interpolation has to go on */
   const lastTickAt = useRef(0);
   /**
@@ -1885,6 +1907,25 @@ export default function App() {
   }, []);
 
   /**
+   * Nobody real, so the bot — dealt already, before the search began.
+   *
+   * Reached from an empty answer and from a pair that never got going: a
+   * stranger who did not connect, a duel that would not open. Either way the
+   * player has watched "searching" for as long as was worth it, so the rival
+   * comes straight in; a player whose hat shows the board first goes there,
+   * which is the screen they skipped to make the search.
+   */
+  const dealBot = useCallback(() => {
+    pendingPair.current = false;
+    window.clearTimeout(pairTimer.current);
+    closeDuel();
+    setDuel(null);
+    setSeeking(false);
+    setSearched(true);
+    if (wantsBoardScreen(perksRef.current.ui)) setScreen('board');
+  }, [closeDuel]);
+
+  /**
    * Everything the object on the other end has to say.
    *
    * Note what `setup` does and does not do. It builds a mirror off the seed and
@@ -1929,6 +1970,10 @@ export default function App() {
           setPauseOpen(false);
           setRivalOutfit(msg.outfits[1]);
           setDuel((d) => (d ? { ...d, phase: 'match', league: msg.league, error: null } : d));
+          // A pair that got going: the search is over and so is the wait for it.
+          pendingPair.current = false;
+          window.clearTimeout(pairTimer.current);
+          setSeeking(false);
           if (msg.startsInMs === null) {
             // dropped back into a match already under way
             setCountdown(null);
@@ -2005,13 +2050,19 @@ export default function App() {
           break;
 
         case 'error':
+          // A pair that fell through before it started is a bot match, not an
+          // error: the player pressed PLAY and is owed a match, not a reason.
+          if (pendingPair.current) {
+            dealBot();
+            break;
+          }
           closeDuel();
           setDuel((d) => (d ? { ...d, phase: 'error', error: msg.reason } : d));
           setScreen('duel');
           break;
       }
     },
-    [closeDuel, reconcile, rerender, showTrade],
+    [closeDuel, dealBot, reconcile, rerender, showTrade],
   );
 
   const connect = useCallback(
@@ -2034,7 +2085,9 @@ export default function App() {
         chat: false,
         ...extra,
       });
-      setScreen('duel');
+      // A pair stays on the versus screen, still "searching", until the match
+      // exists: the invitation screen is about a link they never had.
+      if (!extra.matched) setScreen('duel');
       duelRef.current = new DuelSocket(
         code,
         { name: duelName(), outfit: outfitRef.current },
@@ -2142,6 +2195,64 @@ export default function App() {
     restart(s, LEAGUES[li].preset, li, held ? undefined : null, Boolean(held));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closeDuel, restart]);
+
+  /**
+   * PLAY, once the bot match has been dealt: look for somebody real first.
+   *
+   * The versus screen holds on "searching" while the pool decides — five
+   * seconds when anybody else has been about in this league lately, the old
+   * flourish's length when nobody has (`src/duel/pool.ts`). A stranger turns
+   * the match into a duel that counts on the ladder; nobody, and the bot that
+   * was dealt comes in. A build that cannot look plays exactly as it always
+   * did, board screen and all.
+   */
+  const play = useCallback(
+    (li: number) => {
+      const old = searchRef.current;
+      searchRef.current = null;
+      old?.cancel();
+      if (!seekAvailable()) {
+        setSeeking(false);
+        setSearched(false);
+        setScreen(wantsBoardScreen(perksRef.current.ui) ? 'board' : 'vs');
+        return;
+      }
+      setSeeking(true);
+      setSearched(false);
+      setScreen('vs');
+      const search = seekRival(li);
+      searchRef.current = search;
+      void search.result.then((code) => {
+        // cancelled, or a newer PLAY took over: this answer is nobody's
+        if (searchRef.current !== search) return;
+        searchRef.current = null;
+        track('seek_end', { league: li, found: Boolean(code) });
+        if (!code) return dealBot();
+        pendingPair.current = true;
+        connect(code, 'waiting', { code, league: li, matched: true });
+        window.clearTimeout(pairTimer.current);
+        pairTimer.current = window.setTimeout(() => {
+          if (pendingPair.current) dealBot();
+        }, PAIR_START_MS);
+      });
+    },
+    [connect, dealBot],
+  );
+
+  /** Backing out of the versus screen: stop looking, and let go of any pair. */
+  const stopSearch = useCallback(() => {
+    const old = searchRef.current;
+    searchRef.current = null;
+    old?.cancel();
+    if (pendingPair.current) {
+      pendingPair.current = false;
+      window.clearTimeout(pairTimer.current);
+      closeDuel();
+      setDuel(null);
+    }
+    setSeeking(false);
+    setSearched(false);
+  }, [closeDuel]);
 
   /**
    * Opened on somebody's invitation: straight into it, whatever screen was next.
@@ -2641,7 +2752,7 @@ export default function App() {
             const s = held ?? String(Math.floor(Math.random() * 1e6));
             if (!held) hold(i, s);
             restart(s, LEAGUES[i].preset, i, held ? undefined : null, Boolean(held));
-            setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
+            play(i);
             haptic('heavy');
           }}
         />
@@ -2702,27 +2813,40 @@ export default function App() {
     );
   }
 
+  /** A duel whose match exists — not a pair still on its way to one. */
+  const duelLive = duel?.phase === 'match';
+
   if (screen === 'vs') {
     return (
       <div className="app">
         <VersusScreen
           playerName={me.name}
           playerOutfit={outfit}
+          // A fresh screen once a pair's match exists, so the duel's own
+          // timeline starts from the top rather than from wherever the search
+          // had got to.
+          key={duelLive ? 'duel' : 'bot'}
           rivalName={rival.name}
           rivalOutfit={rivalOutfit}
-          duel={Boolean(duel)}
+          duel={duelLive}
+          stranger={duel?.matched === true}
+          searching={seeking}
+          searched={searched}
           // Only in a duel: a match against a bot has already shown these on a
           // screen of their own, and showing them twice would be a screen that
           // says nothing new.
-          stocks={duel && wantsBoardScreen(perks.ui) ? cfg.stocks : null}
+          stocks={duelLive && wantsBoardScreen(perks.ui) ? cfg.stocks : null}
           quirks={perks.ui.showQuirks}
           onReady={() => {
             // A duel is counted when the server says it began (`duel_start`).
-            if (!duel) track('match_start', { league });
+            if (!duelLive) track('match_start', { league });
             setScreen('match');
             setCountdown(3);
           }}
-          onCancel={() => setScreen('menu')}
+          onCancel={() => {
+            stopSearch();
+            setScreen('menu');
+          }}
         />
       </div>
     );
@@ -3228,16 +3352,28 @@ export default function App() {
           )}
           unlockedName={unlockedName}
           onRestart={() => {
-            if (duel) {
+            // An invitation is played again by minting another; a pair the pool
+            // made is played again the way it began, by PLAY.
+            if (duel && !duel.matched) {
               void startDuel();
               return;
+            }
+            if (duel) {
+              closeDuel();
+              setDuel(null);
             }
             const s = String(Math.floor(Math.random() * 1e6));
             hold(league, s);
             restart(s, LEAGUES[league].preset, league, null);
-            setScreen(wantsBoardScreen(perks.ui) ? 'board' : 'vs');
+            play(league);
           }}
-          onMenu={() => (duel ? leaveDuel() : setScreen('leagues'))}
+          onMenu={() => {
+            if (!duel) return setScreen('leagues');
+            const matched = duel.matched;
+            leaveDuel();
+            // back where PLAY was pressed, as from a match against a bot
+            if (matched) setScreen('leagues');
+          }}
         />
       )}
 

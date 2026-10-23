@@ -546,14 +546,31 @@ export function trade(
  * re-sent submission never reaches this far, because the token is recognised
  * first.
  *
- * A duel does not come this way at all. The ladder is climbed against the bots
- * on purpose: a friend willing to lose ten times is a lift, not a climb.
+ * An invited duel does not come this way at all: a friend willing to lose ten
+ * times is a lift, not a climb. A duel the pool paired does, from the object
+ * that ran it — see `settle` below.
  */
 export function bankWin(h: Held, league: number): Held {
   if (!Number.isInteger(league) || league < 0 || league >= h.wins.length) return h;
   const wins = h.wins.slice();
   wins[league] += 1;
   return { ...h, wins };
+}
+
+/**
+ * The ladder's half of a finished match: a win banked, or nothing.
+ *
+ * Climbed against the bots and against strangers. A friend willing to lose ten
+ * times is a lift, not a climb, so an invited duel banks no league win — but a
+ * stranger the pool picked off PLAY is nobody's lift, and that duel arrives
+ * with `ladder` set.
+ */
+export function climb(
+  h: Held,
+  m: { league: number; facts: { outcome: string; duel: boolean }; ladder?: boolean },
+): Held {
+  const counts = !m.facts.duel || m.ladder === true;
+  return m.facts.outcome === 'win' && counts ? bankWin(h, m.league) : h;
 }
 
 /* ----------------------------------------------------------- the migration */
@@ -1046,14 +1063,21 @@ export async function open(env: Env, caller: Caller, claim: Claim | null): Promi
 export async function settle(
   env: Env,
   caller: Caller,
-  m: { league: number; facts: MatchFacts; companies: string[] },
+  m: {
+    league: number;
+    facts: MatchFacts;
+    companies: string[];
+    /**
+     * A duel that is on the ladder anyway: two strangers the pool paired off
+     * PLAY (`worker/src/matchmaker.ts`). Meaningless without `facts.duel`,
+     * since a bot match is on the ladder already.
+     */
+    ladder?: boolean;
+  },
 ): Promise<Applied> {
   const now = Date.now();
   return change(env, caller, (held, _earned, at) => {
-    // The ladder is climbed against the bots. A friend willing to lose ten
-    // times is a lift, not a climb, so a duel banks no league win.
-    const climbed =
-      m.facts.outcome === 'win' && !m.facts.duel ? bankWin(held, m.league) : held;
+    const climbed = climb(held, m);
     // The day's quests hear about it next, and unlike the ladder they hear
     // about a duel too: there is no ladder here to inflate, and a duel is a
     // match that was played. `MatchFacts` is a superset of what the day counts,

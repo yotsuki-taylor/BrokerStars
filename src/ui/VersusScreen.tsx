@@ -6,10 +6,16 @@ import { TRAIT_LABEL, type StockConfig } from '../sim/companies';
 import type { Outfit } from './wardrobe';
 
 /**
- * Matchmaking flourish before a match. Purely presentational: the match itself
- * has already been created, this only decides when to hand over to it.
+ * The versus screen before a match: the search, then who turned up.
  *
  * player in → searching → rival in as a silhouette → rival revealed → done.
+ *
+ * THE SEARCH IS REAL NOW, for as long as `searching` says so. PLAY asks the
+ * server's pool for somebody else looking in this league (`ui/seek.ts`), and
+ * the screen holds on "searching" until the answer: a stranger, in which case
+ * the parent swaps this for the duel version, or nobody, in which case the bot
+ * comes in. The match against the bot has already been dealt either way, and
+ * a build that cannot look at all passes nothing and gets the old flourish.
  *
  * A duel skips most of that. There is nothing to search for — the friend is
  * already sitting on the other end of the socket — and nothing to cancel or
@@ -31,12 +37,26 @@ const DUEL_TIMELINE: [Phase, number][] = [
 ];
 const HANDOVER_MS = 3600;
 
+/**
+ * After a real search came back empty. The waiting is done — the player has
+ * watched "searching" for as long as there was anybody to wait for — so the
+ * rival comes straight in rather than being searched for a second time.
+ */
+const FOUND_TIMELINE: [Phase, number][] = [
+  ['found', 100],
+  ['revealed', 900],
+];
+const FOUND_HANDOVER_MS = 2400;
+
 export default function VersusScreen({
   playerName,
   playerOutfit,
   rivalName,
   rivalOutfit,
   duel = false,
+  stranger = false,
+  searching = false,
+  searched = false,
   stocks = null,
   quirks = false,
   onReady,
@@ -48,6 +68,15 @@ export default function VersusScreen({
   rivalOutfit: Outfit;
   /** a friend rather than a draw from the pool: no searching, no way out */
   duel?: boolean;
+  /**
+   * The duel is with somebody the pool found, not a friend: there was no friend
+   * to wait for, and the moment before the rival comes in is still the search.
+   */
+  stranger?: boolean;
+  /** the server is still looking for somebody: hold on "searching" until it answers */
+  searching?: boolean;
+  /** a real search already came back empty, so the rival comes straight in */
+  searched?: boolean;
   /**
    * The three companies, for a player whose hat says they get to see them.
    *
@@ -79,20 +108,26 @@ export default function VersusScreen({
   };
 
   useEffect(() => {
-    const line = duel ? DUEL_TIMELINE : TIMELINE;
+    if (searching) {
+      // Nothing is scheduled past "searching": the answer decides what comes next.
+      const t = window.setTimeout(() => setPhase('searching'), TIMELINE[0][1]);
+      return () => clearTimeout(t);
+    }
+    const line = duel ? DUEL_TIMELINE : searched ? FOUND_TIMELINE : TIMELINE;
     const timers = line.map(([p, at]) => window.setTimeout(() => setPhase(p), at));
-    timers.push(window.setTimeout(() => finish(), HANDOVER_MS));
+    timers.push(window.setTimeout(() => finish(), searched && !duel ? FOUND_HANDOVER_MS : HANDOVER_MS));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duel]);
+  }, [duel, searching, searched]);
 
   const rivalIn = phase === 'found' || phase === 'revealed';
 
   return (
     // tapping anywhere skips the wait, except in a duel, where the wait is the
     // server's and skipping it only means staring at a board that has not
-    // started yet
-    <div className="versus" onClick={duel ? undefined : finish}>
+    // started yet -- and except during a real search, which a tap would turn
+    // into a bot match the player never asked for
+    <div className="versus" onClick={duel || searching ? undefined : finish}>
       <img className="versus-bg" src={tex('bg_vs.png')} alt="" draggable={false} />
 
       {!rivalIn && !duel && (
@@ -124,7 +159,7 @@ export default function VersusScreen({
 
       {!rivalIn && (
         <div className="versus-status">
-          {t(duel ? 'versus.waitingFriend' : 'versus.searching')}
+          {t(duel && !stranger ? 'versus.waitingFriend' : 'versus.searching')}
         </div>
       )}
 

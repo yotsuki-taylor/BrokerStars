@@ -81,6 +81,12 @@ export interface Env {
    */
   GOOGLE_CLIENT_ID?: string;
   DUEL: DurableObjectNamespace;
+  /**
+   * The pool PLAY looks for a stranger in (`matchmaker.ts`). Optional so that a
+   * deployment from before it existed, and the tests, still type: without it
+   * the route says there is no pool and every PLAY is a bot, as it always was.
+   */
+  MATCH?: DurableObjectNamespace;
 }
 
 export type Outcome = 'win' | 'draw' | 'loss';

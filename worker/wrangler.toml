@@ -69,3 +69,14 @@ class_name = "Duel"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Duel"]
+
+# The pool PLAY looks for a stranger in before it deals a bot. The queue is a
+# few seconds deep and lives in memory; what goes to storage is only who was
+# about lately, which has to outlive the object being evicted between visits.
+[[durable_objects.bindings]]
+name = "MATCH"
+class_name = "Matchmaker"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Matchmaker"]

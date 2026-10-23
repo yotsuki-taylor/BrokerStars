@@ -33,7 +33,7 @@
 
 import { dayOf } from '../../src/daily/protocol';
 import { NAME_MAX, seasonOf, type Metric } from '../../src/corp/protocol';
-import { DUEL_CODE_LENGTH, DUEL_TTL_MS, normalizeCode } from '../../src/duel/protocol';
+import { DUEL_TTL_MS, normalizeCode } from '../../src/duel/protocol';
 import { cleanCode } from '../../src/friends/protocol';
 import { cleanLinkCode } from '../../src/link/protocol';
 import { HISTORY_DAYS, marketFor } from '../../src/market/protocol';
@@ -84,8 +84,10 @@ import {
   webhookSecret,
 } from './telegram';
 import { identify, isGuest, mintGuest, mintSession, verifyGoogleIdToken } from './auth';
+import { duelStub, mintCode } from './duel';
 
 export { Duel } from './duel';
+export { Matchmaker } from './matchmaker';
 export { verifyInitData } from './telegram';
 export { identify, mintGuest, mintSession, readSession, verifyGoogleIdToken } from './auth';
 export type { Env } from './results';
@@ -985,22 +987,6 @@ async function tradeShares(request: Request, env: Env) {
 /* ----------------------------------------------------------------- duels */
 
 /**
- * The code in an invitation link. Base32 without vowels, so no code can spell
- * anything and none of the pairs a phone keyboard confuses are both in the
- * alphabet. Sixty bits of `crypto.getRandomValues` at ten characters: this is
- * the only thing standing between a stranger and somebody else's duel, and it
- * has fifteen minutes to be guessed in.
- */
-const ALPHABET = '0123456789bcdfghjklmnpqrstvwxyz';
-
-function mintCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(DUEL_CODE_LENGTH));
-  let out = '';
-  for (const b of bytes) out += ALPHABET[b % ALPHABET.length];
-  return out;
-}
-
-/**
  * The invitation as an ordinary web address.
  *
  * The other link — `t.me/<bot>?start=…` — is the right one to hand somebody
@@ -1031,7 +1017,6 @@ export function webInvite(env: Env, key: 'd' | 'f', code: string): string | null
   return `${base}${join}${key}=${encodeURIComponent(code)}`;
 }
 
-const duelStub = (env: Env, code: string) => env.DUEL.get(env.DUEL.idFromName(`duel:${code}`));
 
 async function newDuel(request: Request, env: Env) {
   if (!canAuth(env)) return bad(503, 'no auth configured');
@@ -1580,6 +1565,14 @@ export default {
     if (url.pathname === '/feedback' && request.method === 'POST') return feedback(request, env);
 
     if (url.pathname === '/tg' && request.method === 'POST') return telegramUpdate(request, env);
+
+    // PLAY, looking for somebody real before it settles for a bot. One pool
+    // for the whole game (`matchmaker.ts` says why one), and like a duel's
+    // socket it is told who is asking in its first message, not in the URL.
+    if (url.pathname === '/match/ws') {
+      if (!env.MATCH) return bad(404, 'no pool here');
+      return env.MATCH.get(env.MATCH.idFromName('pool')).fetch('https://pool/ws', request);
+    }
 
     // The socket carries no identity of its own: the first thing over it is a
     // `hello` with the signed initData in the body, which is why the code in

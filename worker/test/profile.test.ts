@@ -9,6 +9,7 @@ import {
   claimBonus,
   claimInto,
   claimQuest,
+  climb,
   countOpen,
   giftHat,
   priceOf,
@@ -387,6 +388,22 @@ describe('climbing the ladder', () => {
     const h = bankWin(bankWin(EMPTY, 0), 0);
     expect(h.wins[0]).toBe(2);
     expect(h.wins[1]).toBe(0);
+  });
+
+  it('counts a win over a bot and over a stranger the pool picked, not over a friend', () => {
+    const won = (duel: boolean, ladder?: boolean) =>
+      climb(EMPTY, { league: 2, facts: { outcome: 'win', duel }, ladder }).wins[2];
+    expect(won(false)).toBe(1);
+    expect(won(true, true)).toBe(1);
+    // the invited duel: a friend willing to lose ten times is a lift
+    expect(won(true)).toBe(0);
+    expect(won(true, false)).toBe(0);
+  });
+
+  it('counts nothing but a win, from a stranger or anyone', () => {
+    for (const outcome of ['draw', 'loss']) {
+      expect(climb(EMPTY, { league: 2, facts: { outcome, duel: true }, ladder: true })).toEqual(EMPTY);
+    }
   });
 
   it('ignores a league that is not on the ladder', () => {

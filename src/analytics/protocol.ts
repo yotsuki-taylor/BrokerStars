@@ -86,7 +86,7 @@ const flag: Field = (raw) => (typeof raw === 'boolean' ? raw : undefined);
 const league = intBelow((n) => n);
 
 /**
- * Name, and the exact shape of what travels with it. Eleven of them, and every one
+ * Name, and the exact shape of what travels with it. Twelve of them, and every one
  * is either a step of the way into the game or the thing the game is for.
  */
 export const EVENTS = {
@@ -94,6 +94,12 @@ export const EVENTS = {
   app_open: {},
   /** a step of the tour was shown; 0 is the first */
   tour_step: { step: intBelow(() => TOUR_STEPS) },
+  /**
+   * PLAY's search for somebody real came to an end: `found` a stranger, or
+   * nobody and so a bot. The share that finds somebody is the number that says
+   * whether the wait is worth having (`src/duel/pool.ts`).
+   */
+  seek_end: { league, found: flag },
   /** a match against a bot began */
   match_start: { league },
   /** a match against a bot ended; `surrender` is the player walking away from it */
@@ -126,6 +132,7 @@ export const EVENT_NAMES = Object.keys(EVENTS) as EventName[];
 export interface EventProps {
   app_open: Record<string, never>;
   tour_step: { step: number };
+  seek_end: { league: number; found: boolean };
   match_start: { league: number };
   match_end: { league: number; outcome: (typeof OUTCOMES)[number]; surrender: boolean };
   duel_invite: { via: (typeof INVITE_VIA)[number] };

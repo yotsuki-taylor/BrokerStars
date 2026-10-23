@@ -38,6 +38,7 @@ import * as corps from './corps';
 import { giftFirstHat, nameOf, outfitOf, roomOf, settle } from './profile';
 import { settle as settleInvite } from './invites';
 import {
+  DUEL_CODE_LENGTH,
   DUEL_INTRO_MS,
   DUEL_TTL_MS,
   HOST_WAIT_MS,
@@ -46,6 +47,7 @@ import {
   type DuelAward,
   type ServerMsg,
 } from '../../src/duel/protocol';
+import { PAIR_TTL_MS } from '../../src/duel/pool';
 import { otherSeat, ordered, snapshotFor, syncFor, type Seat } from '../../src/duel/snapshot';
 import { award, clearedBar, record, topLeague, type Env, type Outcome } from './results';
 import { identify } from './auth';
@@ -56,6 +58,12 @@ interface Player {
   outfit: Outfit;
   /** the league this player is paid at, read off the board at kick-off */
   payLeague: number;
+  /**
+   * The highest league this player had finished a match in, read at kick-off.
+   * Only a ranked duel needs it: a ladder match into a league they have never
+   * played before is a line in their corporation's feed, as it is from a bot.
+   */
+  top?: number;
   /**
    * Renovation steps finished, read off the profile at kick-off alongside the
    * league and for the same reason: an office that gets a step richer mid-duel
@@ -72,6 +80,22 @@ interface Meta {
   players: [Player | null, Player | null];
   /** 'lobby' until both are in, then 'live', then 'done' */
   phase: 'lobby' | 'live' | 'done';
+  /**
+   * Two strangers the pool paired off PLAY, rather than a friend and a link.
+   *
+   * It changes what the match is worth and nothing about how it is played.
+   * Both chose this league and both are paid at it, and a win is banked on the
+   * ladder exactly as a win over a bot is. The rule that keeps an invited duel
+   * off the ladder — a friend willing to lose ten times is a lift — does not
+   * reach a stranger the pool picked, whom nobody arranged.
+   */
+  ranked?: boolean;
+  /**
+   * The one player who may take the second seat, on a ranked duel. Its code
+   * went to exactly two people, and the second of them is named here so that
+   * a code that leaked is still not a seat.
+   */
+  expect?: string;
 }
 
 /**
@@ -134,10 +158,13 @@ export class Duel implements DurableObject {
         name?: string;
         outfit?: unknown;
         league?: number;
+        ranked?: boolean;
+        guest?: string;
       };
       if (this.meta) return json({ error: 'taken' }, 409);
       const league = Math.min(4, Math.max(0, Math.floor(Number(body.league) || 0)));
-      const expiresAt = Date.now() + DUEL_TTL_MS;
+      const ranked = body.ranked === true;
+      const expiresAt = Date.now() + (ranked ? PAIR_TTL_MS : DUEL_TTL_MS);
       this.meta = {
         league,
         expiresAt,
@@ -151,6 +178,7 @@ export class Duel implements DurableObject {
           null,
         ],
         phase: 'lobby',
+        ...(ranked ? { ranked, expect: String(body.guest ?? '') } : {}),
       };
       await this.save();
       // sweep the invitation away the moment it stops being one
@@ -293,6 +321,7 @@ export class Duel implements DurableObject {
     else if (guest && guest.id === caller.id) seat = 1;
     else if (meta.phase !== 'lobby') return fail('started');
     else if (guest) return fail('full');
+    else if (meta.expect !== undefined && caller.id !== meta.expect) return fail('full');
     else if (Date.now() > meta.expiresAt) return fail('expired');
     else {
       // Note what the first branch already covers: a host who opens their own
@@ -353,6 +382,17 @@ export class Duel implements DurableObject {
     // seats taken has anything to decide.
     if (!meta || meta.phase !== 'lobby' || !meta.players[0] || !meta.players[1]) return;
 
+    // A pair the pool made starts when both phones are on, and never without
+    // one. Neither of them sent anybody a link, so there is no host off in a
+    // chat app to wait for — and a phone that gave up on the pair has already
+    // dealt itself a bot (`PAIR_START_MS`), so the held whistle would start a
+    // match against nobody and file a result for it.
+    if (meta.ranked) {
+      if (this.sockets[0] && this.sockets[1]) await this.begin();
+      else this.broadcastLobby();
+      return;
+    }
+
     if (this.sockets[0] && !this.away[0]) {
       this.hold(null);
       this.broadcastLobby();
@@ -409,9 +449,13 @@ export class Duel implements DurableObject {
     if (!a || !b) return;
 
     // What each of them is paid at. Read now rather than at the whistle so a
-    // match handed in mid-duel cannot change what this one is worth.
-    a.payLeague = Math.min(meta.league, await topLeague(this.env, a.id));
-    b.payLeague = Math.min(meta.league, await topLeague(this.env, b.id));
+    // match handed in mid-duel cannot change what this one is worth. A ranked
+    // duel pays the league it was played in, as a bot match does: both of them
+    // chose it, and the pool only pairs two who chose the same one.
+    a.top = await topLeague(this.env, a.id);
+    b.top = await topLeague(this.env, b.id);
+    a.payLeague = meta.ranked ? meta.league : Math.min(meta.league, a.top);
+    b.payLeague = meta.ranked ? meta.league : Math.min(meta.league, b.top);
 
     // And what each of them sits down with. Off the profile this Worker keeps,
     // never off the hello: an office is money at the desk now, and this is a
@@ -665,13 +709,14 @@ export class Duel implements DurableObject {
 
         // And the shelf, which cares about different things than the board
         // does: the duel counter it keeps, the streak, and the companies that
-        // were up. A duel banks no league win — `settle` knows that from the
-        // `duel` flag rather than from being told twice.
+        // were up. An invited duel banks no league win — `settle` knows that
+        // from the `duel` flag — and a ranked one does, which is `ladder`.
         const applied = await settle(
           this.env,
           { id: player.id, name: player.name },
           {
             league: player.payLeague,
+            ladder: meta.ranked === true,
             facts: {
               outcome,
               netWorth: Math.round(Math.max(0, t.netWorth)),
@@ -687,12 +732,16 @@ export class Duel implements DurableObject {
         // And the corporation, on the same footing a bot match is on: a duel is
         // coins earned in a season, and an award earned in one is an award.
         //
-        // NO LEAGUE LINE FROM A DUEL, deliberately: the ladder is climbed
-        // against bots, because a friend willing to lose ten times is a lift
-        // rather than a climb — and a feed that announced a league taken that
-        // way would be advertising exactly the lift.
+        // NO LEAGUE LINE FROM AN INVITED DUEL, deliberately: a friend willing
+        // to lose ten times is a lift rather than a climb — and a feed that
+        // announced a league taken that way would be advertising exactly the
+        // lift. A ranked duel is on the ladder, so it gets the line a bot match
+        // would.
         const who = { id: player.id, name: player.name };
         await corps.credit(this.env, player.id, { coins: paid.total });
+        if (meta.ranked && meta.league > (player.top ?? 0)) {
+          await corps.note(this.env, who, 'league', String(meta.league));
+        }
         for (const id of applied.gained ?? []) await corps.note(this.env, who, 'award', id);
       } catch (err) {
         // The board is a shop window, never a condition of play: a duel that
@@ -727,6 +776,30 @@ function close(ws: WebSocket | null): void {
     /* already gone */
   }
 }
+
+/**
+ * The code in an invitation link. Base32 without vowels, so no code can spell
+ * anything and none of the pairs a phone keyboard confuses are both in the
+ * alphabet. Sixty bits of `crypto.getRandomValues` at ten characters: this is
+ * the only thing standing between a stranger and somebody else's duel, and it
+ * has fifteen minutes to be guessed in.
+ */
+const ALPHABET = '0123456789bcdfghjklmnpqrstvwxyz';
+
+export function mintCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(DUEL_CODE_LENGTH));
+  let out = '';
+  for (const b of bytes) out += ALPHABET[b % ALPHABET.length];
+  return out;
+}
+
+/**
+ * The object a code names. Here rather than beside the routes because two
+ * places open duels now: `/duel/new` for an invitation, and the pool for a
+ * pair of strangers (`matchmaker.ts`).
+ */
+export const duelStub = (env: Env, code: string) =>
+  env.DUEL.get(env.DUEL.idFromName(`duel:${code}`));
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

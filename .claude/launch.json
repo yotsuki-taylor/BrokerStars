@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "preview", "--mode", "crazygames", "--port", "4174", "--strictPort"],
       "port": 4174
+    },
+    {
+      "name": "broker-stars-worker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "worker", "run", "dev"],
+      "port": 8787
     }
   ]
 }

@@ -32,6 +32,7 @@ const NOW = Date.UTC(2026, 8, 23, 12);
 const GOOD: { [K in EventName]: EventProps[K] } = {
   app_open: {},
   tour_step: { step: 0 },
+  seek_end: { league: 2, found: true },
   match_start: { league: 4 },
   match_end: { league: 2, outcome: 'loss', surrender: true },
   duel_invite: { via: 'chat' },
@@ -48,8 +49,8 @@ const clean = (name: string, props: unknown) =>
   cleanEvent({ id: ID, name, props, ts: NOW }, LEAGUES, NOW);
 
 describe('the catalogue', () => {
-  it('has eleven events, and a good example of each passes', () => {
-    expect(EVENT_NAMES).toHaveLength(11);
+  it('has twelve events, and a good example of each passes', () => {
+    expect(EVENT_NAMES).toHaveLength(12);
     for (const name of EVENT_NAMES) {
       expect(clean(name, GOOD[name]), name).toEqual({
         id: ID,
