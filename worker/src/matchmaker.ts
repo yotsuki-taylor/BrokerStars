@@ -34,6 +34,14 @@ const HELLO_TIMEOUT_MS = 10_000;
 interface Waiter {
   ws: WebSocket;
   caller: Caller;
+  /**
+   * The socket closed. Set by the close handler whenever it fires — including
+   * while `seek` is still waiting on `identify`, which is the case the pool
+   * alone cannot see: the seeker is not in it yet, so leaving it does nothing,
+   * and without this they would be put in a moment later with nobody on the
+   * other end. A stranger paired with that is paired with an empty chair.
+   */
+  gone: boolean;
 }
 
 /** The storage key the pool's visitors live under; `Pool.snapshot` says why they live anywhere. */
@@ -65,7 +73,9 @@ export class Matchmaker implements DurableObject {
 
   private accept(ws: WebSocket): void {
     ws.accept();
-    let waiter: Waiter | null = null;
+    // Made before anybody is identified, so a close at any moment has somewhere
+    // to land; `caller` is filled in once `identify` has answered.
+    const me: Waiter = { ws, caller: { id: '', name: '' }, gone: false };
     let asked = false;
 
     const hello = setTimeout(() => {
@@ -84,33 +94,35 @@ export class Matchmaker implements DurableObject {
       if (msg?.k !== 'seek') return;
       asked = true;
       clearTimeout(hello);
-      void this.seek(ws, msg).then((w) => {
-        waiter = w;
-      });
+      void this.seek(me, msg);
     });
 
     const drop = () => {
       clearTimeout(hello);
-      if (waiter) this.pool.leave(waiter);
+      me.gone = true;
+      this.pool.leave(me);
     };
     ws.addEventListener('close', drop);
     ws.addEventListener('error', drop);
   }
 
   /** Put a seeker in the pool and answer them, now or at their deadline. */
-  private async seek(ws: WebSocket, msg: SeekClientMsg): Promise<Waiter | null> {
+  private async seek(waiter: Waiter, msg: SeekClientMsg): Promise<void> {
+    const ws = waiter.ws;
     if (!this.env.BOT_TOKEN && !this.env.SESSION_SECRET) {
       answer(ws, { k: 'error', reason: 'noserver' });
-      return null;
+      return;
     }
     const caller = await identify(String(msg.initData ?? ''), this.env);
     if (!caller) {
       answer(ws, { k: 'error', reason: 'badsig' });
-      return null;
+      return;
     }
+    // Hung up while being identified: nobody to put in the pool.
+    if (waiter.gone) return;
+    waiter.caller = caller;
 
     const league = Math.min(4, Math.max(0, Math.floor(Number(msg.league) || 0)));
-    const waiter: Waiter = { ws, caller };
     const seeker: Seeker<Waiter> = { id: caller.id, league, at: Date.now(), handle: waiter };
     const got = this.pool.seek(seeker);
     // One small write per PLAY, and nothing waits on it: a visitor lost to a
@@ -119,7 +131,7 @@ export class Matchmaker implements DurableObject {
 
     if (got.kind === 'pair') {
       await this.open(got.host, got.guest);
-      return null;
+      return;
     }
 
     if (got.replaced) answer(got.replaced.handle.ws, { k: 'none' });
@@ -127,7 +139,6 @@ export class Matchmaker implements DurableObject {
       // Paired or gone in the meantime: they have had their answer already.
       if (this.pool.expire(waiter)) answer(ws, { k: 'none' });
     }, got.ms);
-    return waiter;
   }
 
   /**
