@@ -162,9 +162,16 @@ export function duelCodeFromText(text: string): string | null {
  * Either may be null — a deployment with no bot, or one that does not know
  * where the game is served from — so each falls back to the other rather than
  * leaving the player with nothing to send.
+ *
+ * A host that wants invitations in a shape of its own (`invitation` in
+ * src/platform/) gets the chosen one handed over to reshape. On CrazyGames
+ * that is the only kind it may send, so a link it cannot reshape is no link.
  */
 export function linkToShare(bot: string | null, web: string | null): string | null {
-  return platform().id === 'telegram' ? (bot ?? web) : (web ?? bot);
+  const p = platform();
+  const chosen = p.id === 'telegram' ? (bot ?? web) : (web ?? bot);
+  if (!chosen || !p.invitation) return chosen;
+  return p.invitation(chosen) || null;
 }
 
 /**
@@ -222,6 +229,9 @@ const WEBVIEW = /;\s*wv[)\s]/i;
  */
 export function canHandOver(): boolean {
   if (platform().id === 'android') return false;
+  // A walled host forbids pointing anybody at an app store or another copy of
+  // the game, and an offer of the app is both.
+  if (platform().walled) return false;
   // No Android, no app to hand anything to -- which covers Telegram on a
   // desktop and on an iPhone as much as it covers a laptop browser.
   const ua = String((globalThis as any).navigator?.userAgent ?? '');

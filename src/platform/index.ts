@@ -19,6 +19,7 @@
  */
 
 import { ANDROID, inAndroid } from './android';
+import { CRAZYGAMES, inCrazyGames } from './crazygames';
 import { TELEGRAM, inTelegram } from './telegram';
 import { WEB } from './web';
 
@@ -29,7 +30,15 @@ export interface Platform {
    * answered, and it answers in a browser tab too — see `inTelegram`. Ask
    * `authToken()` for that.
    */
-  readonly id: 'telegram' | 'web' | 'android';
+  readonly id: 'telegram' | 'web' | 'android' | 'crazygames';
+
+  /**
+   * A host that forbids sending players anywhere else — CrazyGames, which takes
+   * no links to other platforms, app stores or other copies of the game. Asked
+   * by everything that would open Telegram or offer the Android app; the
+   * privacy policy is the one link out that stays. Absent means open.
+   */
+  readonly walled?: boolean;
 
   /**
    * Whatever the host wants doing before the game draws — full height, a
@@ -114,6 +123,27 @@ export interface Platform {
   onLink(listener: (param: string) => void): () => void;
 
   /**
+   * The address an invitation should travel as on this host, made from one of
+   * the server's own links. Empty when there is none to give, which the caller
+   * treats as no link at all.
+   *
+   * Absent everywhere but on a host whose rules forbid the server's links: there
+   * the code is lifted off them and put on a link of the host's own, and
+   * `launchParam()` reads it back off the page the recipient lands on.
+   */
+  invitation?(link: string): string;
+
+  /**
+   * A match on the board and running (`true`), and not any more (`false`).
+   * Called every frame by the match loop, so an implementation that tells
+   * somebody passes on changes only.
+   *
+   * Absent wherever nobody is listening, which is everywhere but CrazyGames —
+   * it keeps its ads out of play and measures the download up to the first one.
+   */
+  gameplay?(playing: boolean): void;
+
+  /**
    * The game going to the background (`false`) and coming back (`true`).
    * Returns the way to stop listening.
    *
@@ -153,9 +183,12 @@ export interface Account {
  * Android is tested first and the order is not arbitrary: the Android build
  * carries no Telegram SDK (vite.config.ts takes the tag out), so the two can
  * never both answer — but if a future build ever did carry both, the native
- * host is the one that actually knows who is playing.
+ * host is the one that actually knows who is playing. CrazyGames comes next
+ * for the same reason Telegram is never the only check: its build carries no
+ * Telegram script either, and only it carries its own.
  */
 export function platform(): Platform {
   if (inAndroid()) return ANDROID;
+  if (inCrazyGames()) return CRAZYGAMES;
   return inTelegram() ? TELEGRAM : WEB;
 }

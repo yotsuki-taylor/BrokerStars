@@ -20,7 +20,7 @@ const keepCodeChars = (raw: string): string =>
     .toUpperCase()
     .replace(/[^0-9BCDFGHJKLMNPQRSTVWXYZ]/g, '')
     .slice(0, FRIEND_CODE_LENGTH);
-import { copyText, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
+import { chatAvailable, copyText, friendsAvailable, linkToShare, openChat, shareInvite } from './friends';
 import { t } from './i18n';
 import VisitScreen from './VisitScreen';
 import type { Friend, FriendError, FriendList, InviteStanding } from '../friends/protocol';
@@ -123,6 +123,7 @@ const POPUP_H = 132;
  * has nothing to offer.
  */
 function ChatCall() {
+  if (!chatAvailable()) return null;
   return (
     <div className="friend-chat">
       <p>{t('friends.chatPitch')}</p>

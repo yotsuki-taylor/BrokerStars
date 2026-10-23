@@ -787,8 +787,12 @@ export async function sendFeedback(
  * prove who is asking — the same two things friends and duels need, and for
  * the same reason: a link is a claim about an account, and an account is the
  * one thing a client is never believed about.
+ *
+ * And not on a walled host: the other door is Google and the Android app, and
+ * CrazyGames does not let a game point its players at an app.
  */
-export const linkAvailable = (): boolean => BASE !== '' && initData() !== '';
+export const linkAvailable = (): boolean =>
+  BASE !== '' && initData() !== '' && !platform().walled;
 
 /** Whether this player already has a second way in. Null when nothing answered. */
 export async function linkStatus(): Promise<boolean | null> {

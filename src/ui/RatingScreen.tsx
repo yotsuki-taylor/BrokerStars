@@ -10,6 +10,7 @@ import {
   type WorthBoard,
   type WorthRow,
 } from './api';
+import { platform } from '../platform';
 import { t } from './i18n';
 
 /**
@@ -126,7 +127,7 @@ function Table<T>({
     <div className="rating-board">
       <div className="rating-head">
         <span>{head}</span>
-        {!myId() && <em>{t('rating.onlyInTelegram')}</em>}
+        {!myId() && !platform().walled && <em>{t('rating.onlyInTelegram')}</em>}
       </div>
       <div className="rating-rows">
         {rows.map((r) => render(r))}

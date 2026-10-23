@@ -1607,6 +1607,9 @@ export default function App() {
       // `progress` can dip below zero (see above); the floor in `musicAt`
       // takes that.
       const live = duelRef.current ? ui.current.onBoard : !ui.current.paused;
+      // The same question the music asks, and the host that wants telling
+      // (CrazyGames) hears only when the answer changes.
+      platform().gameplay?.(live && !st.finished && st.totalTicks > 0);
       if (live && !st.finished && st.totalTicks > 0) {
         const through = (st.tick + progressRef.current) / st.totalTicks;
         musicAt('OST1', through * MATCH_TRACK_S);
@@ -2760,9 +2763,10 @@ export default function App() {
             return copyText(send);
           }}
           // Only when the server said there is a chat to shout into: the button
-          // is drawn from whether this prop is here at all.
+          // is drawn from whether this prop is here at all. Never on a walled
+          // host — the chat is Telegram's.
           onShout={
-            duel.chat && duel.code
+            duel.chat && duel.code && !platform().walled
               ? async () => {
                   const shout = await shoutInvite(duel.code as string);
                   if (shout === 'ok') track('duel_invite', { via: 'chat' });
@@ -2772,7 +2776,7 @@ export default function App() {
           }
           // No button, but a reason for its absence. Only where signing in
           // would actually produce one — see `chatNeedsAccount`.
-          shoutNeedsAccount={duel.chatNeedsAccount === true}
+          shoutNeedsAccount={duel.chatNeedsAccount === true && !platform().walled}
           // Only from an invitation of our own: anybody who got this far was
           // allowed to open one, so they are allowed to sit down at one.
           onJoinCode={

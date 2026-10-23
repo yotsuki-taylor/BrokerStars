@@ -79,3 +79,9 @@ export const CHAT_LINK = 'https://t.me/+9R4CBPEDUwg0MTQy';
 export function openChat(): void {
   platform().openLink(CHAT_LINK);
 }
+
+/**
+ * Whether there is a chat to offer here. Not on a walled host: the chat is a
+ * Telegram one, and sending players to another platform is what the wall is.
+ */
+export const chatAvailable = (): boolean => !platform().walled;

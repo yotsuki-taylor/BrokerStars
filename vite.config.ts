@@ -4,8 +4,11 @@ import react from '@vitejs/plugin-react';
 
 const TELEGRAM_SDK = /[ \t]*<script src="https:\/\/telegram\.org\/js\/telegram-web-app\.js"><\/script>\r?\n?/;
 
+/** CrazyGames' SDK. In `<head>` and before the game's own module, as their docs ask. */
+const CRAZYGAMES_SDK = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>';
+
 /**
- * Take Telegram's SDK out of the Android build.
+ * Take Telegram's SDK out of the Android and CrazyGames builds.
  *
  * Three reasons, and the third is the one that matters. It is a request to
  * telegram.org, which an app that opens offline should not be waiting on. It is
@@ -15,13 +18,13 @@ const TELEGRAM_SDK = /[ \t]*<script src="https:\/\/telegram\.org\/js\/telegram-w
  * src/platform/telegram.ts reads. Leave the tag in and the Android build would
  * pick the Telegram adapter and then find nobody signed in.
  */
-function withoutTelegramSdk(android: boolean): Plugin {
+function withoutTelegramSdk(strip: boolean): Plugin {
   return {
     name: 'broker-stars:strip-telegram-sdk',
     transformIndexHtml: {
       order: 'pre',
       handler(html) {
-        if (!android) return html;
+        if (!strip) return html;
         if (!TELEGRAM_SDK.test(html)) {
           // Fail loudly. A silent no-op here ships an Android build that thinks
           // it is a mini app, and the symptom turns up as a sign-in that never
@@ -32,6 +35,28 @@ function withoutTelegramSdk(android: boolean): Plugin {
           );
         }
         return html.replace(TELEGRAM_SDK, '');
+      },
+    },
+  };
+}
+
+/**
+ * Put CrazyGames' SDK into the CrazyGames build, and only there.
+ *
+ * The same reasoning as the Telegram tag, the other way round: the SDK defines
+ * `CrazyGames.SDK` wherever it loads, `inCrazyGames()` in
+ * src/platform/crazygames.ts reads exactly that, and on any other site it would
+ * load only to report itself disabled. The Telegram tag comes out of this build
+ * too (above) — leave it in and the Telegram adapter would still answer second.
+ */
+function withCrazyGamesSdk(crazygames: boolean): Plugin {
+  return {
+    name: 'broker-stars:crazygames-sdk',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (!crazygames) return html;
+        return html.replace('</head>', `  ${CRAZYGAMES_SDK}\n  </head>`);
       },
     },
   };
@@ -78,7 +103,14 @@ function buildVersion(): string {
  */
 export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [react(), withoutTelegramSdk(mode === 'android')],
+  plugins: [
+    react(),
+    withoutTelegramSdk(mode === 'android' || mode === 'crazygames'),
+    withCrazyGamesSdk(mode === 'crazygames'),
+  ],
+  // Its own folder, so the zip that goes to CrazyGames is never the Pages build
+  // or the one Capacitor copies into android/ — whichever ran last would win.
+  build: mode === 'crazygames' ? { outDir: 'dist-crazygames' } : {},
   define: { __BUILD_VERSION__: JSON.stringify(buildVersion()) },
   server: { host: true, port: 5173 },
 }));

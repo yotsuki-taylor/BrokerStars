@@ -15,6 +15,7 @@
     "build:android": "tsc -b && vite build --mode android",
     "android": "npm run build:android && cap sync android",
     "android:open": "cap open android",
+    "build:crazygames": "tsc -b && vite build --mode crazygames",
     "icons": "node assets/build-icons.mjs && capacitor-assets generate --android && node assets/shrink-splash.mjs"
   },
   "dependencies": {
