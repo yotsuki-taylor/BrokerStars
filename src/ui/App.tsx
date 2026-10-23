@@ -1317,6 +1317,12 @@ export default function App() {
    */
   const pendingPair = useRef(false);
   const pairTimer = useRef(0);
+  /**
+   * The same thing as `pendingPair`, for drawing: once a stranger is on the way
+   * the bot is no longer on offer, or taking it would leave them at an empty
+   * duel for the eight seconds it takes their phone to give up.
+   */
+  const [pairing, setPairing] = useState(false);
   /** when the last tick landed, which is all the interpolation has to go on */
   const lastTickAt = useRef(0);
   /**
@@ -1917,6 +1923,7 @@ export default function App() {
    */
   const dealBot = useCallback(() => {
     pendingPair.current = false;
+    setPairing(false);
     window.clearTimeout(pairTimer.current);
     closeDuel();
     setDuel(null);
@@ -1972,6 +1979,7 @@ export default function App() {
           setDuel((d) => (d ? { ...d, phase: 'match', league: msg.league, error: null } : d));
           // A pair that got going: the search is over and so is the wait for it.
           pendingPair.current = false;
+          setPairing(false);
           window.clearTimeout(pairTimer.current);
           setSeeking(false);
           if (msg.startsInMs === null) {
@@ -2199,9 +2207,10 @@ export default function App() {
   /**
    * PLAY, once the bot match has been dealt: look for somebody real first.
    *
-   * The versus screen holds on "searching" while the pool decides — five
-   * seconds when anybody else has been about in this league lately, the old
-   * flourish's length when nobody has (`src/duel/pool.ts`). A stranger turns
+   * The versus screen holds on "searching" while the pool decides — up to a
+   * minute when anybody else has been about in this league lately, the old
+   * flourish's length when nobody has (`src/duel/pool.ts`) — and the player
+   * may take the bot at any moment of it (`skipSearch`). A stranger turns
    * the match into a duel that counts on the ladder; nobody, and the bot that
    * was dealt comes in. A build that cannot look plays exactly as it always
    * did, board screen and all.
@@ -2229,6 +2238,7 @@ export default function App() {
         track('seek_end', { league: li, found: Boolean(code) });
         if (!code) return dealBot();
         pendingPair.current = true;
+        setPairing(true);
         connect(code, 'waiting', { code, league: li, matched: true });
         window.clearTimeout(pairTimer.current);
         pairTimer.current = window.setTimeout(() => {
@@ -2246,6 +2256,7 @@ export default function App() {
     old?.cancel();
     if (pendingPair.current) {
       pendingPair.current = false;
+      setPairing(false);
       window.clearTimeout(pairTimer.current);
       closeDuel();
       setDuel(null);
@@ -2253,6 +2264,25 @@ export default function App() {
     setSeeking(false);
     setSearched(false);
   }, [closeDuel]);
+
+  /**
+   * The player would rather not wait: the bot, now.
+   *
+   * The search is dropped exactly as backing out drops it — the socket closes
+   * and the pool lets go of them — and then it goes the way an empty answer
+   * goes, so the bot that was dealt before the search comes straight in, or
+   * the board first for a hat that shows it.
+   */
+  const skipSearch = useCallback(
+    (li: number) => {
+      const old = searchRef.current;
+      searchRef.current = null;
+      old?.cancel();
+      track('seek_skip', { league: li });
+      dealBot();
+    },
+    [dealBot],
+  );
 
   /**
    * Opened on somebody's invitation: straight into it, whatever screen was next.
@@ -2831,6 +2861,8 @@ export default function App() {
           duel={duelLive}
           stranger={duel?.matched === true}
           searching={seeking}
+          // Only while nobody is on the way: see `pairing`.
+          onSkip={seeking && !pairing ? () => skipSearch(league) : undefined}
           searched={searched}
           // Only in a duel: a match against a bot has already shown these on a
           // screen of their own, and showing them twice would be a screen that

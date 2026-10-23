@@ -86,7 +86,7 @@ const flag: Field = (raw) => (typeof raw === 'boolean' ? raw : undefined);
 const league = intBelow((n) => n);
 
 /**
- * Name, and the exact shape of what travels with it. Twelve of them, and every one
+ * Name, and the exact shape of what travels with it. Thirteen of them, and every one
  * is either a step of the way into the game or the thing the game is for.
  */
 export const EVENTS = {
@@ -100,6 +100,12 @@ export const EVENTS = {
    * whether the wait is worth having (`src/duel/pool.ts`).
    */
   seek_end: { league, found: flag },
+  /**
+   * The player stopped the search and took the bot before the pool answered.
+   * Its own event rather than a field on `seek_end`, so that builds already
+   * out, which send `seek_end` without it, are not refused for missing one.
+   */
+  seek_skip: { league },
   /** a match against a bot began */
   match_start: { league },
   /** a match against a bot ended; `surrender` is the player walking away from it */
@@ -133,6 +139,7 @@ export interface EventProps {
   app_open: Record<string, never>;
   tour_step: { step: number };
   seek_end: { league: number; found: boolean };
+  seek_skip: { league: number };
   match_start: { league: number };
   match_end: { league: number; outcome: (typeof OUTCOMES)[number]; surrender: boolean };
   duel_invite: { via: (typeof INVITE_VIA)[number] };

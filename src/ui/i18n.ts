@@ -365,6 +365,9 @@ const EN = {
   'board.never': 'NEVER {name}',
 
   'versus.searching': 'SEARCHING FOR AN OPPONENT',
+  // Under the search: the way out of a wait of up to a minute, without going
+  // back to the menu. Says what happens instead of what is given up.
+  'versus.playBot': 'DON’T WAIT — PLAY A BOT',
   'versus.waitingFriend': 'WAITING FOR YOUR FRIEND',
 
   'duel.title': 'DUEL A FRIEND',
@@ -1004,6 +1007,7 @@ const RU: Record<Key, string> = {
   'board.never': 'НИКОГДА {name}',
 
   'versus.searching': 'ИЩЕМ СОПЕРНИКА',
+  'versus.playBot': 'НЕ ЖДАТЬ — ИГРАТЬ С БОТОМ',
   'versus.waitingFriend': 'ЖДЁМ ДРУГА',
 
   'duel.title': 'ДУЭЛЬ С ДРУГОМ',

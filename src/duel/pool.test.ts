@@ -64,7 +64,7 @@ describe('how long a seeker waits', () => {
     expect(got.kind === 'wait' && got.ms).toBe(SEEK_ALONE_MS);
   });
 
-  it('waits the full five seconds when somebody looked in this league lately', () => {
+  it('waits the full minute when somebody looked in this league lately', () => {
     // b is playing a bot now and will be back in the queue in a minute or two
     const pool = new Pool<string>();
     const b = seeker('b', 1, NOW);

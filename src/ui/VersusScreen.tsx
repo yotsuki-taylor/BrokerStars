@@ -61,6 +61,7 @@ export default function VersusScreen({
   quirks = false,
   onReady,
   onCancel,
+  onSkip,
 }: {
   playerName: string;
   playerOutfit: Outfit;
@@ -91,8 +92,24 @@ export default function VersusScreen({
   quirks?: boolean;
   onReady: () => void;
   onCancel: () => void;
+  /**
+   * Stop looking and play the bot now. Passed only while a real search is on
+   * and nobody has been found yet; the button is drawn from whether it is here.
+   */
+  onSkip?: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>('enter');
+
+  // How long the search has been on, so a wait of up to a minute is a clock
+  // the player can read rather than a spinner they have to trust.
+  const [waited, setWaited] = useState(0);
+  useEffect(() => {
+    if (!searching) return;
+    const from = Date.now();
+    setWaited(0);
+    const tick = window.setInterval(() => setWaited(Math.floor((Date.now() - from) / 1000)), 250);
+    return () => clearInterval(tick);
+  }, [searching]);
   const done = useRef(false);
 
   // Held in a ref so the timeline below can depend on nothing: onReady is a
@@ -160,7 +177,26 @@ export default function VersusScreen({
       {!rivalIn && (
         <div className="versus-status">
           {t(duel && !stranger ? 'versus.waitingFriend' : 'versus.searching')}
+          {searching && waited > 0 && (
+            <span className="versus-clock">
+              {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, '0')}
+            </span>
+          )}
         </div>
+      )}
+
+      {/* Under the status, where the eye already is. It stops the tap from
+          reaching the screen behind, which would only skip the flourish. */}
+      {onSkip && !rivalIn && (
+        <button
+          className="menu-btn versus-skip"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSkip();
+          }}
+        >
+          {t('versus.playBot')}
+        </button>
       )}
 
       {rivalIn && <div className="name-plate top">{rivalName}</div>}

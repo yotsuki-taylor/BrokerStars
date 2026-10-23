@@ -33,6 +33,7 @@ const GOOD: { [K in EventName]: EventProps[K] } = {
   app_open: {},
   tour_step: { step: 0 },
   seek_end: { league: 2, found: true },
+  seek_skip: { league: 1 },
   match_start: { league: 4 },
   match_end: { league: 2, outcome: 'loss', surrender: true },
   duel_invite: { via: 'chat' },
@@ -49,8 +50,8 @@ const clean = (name: string, props: unknown) =>
   cleanEvent({ id: ID, name, props, ts: NOW }, LEAGUES, NOW);
 
 describe('the catalogue', () => {
-  it('has twelve events, and a good example of each passes', () => {
-    expect(EVENT_NAMES).toHaveLength(12);
+  it('has thirteen events, and a good example of each passes', () => {
+    expect(EVENT_NAMES).toHaveLength(13);
     for (const name of EVENT_NAMES) {
       expect(clean(name, GOOD[name]), name).toEqual({
         id: ID,

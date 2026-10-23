@@ -15,9 +15,11 @@
  * object answers every seeker exactly once — paired, or nobody — and the phone
  * keeps a timer of its own only for a server that says nothing at all.
  *
- * HOW LONG. Five seconds is worth waiting only when there is somebody to wait
- * for. A seeker alone in a league whose last visitor left an hour ago gets the
- * old flourish's length instead, so a quiet evening costs nobody anything over
+ * HOW LONG. Up to a minute, and only when there is somebody to wait for. A
+ * minute is long, so the screen says how long it has been and offers the bot
+ * at any moment (`VersusScreen`); the wait is the ceiling, not a sentence. A
+ * seeker alone in a league whose last visitor left an hour ago gets the old
+ * flourish's length instead, so a quiet evening costs nobody anything over
  * what PLAY always cost. "Somebody" is anyone else who looked for a match in
  * this league recently: a player in a bot match now is in the queue again in
  * about two minutes, which is what the window is sized to.
@@ -27,7 +29,7 @@
  */
 
 /** The longest a seek waits, when there is somebody it might be paired with. */
-export const SEEK_MS = 5000;
+export const SEEK_MS = 60_000;
 
 /** The wait for a seeker nobody is likely to join: the old flourish's length. */
 export const SEEK_ALONE_MS = 1400;
