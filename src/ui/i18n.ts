@@ -399,6 +399,10 @@ const EN = {
   'duel.expires': 'GOOD FOR {mm}:{ss}',
   'duel.how':
     'Send the link to a friend. It opens the bot, and the button there drops them straight into this match. Fifteen minutes and the invitation is dead — open another one, it costs nothing.',
+  // The same line on CrazyGames, where there is no bot: the link is the site's
+  // own invitation and opens the game itself (platform/crazygames.ts).
+  'duel.howCrazy':
+    'Send the link to a friend. It opens the game straight into this match. Fifteen minutes and the invitation is dead — open another one, it costs nothing.',
   'duel.send': 'SEND TO A FRIEND',
   'duel.copy': 'COPY THE LINK',
   /* The third way off the duel screen, for the player who has nobody to send
@@ -1039,6 +1043,8 @@ const RU: Record<Key, string> = {
   'duel.expires': 'ДЕЙСТВУЕТ {mm}:{ss}',
   'duel.how':
     'Отправь ссылку другу. Она открывает бота, а кнопка там заводит его прямо в этот матч. Через пятнадцать минут приглашение мертво — откроешь новое, это ничего не стоит.',
+  'duel.howCrazy':
+    'Отправь ссылку другу. Она откроет игру прямо в этом матче. Через пятнадцать минут приглашение мертво — откроешь новое, это ничего не стоит.',
   'duel.send': 'ОТПРАВИТЬ ДРУГУ',
   'duel.shout': 'ПОЗВАТЬ В ЧАТЕ',
   'duel.shouted': 'ОТПРАВЛЕНО В ЧАТ',

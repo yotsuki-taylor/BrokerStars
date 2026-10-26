@@ -987,6 +987,54 @@ body {
   [data-host='crazygames'] .rows {
     gap: 5px;
   }
+
+  /* The league carousel. Its cards are sized by width and the badge is
+     square, so at 800 wide a 230px card stood taller than the strip it sits
+     in and pushed the league's name under the panel below. A narrower card
+     brings badge and name back inside; the carousel measures real card sizes,
+     so centring and snapping follow. */
+  [data-host='crazygames'] .league-track {
+    --card-w: 144px;
+  }
+
+  /* The market's companies. The open company's card and the buy/sell block
+     above the grid left it about 35px, a strip of tile tops. Here the window
+     has width to spare, so the screen widens and splits: company and trade on
+     the left, the grid scrolling on its own on the right. Only while the grid
+     is on screen — the portfolio tab and every other `.archive` keep the
+     single column. */
+  [data-host='crazygames'] .app:has(> .archive > .arch-grid) {
+    max-width: 780px;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'top top'
+      'tabs tabs'
+      'detail grid'
+      'trade grid';
+    column-gap: 10px;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) > .menu-top {
+    grid-area: top;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) > .arch-tabs {
+    grid-area: tabs;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) > .arch-detail {
+    grid-area: detail;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) > .trade {
+    grid-area: trade;
+    align-self: start;
+  }
+  [data-host='crazygames'] .archive:has(> .arch-grid) > .arch-grid {
+    grid-area: grid;
+    min-height: 0;
+    align-content: start;
+  }
 }
 
 /* ---------- main menu ---------- */

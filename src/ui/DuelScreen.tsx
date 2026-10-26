@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Cross } from './components';
+import { platform } from '../platform';
 import { t } from './i18n';
 import type { DuelError } from '../duel/protocol';
 import { duelCodeFromText, type Shout } from './duel';
@@ -245,7 +246,9 @@ export default function DuelScreen({
           {t(invited.sent ? 'duel.invited' : 'duel.notInvited', { name: invited.name })}
         </div>
       ) : (
-        <p>{t('duel.how')}</p>
+        // No bot on CrazyGames to send anybody through: the link there is the
+        // site's own invitation, which opens the game itself.
+        <p>{t(platform().id === 'crazygames' ? 'duel.howCrazy' : 'duel.how')}</p>
       )}
 
       {/* The code, so a link that will not open is still something a friend can
