@@ -62,6 +62,8 @@ assets/_preview*.png
 assets/play-icon-512.png
 assets/play-feature-graphic.png
 assets/store/*.png
+# CrazyGames' covers and preview videos (assets/build-crazygames-covers.mjs).
+assets/crazygames/
 
 # Signing keys, anywhere in the tree. `android/.gitignore` covers only the
 # android/ subtree, and a key made in whatever folder the terminal happened to
