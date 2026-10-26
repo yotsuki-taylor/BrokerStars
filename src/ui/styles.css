@@ -5249,3 +5249,95 @@ a.big-btn {
   letter-spacing: 0.5px;
   opacity: 0.6;
 }
+
+/* ---------- the menu in a landscape window (CrazyGames only) ---------- */
+
+/* The office is drawn for a phone: every layer is a 1080×1920 portrait
+   sheet laid over the whole menu with `cover`, and the trader stands in
+   front of it at a height and a spot measured against that sheet. In a
+   landscape window the same sheet is scaled by width, so only its bottom
+   strip fits behind the buttons — a desk and the foot of a monitor, with
+   the window, the pictures, the shelf and the trader himself out of frame.
+
+   So on CrazyGames, in any window wider than tall, the menu splits. The
+   office gets a panel of its own on the left and the renovation card and
+   the buttons take the right. Behind the panel the sheet is laid out as it
+   is on a phone — a box 0.465 wide for its height, so it crops the same —
+   and the trader is placed by the same fractions of that box as on a phone
+   (0.417 of it tall, standing on 0.642 of it). The box is taller than the
+   panel, though: only its top 72% shows. Below that a phone has nothing but
+   table top under its buttons, and dropping it makes the panel wider and
+   the scene bigger. The rails sit on the panel's edges. Phones and every
+   other host keep the single column. */
+@media (orientation: landscape) {
+  /* 0.465 / 0.72: the panel is as wide as the box behind it */
+  [data-host='crazygames'] .app:has(> .menu) {
+    --scene-w: calc((100dvh - 16px) * 0.646);
+    max-width: calc(var(--scene-w) + 590px);
+  }
+  [data-host='crazygames'] .menu {
+    display: grid;
+    grid-template-columns: var(--scene-w) minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'scene top'
+      'scene admin'
+      'scene reno'
+      'scene actions';
+    column-gap: 10px;
+  }
+  /* absolute children placed in a grid area are laid out against that area */
+  [data-host='crazygames'] .menu > .room {
+    grid-area: scene;
+    top: -6px;
+    bottom: auto;
+    height: calc((100% + 14px) / 0.72);
+    left: -12px;
+    right: 0;
+  }
+  [data-host='crazygames'] .menu > .rail-btn {
+    grid-area: scene;
+  }
+  /* 0.642 of the box is 89.2% of the panel that shows 0.72 of it */
+  [data-host='crazygames'] .menu > .hero {
+    grid-area: scene;
+    align-self: start;
+    height: 89.2%;
+  }
+  /* 0.417 of the box is 65% of a hero box 0.642 of it */
+  [data-host='crazygames'] .menu > .hero .character {
+    height: 65%;
+    max-height: none;
+    max-width: none;
+  }
+  /* On a phone the renovation card crosses the standing trader's lower edge;
+     here the card is in the other column and the edge of the sprite showed.
+     So with no desk to stand at he drops past the bottom of the panel, and
+     the hero is clipped at the bottom of the window — the panel's edge,
+     12.1% of the hero's height below it (the panel being 1/0.892 of the
+     hero), plus the padding under the menu — as if he went on out of frame. */
+  [data-host='crazygames'] .menu > .hero {
+    clip-path: inset(-100% -100% calc(-12.1% - 14px) -100%);
+  }
+  [data-host='crazygames'] .menu > .hero:not(.hero-seated) .character {
+    transform: translateY(30%);
+  }
+  [data-host='crazygames'] .menu > .menu-top {
+    grid-area: top;
+  }
+  [data-host='crazygames'] .menu > .admin-bar {
+    grid-area: admin;
+  }
+  [data-host='crazygames'] .menu > .reno {
+    grid-area: reno;
+  }
+  /* the buttons fill what the right column has left, rather than leaving a
+     bare stretch of background above the renovation card */
+  [data-host='crazygames'] .menu > .menu-actions {
+    grid-area: actions;
+    align-self: stretch;
+  }
+  [data-host='crazygames'] .menu > .menu-actions .menu-left .menu-btn {
+    flex: 1 1 0;
+  }
+}
