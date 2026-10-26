@@ -168,20 +168,25 @@ async function signIn(): Promise<void> {
     return;
   }
 
+  // Traded afresh on every launch, as CrazyGames asks: a username changed
+  // there reaches the game, and the server, the next time it opens. The
+  // session kept from last time is only the fallback for a trade that fails,
+  // and only for the same account -- somebody else logged in on this browser
+  // is never handed the last one's session.
   const tag = String(who.__dangerousUserId ?? who.username ?? '');
   const held = loadSession();
-  if (held && held.user === tag) {
-    session = held;
-    return;
-  }
+  const fallback = held && held.user === tag ? held : null;
+  const keepHeld = () => {
+    session = fallback;
+  };
 
   let token = '';
   try {
     token = String((await user.getUserToken({ signingKeyType: 'IN_GAME_AUTH' })) ?? '');
   } catch {
-    return;
+    return keepHeld();
   }
-  if (!token) return;
+  if (!token) return keepHeld();
 
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(), SIGN_IN_MS);
@@ -192,9 +197,9 @@ async function signIn(): Promise<void> {
       body: JSON.stringify({ token, guest: guestToken() }),
       signal: stop.signal,
     });
-    if (!res.ok) return;
+    if (!res.ok) return keepHeld();
     const body = (await res.json()) as { token?: string; id?: string; name?: string; adopted?: boolean };
-    if (!body.token || !body.id) return;
+    if (!body.token || !body.id) return keepHeld();
     keepSession({
       token: body.token,
       id: body.id,
@@ -203,7 +208,8 @@ async function signIn(): Promise<void> {
     });
     if (body.adopted) forgetGuest();
   } catch {
-    /* a guest, this time */
+    // no answer in time: last launch's session, or a guest
+    keepHeld();
   } finally {
     clearTimeout(timer);
   }
@@ -253,6 +259,7 @@ function handOver(text: string): void {
 export const CRAZYGAMES: Platform = {
   id: 'crazygames',
   walled: true,
+  ownNames: true,
 
   async ready(): Promise<void> {
     // The one hook the stylesheet has on this host: CrazyGames plays in a wide,

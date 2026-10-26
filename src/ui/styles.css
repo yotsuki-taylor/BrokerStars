@@ -1035,6 +1035,62 @@ body {
     min-height: 0;
     align-content: start;
   }
+
+  /* The board of a duel. Each company's buttons wrapped onto a line of their
+     own, three rows of that ran past the window, and the column spilled over
+     the last-move line above and the chips below. A wide window has room for
+     the buttons beside the name, which makes each row one line again. */
+  [data-host='crazygames'] .draft {
+    gap: 5px;
+  }
+  [data-host='crazygames'] .draft .menu-top {
+    min-height: 0;
+  }
+  [data-host='crazygames'] .draft-status {
+    padding: 3px 6px;
+    font-size: 13px;
+  }
+  [data-host='crazygames'] .draft-last {
+    font-size: 10px;
+  }
+  [data-host='crazygames'] .draft .board-list {
+    gap: 5px;
+  }
+  [data-host='crazygames'] .draft-row {
+    flex-wrap: nowrap;
+    padding: 5px 8px;
+  }
+  [data-host='crazygames'] .draft-row .board-logo {
+    width: 28px;
+    height: 28px;
+  }
+  [data-host='crazygames'] .draft-moves {
+    flex: 0 0 auto;
+  }
+  [data-host='crazygames'] .draft .menu-btn.play {
+    min-height: 40px;
+  }
+
+  /* The result. The chart and three rows of figures left MENU and PLAY AGAIN
+     under the bottom edge, to be scrolled to. A shorter chart and the six
+     figures in three columns bring both buttons back on screen. */
+  [data-host='crazygames'] .overlay:has(> .result-grid) .result-chart {
+    height: 84px;
+    margin-bottom: 6px;
+  }
+  [data-host='crazygames'] .overlay:has(> .result-grid) .result-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+  [data-host='crazygames'] .overlay:has(> .result-grid) .stat {
+    padding: 3px 7px;
+  }
+  [data-host='crazygames'] .overlay:has(> .result-grid) .result-actions {
+    margin-top: 8px;
+  }
+  [data-host='crazygames'] .overlay:has(> .result-grid) .result-rematch-note {
+    margin-top: 6px;
+  }
 }
 
 /* ---------- main menu ---------- */

@@ -298,10 +298,19 @@ function haptic(kind: 'light' | 'heavy' = 'light') {
  * no name for the player leaves the game calling them what it always called
  * them.
  */
+/**
+ * The chosen name, unless the host's must win: on a host that names its own
+ * players (`ownNames`), a logged-in player is called what the host calls them.
+ */
+function chosenName(): string | null {
+  if (platform().ownNames && platform().userName()) return null;
+  return loadNick();
+}
+
 function playerName(): string {
   // The chosen name first: it is the one the rest of the game knows them by,
   // and the host's is what they chose it INSTEAD of.
-  const name = loadNick() ?? platform().userName();
+  const name = chosenName() ?? platform().userName();
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -315,7 +324,7 @@ function playerName(): string {
  * (`mintGuest`), which is what that name is for.
  */
 function duelName(): string {
-  const name = loadNick() ?? (platform().userName() || guestName());
+  const name = chosenName() ?? (platform().userName() || guestName());
   return name ? name.slice(0, 12).toUpperCase() : t('match.you');
 }
 
@@ -810,7 +819,8 @@ function AccountPanel({
       {/* Above the account block and outside it: everybody who can reach this
           drawer can choose a name, including a player in Telegram who has no
           Google account to sign into. */}
-      <NickPanel onNamed={() => setNote(null)} />
+      {/* Not where the host names its players and forbids a second name. */}
+      {!platform().ownNames && <NickPanel onNamed={() => setNote(null)} />}
       {account && (
         <div className="settings-list">
           <p className="settings-note">{signed ? platform().userName() : t('account.out')}</p>
@@ -1984,7 +1994,7 @@ export default function App() {
     const text =
       trade.realized !== 0
         ? `${signed(trade.realized)}`
-        : `${trade.qty > 0 ? '+' : '-'}${Math.abs(trade.qty)} SH`;
+        : `${trade.qty > 0 ? '+' : '-'}${Math.abs(trade.qty)} ${t('match.shares')}`;
     const item: FloatPnl = { id, text, good: trade.realized !== 0 ? trade.realized > 0 : true };
     setFloats((f) => ({ ...f, [trade.stock]: [...(f[trade.stock] ?? []), item] }));
     window.setTimeout(
@@ -3331,7 +3341,11 @@ export default function App() {
         <div className="overlay pause">
           <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
           <div className="sub">
-            {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
+            {t('match.pauseLine', {
+              time: `${mm}:${ss}`,
+              you: money(me.netWorth),
+              rival: money(rival.netWorth),
+            })}
           </div>
           {admin && (
             <button
@@ -3634,7 +3648,11 @@ export default function App() {
         <div className="overlay pause">
           <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
           <div className="sub">
-            {mm}:{ss} left · you {money(me.netWorth)} · rival {money(rival.netWorth)}
+            {t('match.pauseLine', {
+              time: `${mm}:${ss}`,
+              you: money(me.netWorth),
+              rival: money(rival.netWorth),
+            })}
           </div>
           {admin && (
             <button

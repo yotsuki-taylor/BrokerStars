@@ -46,6 +46,8 @@ describe('on CrazyGames', () => {
     await onCrazyGames();
     expect(platform().id).toBe('crazygames');
     expect(platform().walled).toBe(true);
+    // and names its players itself: no nickname box, the username wins
+    expect(platform().ownNames).toBe(true);
   });
 
   it('beats Telegram if both scripts were ever loaded', async () => {
@@ -380,12 +382,29 @@ describe('signing in as the CrazyGames user', () => {
     expect(guestToken()).toBe('');
   });
 
-  it('does not ask again for the same user on the next launch', async () => {
+  it('trades again on every launch, so a username changed on CrazyGames arrives', async () => {
     await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    answer.body = { ok: true, token: 'bs1.next', id: 'cg:Xk3mZ8', name: 'masha_renamed' };
+    await onCrazyGamesAs({ username: 'masha_renamed', __dangerousUserId: 'Xk3mZ8' });
+    expect(posted).toHaveLength(2);
+    expect(platform().authToken()).toBe('bs1.next');
+    expect(platform().userName()).toBe('masha_renamed');
+  });
+
+  it('keeps last launch’s session for the same account when the trade fails', async () => {
     await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
-    expect(posted).toHaveLength(1);
+    answer = { status: 503, body: { error: 'down' } };
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
     expect(platform().authToken()).toBe('bs1.session');
   });
+
+  it('never hands another account the last one’s session when the trade fails', async () => {
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    answer = { status: 503, body: { error: 'down' } };
+    await onCrazyGamesAs({ username: 'other_one', __dangerousUserId: 'Q9' });
+    expect(platform().authToken()).toBe('');
+  });
+
 
   it('asks again when a different account logs in on this browser', async () => {
     await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });

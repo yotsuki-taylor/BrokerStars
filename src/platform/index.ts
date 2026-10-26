@@ -41,6 +41,14 @@ export interface Platform {
   readonly walled?: boolean;
 
   /**
+   * A host whose players already have a name the game must use, and no
+   * nickname of the game's own -- CrazyGames, which asks for its usernames and
+   * forbids a second name. The name box is hidden, and the host's name wins
+   * over any chosen one. Absent means the game may let players choose.
+   */
+  readonly ownNames?: boolean;
+
+  /**
    * Whatever the host wants doing before the game draws — full height, a
    * gesture to disable, chrome to paint, a session to remember, the link the
    * app was opened on. Called once, from main.tsx, and awaited: Android cannot

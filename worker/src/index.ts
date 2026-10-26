@@ -489,9 +489,14 @@ async function crazyGamesSignIn(request: Request, env: Env) {
     if (was && isGuest(was.id)) adopted = (await link.adopt(env, caller, was.id)) === null;
   }
 
+  // The CrazyGames username, always, and every launch. CrazyGames asks games
+  // to show players by the name they have there and to have no nickname of
+  // their own -- the game hides its box on that host -- and the client trades
+  // the token on every launch so that a name changed there arrives here. A
+  // name chosen in-game before that rule is dropped with it (`named = 0`).
   try {
     const player = await link.resolve(env, caller.id);
-    await env.DB.prepare(`UPDATE players SET name = ?1 WHERE id = ?2 AND named = 0`)
+    await env.DB.prepare(`UPDATE players SET name = ?1, named = 0 WHERE id = ?2`)
       .bind(caller.name, player)
       .run();
   } catch {

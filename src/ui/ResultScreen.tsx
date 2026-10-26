@@ -34,7 +34,7 @@ export default function ResultScreen({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (ref.current) drawNetWorthChart(ref.current, state);
+    if (ref.current) drawNetWorthChart(ref.current, state, tt('result.netWorth'));
   }, [state]);
 
   // Once, when the window opens. A draw is neither, so it stays quiet; giving up

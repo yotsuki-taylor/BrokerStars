@@ -448,7 +448,12 @@ function roundRect(
 }
 
 /** Post-match net worth curves for both traders. */
-export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState): void {
+export function drawNetWorthChart(
+  canvas: HTMLCanvasElement,
+  state: MatchState,
+  /** the caption over the legend, in the player's language */
+  caption = 'NET WORTH',
+): void {
   const ctx = fit(canvas);
   if (!ctx) return;
   const W = canvas.clientWidth;
@@ -510,7 +515,7 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
   ctx.font = font(10);
   let boxW = Math.max(...rows.map((r) => ctx.measureText(r).width)) + 16;
   ctx.font = font(9);
-  boxW = Math.max(boxW, ctx.measureText('NET WORTH').width);
+  boxW = Math.max(boxW, ctx.measureText(caption).width);
 
   // backdrop: a net worth curve will otherwise run straight through the labels
   ctx.fillStyle = 'rgba(6,26,54,0.78)';
@@ -518,7 +523,7 @@ export function drawNetWorthChart(canvas: HTMLCanvasElement, state: MatchState):
   ctx.fill();
 
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText('NET WORTH', 12, 6);
+  ctx.fillText(caption, 12, 6);
   rows.forEach((row, i) => {
     const y = 19 + i * 13;
     ctx.fillStyle = colors[i];

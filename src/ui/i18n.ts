@@ -689,6 +689,8 @@ const EN = {
   'match.held': 'HELD',
   'match.bust': 'BUST',
   'match.shares': 'SH',
+  /* Under PAUSED: the clock and both books. */
+  'match.pauseLine': '{time} left · you {you} · rival {rival}',
   /* What DOSSIER opens: the rival's holding in one company, under its card. */
   'match.rivalHolds': 'RIVAL {n}',
   'match.buy': 'BUY',
@@ -802,6 +804,7 @@ const EN = {
   'result.gainPay': '+{n}% GAIN +{coins}',
   'result.unlocked': '{name} UNLOCKED',
   'result.yourResult': 'YOUR RESULT',
+  'result.netWorth': 'NET WORTH',
   'result.bestTrade': 'BEST TRADE',
   'result.worstTrade': 'WORST TRADE',
   'result.trades': 'TRADES',
@@ -989,7 +992,7 @@ const RU: Record<Key, string> = {
   'help.quarters':
     'Год идёт четырьмя кварталами, они отчёркнуты на графике. Некоторые компании показывают свой фокус только на закрытии квартала — следи за линией, когда оно проходит.',
   'help.trading':
-    'BUY открывает лонг, одно нажатие вкладывает четверть твоих денег. SELL закрывает лонг, а если ничего нет — открывает шорт, и тогда ты зарабатываешь на падении. Крупные заявки двигают цену против тебя, так что соперник чувствует каждую твою сделку.',
+    'КУПИТЬ открывает лонг, одно нажатие вкладывает четверть твоих денег. ПРОДАТЬ закрывает лонг. Если акций нет, на этой кнопке написано ШОРТ: она открывает шорт, и тогда ты зарабатываешь на падении. Крупные заявки двигают цену против тебя, так что соперник чувствует каждую твою сделку.',
   'help.entry':
     'Пунктир на графике — твоя средняя цена входа: лонг в плюсе выше неё, шорт ниже. За победу дают монеты, и чем выше лига, тем больше. Набери достаточно побед в лиге — откроется следующая.',
   'help.gotIt': 'ПОНЯТНО',
@@ -1316,6 +1319,7 @@ const RU: Record<Key, string> = {
   'match.held': 'В ПОЗИЦИЯХ',
   'match.bust': 'БАНКРОТ',
   'match.shares': 'ШТ',
+  'match.pauseLine': 'осталось {time} · ты {you} · соперник {rival}',
   'match.rivalHolds': 'СОПЕРНИК {n}',
   'match.buy': 'КУПИТЬ',
   'match.sell': 'ПРОДАТЬ',
@@ -1412,6 +1416,7 @@ const RU: Record<Key, string> = {
   'result.gainPay': '+{n}% ПРИБЫЛИ +{coins}',
   'result.unlocked': '{name} ОТКРЫТА',
   'result.yourResult': 'ТВОЙ РЕЗУЛЬТАТ',
+  'result.netWorth': 'КАПИТАЛ',
   'result.bestTrade': 'ЛУЧШАЯ СДЕЛКА',
   'result.worstTrade': 'ХУДШАЯ СДЕЛКА',
   'result.trades': 'СДЕЛОК',
