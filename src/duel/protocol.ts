@@ -25,6 +25,7 @@ import type { AbilityId, AbilityState } from '../sim/abilities';
 import type { StockConfig } from '../sim/companies';
 import type { NewsBanner, Trade } from '../sim/types';
 import type { Outfit } from '../ui/wardrobe';
+import type { DraftMove, DraftView } from './draft';
 
 /** How long an invitation stands. Fifteen minutes, as the link says it does. */
 export const DUEL_TTL_MS = 15 * 60 * 1000;
@@ -204,6 +205,8 @@ export type ClientMsg =
    * again. A pair the pool made is not kept; this is ignored there.
    */
   | { k: 'again' }
+  /** a move on the board while it is being argued over (`duel/draft.ts`) */
+  | { k: 'draft'; move: DraftMove }
   /**
    * Nothing to answer. It exists so that something goes *up* the socket now
    * and then: a duellist who is not trading sends nothing for a minute at a
@@ -270,6 +273,12 @@ export type ServerMsg =
    * it changes; the round itself arrives as an ordinary `setup`.
    */
   | { k: 'again'; you: boolean; rival: boolean }
+  /**
+   * The board is being argued over before the match: both are in, and at
+   * least one of them has a hat that can change it. Sent at the start and
+   * after every change; the match itself arrives as `setup` once it is done.
+   */
+  | { k: 'draft'; league: number; view: DraftView }
   /** the other one dropped; the match, if there is one, carries on without them */
   | { k: 'gone' }
   | { k: 'back' }

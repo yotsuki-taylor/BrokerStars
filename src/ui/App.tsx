@@ -36,6 +36,8 @@ import {
   type FloatPnl,
 } from './components';
 import BoardScreen from './BoardScreen';
+import DraftScreen from './DraftScreen';
+import type { DraftView } from '../duel/draft';
 import ArchiveScreen from './ArchiveScreen';
 import DailyScreen from './DailyScreen';
 import DuelScreen, { type DuelPhase } from './DuelScreen';
@@ -261,6 +263,14 @@ interface DuelUi {
    * rematch is off, and PLAY AGAIN mints a link as it used to.
    */
   closed?: boolean;
+  /**
+   * The board being argued over before the match (`src/duel/draft.ts`), as the
+   * server last drew it for this player, and `Date.now()` when it arrived so
+   * its clocks can count down here. Null once the match exists, and for a
+   * pair whose hats cannot change a thing, which never get one.
+   */
+  draft?: DraftView | null;
+  draftAt?: number;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -1258,6 +1268,7 @@ export default function App() {
     | 'corpTop'
     | 'leagues'
     | 'board'
+    | 'draft'
     | 'duel'
     | 'vs'
     | 'match'
@@ -2058,7 +2069,9 @@ export default function App() {
           setPauseOpen(false);
           setRivalOutfit(msg.outfits[1]);
           setDuel((d) =>
-            d ? { ...d, phase: 'match', league: msg.league, error: null, again: undefined } : d,
+            d
+              ? { ...d, phase: 'match', league: msg.league, error: null, again: undefined, draft: null }
+              : d,
           );
           // A pair that got going: the search is over and so is the wait for it.
           pendingPair.current = false;
@@ -2139,6 +2152,23 @@ export default function App() {
         case 'again':
           setDuel((d) => (d ? { ...d, again: { you: msg.you, rival: msg.rival } } : d));
           break;
+
+        case 'draft': {
+          // A pair that got going, as far as the search is concerned: the
+          // board is being argued over, and the match follows as `setup`. The
+          // wait for the pair must not deal a bot in the middle of it.
+          pendingPair.current = false;
+          setPairing(false);
+          window.clearTimeout(pairTimer.current);
+          setSeeking(false);
+          const at = Date.now();
+          setDuel((d) =>
+            d ? { ...d, draft: msg.view, draftAt: at, league: msg.league, error: null } : d,
+          );
+          // A bare head has nothing to look at and waits on the versus screen.
+          setScreen(msg.view.you.see ? 'draft' : 'vs');
+          break;
+        }
 
         case 'back':
           setDuel((d) => (d ? { ...d, rivalGone: false } : d));
@@ -2977,6 +3007,20 @@ export default function App() {
   /** A duel whose match exists — not a pair still on its way to one. */
   const duelLive = duel?.phase === 'match';
 
+  if (screen === 'draft' && duel?.draft) {
+    return (
+      <div className="app">
+        <DraftScreen
+          league={duel.league}
+          view={duel.draft}
+          at={duel.draftAt ?? Date.now()}
+          quirks={perks.ui.showQuirks}
+          onMove={(move) => duelRef.current?.send({ k: 'draft', move })}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'vs') {
     return (
       <div className="app">
@@ -2992,6 +3036,12 @@ export default function App() {
           duel={duelLive}
           stranger={duel?.matched === true}
           searching={seeking}
+          // A bare head while the rival's hat argues over the board.
+          hold={
+            duel?.draft && !duelLive
+              ? { note: t('draft.rivalPicking'), endsAt: (duel.draftAt ?? Date.now()) + duel.draft.endsInMs }
+              : null
+          }
           // Only while nobody is on the way: see `pairing`.
           onSkip={seeking && !pairing ? () => skipSearch(league) : undefined}
           searched={searched}

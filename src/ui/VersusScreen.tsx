@@ -69,6 +69,7 @@ export default function VersusScreen({
   onReady,
   onCancel,
   onSkip,
+  hold = null,
 }: {
   playerName: string;
   playerOutfit: Outfit;
@@ -105,19 +106,26 @@ export default function VersusScreen({
    * once the search is `SKIP_AFTER_S` old.
    */
   onSkip?: () => void;
+  /**
+   * Found, and waiting on the rival, who is changing the board with a hat this
+   * player has not got (`src/duel/draft.ts`). Holds the screen as a search
+   * does, says what is being waited for, and counts down to when it ends.
+   */
+  hold?: { note: string; endsAt: number } | null;
 }) {
+  const holding = Boolean(hold);
   const [phase, setPhase] = useState<Phase>('enter');
 
   // How long the search has been on, so a wait of up to a minute is a clock
   // the player can read rather than a spinner they have to trust.
   const [waited, setWaited] = useState(0);
   useEffect(() => {
-    if (!searching) return;
+    if (!searching && !holding) return;
     const from = Date.now();
     setWaited(0);
     const tick = window.setInterval(() => setWaited(Math.floor((Date.now() - from) / 1000)), 250);
     return () => clearInterval(tick);
-  }, [searching]);
+  }, [searching, holding]);
   const done = useRef(false);
 
   // Held in a ref so the timeline below can depend on nothing: onReady is a
@@ -133,7 +141,7 @@ export default function VersusScreen({
   };
 
   useEffect(() => {
-    if (searching) {
+    if (searching || holding) {
       // Nothing is scheduled past "searching": the answer decides what comes next.
       const t = window.setTimeout(() => setPhase('searching'), TIMELINE[0][1]);
       return () => clearTimeout(t);
@@ -143,7 +151,7 @@ export default function VersusScreen({
     timers.push(window.setTimeout(() => finish(), searched && !duel ? FOUND_HANDOVER_MS : HANDOVER_MS));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duel, searching, searched]);
+  }, [duel, searching, searched, holding]);
 
   const rivalIn = phase === 'found' || phase === 'revealed';
 
@@ -152,10 +160,10 @@ export default function VersusScreen({
     // server's and skipping it only means staring at a board that has not
     // started yet -- and except during a real search, which a tap would turn
     // into a bot match the player never asked for
-    <div className="versus" onClick={duel || searching ? undefined : finish}>
+    <div className="versus" onClick={duel || searching || holding ? undefined : finish}>
       <img className="versus-bg" src={tex('bg_vs.png')} alt="" draggable={false} />
 
-      {!rivalIn && !duel && (
+      {!rivalIn && !duel && !holding && (
         <button
           className="menu-btn back versus-cancel"
           onClick={(e) => {
@@ -184,8 +192,16 @@ export default function VersusScreen({
 
       {!rivalIn && (
         <div className="versus-status">
-          {t(duel && !stranger ? 'versus.waitingFriend' : 'versus.searching')}
-          {searching && waited > 0 && (
+          {hold
+            ? hold.note
+            : t(duel && !stranger ? 'versus.waitingFriend' : 'versus.searching')}
+          {hold && (
+            <span className="versus-clock">
+              {/* `waited` only drives the redraw; the number is the server's deadline */}
+              {waited >= 0 && Math.max(0, Math.ceil((hold.endsAt - Date.now()) / 1000))}
+            </span>
+          )}
+          {!hold && searching && waited > 0 && (
             <span className="versus-clock">
               {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, '0')}
             </span>

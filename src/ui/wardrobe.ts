@@ -123,23 +123,23 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
   hat: {
     common: {
       name: 'BANDANA',
-      text: 'You see which three companies you are about to face, and can walk away.',
+      text: 'You see which three companies you are about to face, and can walk away. In a duel you watch the board while your rival changes it.',
     },
     uncommon: {
       name: 'BALL CAP',
-      text: 'You see the three companies before the match, and once you can send them back for a different three.',
+      text: 'You see the three companies before the match, and once you can send them back for a different three. In a duel: one swap of any company on the board.',
     },
     rare: {
       name: 'PIT CAP',
-      text: 'You see the three, can send them back twice a match, and can bar one company from this league for good.',
+      text: 'You see the three, can send them back twice a match, and can bar one company from this league for good. In a duel: two swaps and one ban.',
     },
     mythic: {
       name: 'BLACK BRIM',
-      text: 'Name one company you always want on the board and it is always there — plus two goes at the rest, and a company barred for good.',
+      text: 'Name one company you always want on the board and it is always there — plus two goes at the rest, and a company barred for good. In a duel: two swaps, a ban, and a pin your rival cannot touch.',
     },
     legend: {
       name: 'TEN GALLON',
-      text: 'You choose all three companies yourself, every match.',
+      text: 'You choose all three companies yourself, every match. In a duel: three times, put any company from the league on the board.',
     },
   },
   neck: {
@@ -209,7 +209,7 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
     uncommon: {
       name: 'RED SHADES',
-      text: 'You see all three companies, and what each does, before you agree to the match.',
+      text: 'You see all three companies, and what each does, before you agree to the match — in a duel too, while the board is being changed.',
     },
     rare: {
       name: 'TRADING HEADSET',

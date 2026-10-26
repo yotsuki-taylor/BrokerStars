@@ -24,7 +24,7 @@
  */
 
 import { CONFIG } from '../../src/sim/config';
-import { pickCompanies } from '../../src/sim/companies';
+import { pickCompanies, poolFor, type Company } from '../../src/sim/companies';
 import { useAbility } from '../../src/sim/abilities';
 import { createMatch, resign, step } from '../../src/sim/match';
 import { Rng } from '../../src/sim/rng';
@@ -48,6 +48,16 @@ import {
   type ServerMsg,
 } from '../../src/duel/protocol';
 import { PAIR_TTL_MS } from '../../src/duel/pool';
+import {
+  applyMove,
+  openDraft,
+  over,
+  powersOf,
+  step as stepDraft,
+  viewFor,
+  type Draft,
+  type DraftMove,
+} from '../../src/duel/draft';
 import { otherSeat, ordered, snapshotFor, syncFor, type Seat } from '../../src/duel/snapshot';
 import { award, clearedBar, record, topLeague, type Env, type Outcome } from './results';
 import { identify } from './auth';
@@ -153,6 +163,18 @@ export class Duel implements DurableObject {
   /** which seats have asked to go again since the last whistle */
   private again: [boolean, boolean] = [false, false];
 
+  /**
+   * The board being argued over, between "both are here" and the versus
+   * screen (`src/duel/draft.ts`), and what the match will be built from once
+   * it is settled. Null outside that phase, which for a pair of bare heads is
+   * always: nobody can change a thing, so there is nothing to wait for.
+   */
+  private draft: Draft | null = null;
+  private draftRng: Rng | null = null;
+  private draftTimer: ReturnType<typeof setTimeout> | null = null;
+  private pending: { seed: number; starts: [number, number]; perks: ReturnType<typeof perksFor>[] } | null =
+    null;
+
   constructor(
     private readonly state: DurableObjectState,
     private readonly env: Env,
@@ -213,9 +235,10 @@ export class Duel implements DurableObject {
 
   async alarm(): Promise<void> {
     await this.load();
-    // A match that is still running keeps the object; anything else is over
-    // one way or another and the invitation should not outlive it.
-    if (this.meta?.phase === 'live' && this.match && !this.match.finished) {
+    // A match that is still running keeps the object, and so does the board
+    // being argued over before one; anything else is over one way or another
+    // and the invitation should not outlive it.
+    if (this.meta?.phase === 'live' && (this.draft || (this.match && !this.match.finished))) {
       await this.state.storage.setAlarm(Date.now() + LINGER_MS);
       return;
     }
@@ -279,6 +302,12 @@ export class Duel implements DurableObject {
         if (seat === null) return;
         this.away[seat] = msg.away === true;
         if (seat === 0 && !this.away[0]) void this.readyUp();
+        return;
+      }
+
+      // Before the match exists, which `command` needs.
+      if (msg?.k === 'draft') {
+        if (seat !== null) this.draftMove(seat, msg.move);
         return;
       }
 
@@ -537,11 +566,97 @@ export class Duel implements DurableObject {
       CONFIG.match.startingCash + roomCash(b.room ?? 0),
     ];
     const perks = [perksFor(a.outfit, starts[0]), perksFor(b.outfit, starts[1])];
-    // A clean draw for the league. The board perks — reroll, pin, ban, the
-    // whole of what the HEAD slot sells — are a single-player bargain with the
-    // dealer, and there is no honest way for two of them to be struck at once
-    // over one board.
+    // A clean draw for the league: the standing orders a hat keeps against the
+    // bot are not read for a board two people share. What the hats do here is
+    // the draft below, in front of both of them.
     const stocks = pickCompanies(meta.league, new Rng(seed ^ 0x1b873593), 3);
+
+    // Either of them can change the board: argue it out first, and the match
+    // is built from whatever is left standing (`finishDraft`). Off the
+    // wardrobe this Worker keeps, like every other perk in here.
+    const draftRng = new Rng(seed ^ 0x2545f491);
+    const draft = openDraft(
+      meta.league,
+      stocks.map((s) => s.id),
+      [powersOf(perks[0].ui), powersOf(perks[1].ui)],
+      Date.now(),
+      draftRng,
+    );
+    if (draft) {
+      this.draft = draft;
+      this.draftRng = draftRng;
+      this.pending = { seed, starts, perks };
+      this.broadcastDraft();
+      this.armDraft();
+      return;
+    }
+    this.kickoff(seed, starts, perks, stocks);
+  }
+
+  /* -------------------------------------------------------------- the draft */
+
+  private broadcastDraft(): void {
+    const d = this.draft;
+    const meta = this.meta;
+    if (!d || !meta) return;
+    const now = Date.now();
+    for (const s of [0, 1] as Seat[]) {
+      this.sendTo(s, { k: 'draft', league: meta.league, view: viewFor(d, s, now) });
+    }
+  }
+
+  /** One seat's move on the board; anything the rules refuse is simply not answered. */
+  private draftMove(seat: Seat, move: DraftMove): void {
+    const d = this.draft;
+    if (!d || !this.draftRng) return;
+    if (!applyMove(d, seat, move, Date.now(), this.draftRng)) return;
+    if (over(d, Date.now())) return this.finishDraft();
+    this.broadcastDraft();
+    this.armDraft();
+  }
+
+  /** The draft's own clock: a turn passed, or the phase out of time. */
+  private armDraft(): void {
+    if (this.draftTimer !== null) clearTimeout(this.draftTimer);
+    const d = this.draft;
+    if (!d) return;
+    const due = Math.min(d.turnEndsAt, d.endsAt);
+    this.draftTimer = setTimeout(() => {
+      this.draftTimer = null;
+      const now = Date.now();
+      if (!this.draft) return;
+      if (over(this.draft, now)) return this.finishDraft();
+      if (stepDraft(this.draft, now)) this.broadcastDraft();
+      this.armDraft();
+    }, Math.max(0, due - Date.now()) + 20);
+  }
+
+  /** The board is settled: build the match off it and start the versus screen. */
+  private finishDraft(): void {
+    const d = this.draft;
+    const pending = this.pending;
+    if (this.draftTimer !== null) clearTimeout(this.draftTimer);
+    this.draftTimer = null;
+    this.draft = null;
+    this.draftRng = null;
+    this.pending = null;
+    if (!d || !pending) return;
+    const pool = poolFor(d.league);
+    const stocks = d.board.map((id) => pool.find((c) => c.id === id)).filter(Boolean) as Company[];
+    this.kickoff(pending.seed, pending.starts, pending.perks, stocks);
+  }
+
+  /** The match itself, on a board everybody has finished with. */
+  private kickoff(
+    seed: number,
+    starts: [number, number],
+    perks: ReturnType<typeof perksFor>[],
+    stocks: Company[],
+  ): void {
+    const meta = this.meta;
+    if (!meta) return;
+    const [a, b] = meta.players;
+    if (!a || !b) return;
 
     this.match = createMatch(seed, CONFIG, {
       stocks,
@@ -591,6 +706,12 @@ export class Duel implements DurableObject {
     const meta = this.meta;
     const st = this.match;
     if (!meta) return;
+    if (!st && this.draft) {
+      // Back during the argument over the board: the board as it stands.
+      this.sendTo(seat, { k: 'draft', league: meta.league, view: viewFor(this.draft, seat, Date.now()) });
+      this.sendTo(otherSeat(seat), { k: 'back' });
+      return;
+    }
     if (!st) {
       // The object was evicted with the match in it. Nothing can be salvaged
       // and pretending otherwise would be worse than saying so.
