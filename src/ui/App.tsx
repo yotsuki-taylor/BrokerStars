@@ -1488,6 +1488,13 @@ export default function App() {
       // how a browser tab and a fresh install used to be nobody (`ui/guest.ts`).
       ensureGuest(Boolean(platform().authToken()))
         .then(() => {
+          // Started to play with friends (CrazyGames' instant multiplayer): a
+          // duel that can be joined, first thing. Here rather than on mount,
+          // because a duel needs the guest this has just made sure of.
+          if (instantDuel.current) {
+            instantDuel.current = false;
+            void startDuel();
+          }
           // Whatever waited on the phone for an id to belong to has one now.
           void flushEvents();
           return flushPending();
@@ -1827,6 +1834,17 @@ export default function App() {
   const tourChecked = useRef(false);
 
   /**
+   * Launched to play with friends straight away (`platform().instantDuel`), and
+   * not on somebody's invitation, which goes where it says instead. Spent by
+   * the effect that opens the duel once there is a guest to open it as.
+   */
+  const instantDuel = useRef(
+    Boolean(platform().instantDuel?.()) &&
+      platform().launchParam() === '' &&
+      !/[?&][df]=/.test(String((globalThis as any).location?.search ?? '')),
+  );
+
+  /**
    * A new player on CrazyGames, before their first menu.
    *
    * CrazyGames wants a new player in play at once, a click at most, so there
@@ -1843,6 +1861,7 @@ export default function App() {
     () =>
       platform().id === 'crazygames' &&
       !tutorialSeen() &&
+      !platform().instantDuel?.() &&
       platform().launchParam() === '' &&
       !/[?&][df]=/.test(String((globalThis as any).location?.search ?? '')),
   );
@@ -2501,6 +2520,20 @@ export default function App() {
 
   // the socket must not outlive the page that was watching it
   useEffect(() => closeDuel, [closeDuel]);
+
+  /**
+   * Tell a host with an invite button of its own (CrazyGames) whether this
+   * player can be joined: while an invitation's lobby is open, yes, under its
+   * code; once the match is on, or the lobby is gone, no. A pair the pool made
+   * is nobody's to join.
+   */
+  const joinable =
+    duel && !duel.matched && duel.code && (duel.phase === 'waiting' || duel.phase === 'opening')
+      ? duel.code
+      : null;
+  useEffect(() => {
+    platform().room?.(joinable);
+  }, [joinable]);
 
   /* ---------------------------------------------------------------- actions */
 

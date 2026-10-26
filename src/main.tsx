@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App';
 import { platform } from './platform';
-import { installSfx } from './ui/sfx';
+import { installSfx, setHostMuted } from './ui/sfx';
 import './ui/styles.css';
 
 /**
@@ -28,6 +28,8 @@ function fontReady(): Promise<unknown> {
 async function start(): Promise<void> {
   installSfx();
   await Promise.all([platform().ready(), fontReady()]);
+  // A host with a mute switch of its own (CrazyGames) is heard from the start.
+  platform().onMute?.(setHostMuted);
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <App />

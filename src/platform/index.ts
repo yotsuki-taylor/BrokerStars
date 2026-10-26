@@ -144,6 +144,32 @@ export interface Platform {
   gameplay?(playing: boolean): void;
 
   /**
+   * The duel this player can be joined in right now, or null for none.
+   *
+   * For a host with an invite button of its own: CrazyGames shows one on the
+   * page while the game says the player is in a joinable room, and that room is
+   * how a friend there gets in. Told every time the answer might have changed;
+   * an implementation that tells somebody passes on changes only. Absent
+   * elsewhere, where the invitation screen's own link is the whole of it.
+   */
+  room?(code: string | null): void;
+
+  /**
+   * The host started the game to play with friends straight away — CrazyGames'
+   * "instant multiplayer", from its multiplayer pages — so the first thing on
+   * screen should be a duel that can be joined. Absent, or false, everywhere
+   * else and on any ordinary launch.
+   */
+  instantDuel?(): boolean;
+
+  /**
+   * The host's own mute switch, which outranks the game's. The listener hears
+   * its state at once and on every change; returns the way to stop listening.
+   * Absent wherever the host has no such switch.
+   */
+  onMute?(listener: (muted: boolean) => void): () => void;
+
+  /**
    * The game going to the background (`false`) and coming back (`true`).
    * Returns the way to stop listening.
    *

@@ -217,6 +217,62 @@ export const CRAZYGAMES: Platform = {
     }
   },
 
+  /**
+   * Room Data, which is how CrazyGames draws its invite button: a room the
+   * player can be joined in, its invitation parameters, and later that it is
+   * closed. The old show/hide button calls are deprecated in favour of this.
+   * The parameters are the duel link's own, so a friend arriving through the
+   * button lands where a link would have put them (`launchParam`, `onLink`).
+   */
+  room: (() => {
+    let open: string | null = null;
+    return (code: string | null): void => {
+      if (code === open || !live) return;
+      const was = open;
+      open = code;
+      try {
+        const game = sdk().game;
+        if (code) {
+          game.updateRoom({ roomId: code, isJoinable: true, inviteParams: { d: code } });
+        } else if (was) {
+          game.updateRoom({ isJoinable: false });
+          game.leftRoom();
+        }
+      } catch {
+        /* no button is a duel still joined by its link */
+      }
+    };
+  })(),
+
+  instantDuel(): boolean {
+    if (!live) return false;
+    try {
+      return sdk().game.isInstantMultiplayer === true;
+    } catch {
+      return false;
+    }
+  },
+
+  onMute(listener: (muted: boolean) => void): () => void {
+    if (!live) return () => {};
+    try {
+      const game = sdk().game;
+      const hear = (settings: { muteAudio?: boolean } | undefined) =>
+        listener(settings?.muteAudio === true);
+      hear(game.settings);
+      game.addSettingsChangeListener(hear);
+      return () => {
+        try {
+          game.removeSettingsChangeListener(hear);
+        } catch {
+          /* already gone */
+        }
+      };
+    } catch {
+      return () => {};
+    }
+  },
+
   gameplay: (() => {
     // Called every frame by the match loop; the site is told only on a change.
     let on = false;
@@ -232,9 +288,33 @@ export const CRAZYGAMES: Platform = {
     };
   })(),
 
-  onLink(): () => void {
-    // An invitation opened on CrazyGames is a page load, which `launchParam` covers.
-    return () => {};
+  /**
+   * A friend's invitation accepted while the game is already open — the invite
+   * button, or a link opened in the same tab — arrives here rather than as a
+   * page load, so the duel is joined without a reload. Shaped like
+   * `launchParam`, which covers the invitations that do start the game.
+   */
+  onLink(listener: (param: string) => void): () => void {
+    if (!live) return () => {};
+    try {
+      const game = sdk().game;
+      const join = (params: Record<string, unknown> | undefined) => {
+        const duel = params?.d;
+        const friend = params?.f;
+        if (duel) listener(`duel_${duel}`);
+        else if (friend) listener(`friend_${friend}`);
+      };
+      game.addJoinRoomListener(join);
+      return () => {
+        try {
+          game.removeJoinRoomListener(join);
+        } catch {
+          /* already gone */
+        }
+      };
+    } catch {
+      return () => {};
+    }
   },
 
   onVisibility(listener: (visible: boolean) => void): () => void {

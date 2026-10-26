@@ -65,6 +65,19 @@ try {
 
 export const sfxMuted = (): boolean => muted;
 
+/**
+ * The host's own mute (CrazyGames' switch on its page), which outranks the
+ * player's and is never written into it: when the host lets go, the player's
+ * own choice is exactly where they left it. Not persisted — the host says so
+ * afresh on every launch (`platform().onMute`).
+ */
+let hostMuted = false;
+
+export function setHostMuted(next: boolean): void {
+  hostMuted = next;
+  if (next) stopMusic();
+}
+
 export function setSfxMuted(next: boolean): void {
   muted = next;
   // the match loop starts it again on its next frame, from where the match is
@@ -79,7 +92,7 @@ export function setSfxMuted(next: boolean): void {
 /** Play one sound. Quiet until the file has loaded, and quiet where there is no audio at all. */
 export function playSfx(name: Sfx): void {
   const buffer = buffers.get(name);
-  if (muted || !ctx || !buffer) return;
+  if (muted || hostMuted || !ctx || !buffer) return;
   const src = ctx.createBufferSource();
   src.buffer = buffer;
   src.connect(ctx.destination);
@@ -110,7 +123,7 @@ let track: { name: Music; src: AudioBufferSourceNode; startedAt: number } | null
  */
 export function musicAt(name: Music, seconds: number): void {
   const buffer = buffers.get(name);
-  if (muted || !ctx || !buffer || ctx.state !== 'running') return;
+  if (muted || hostMuted || !ctx || !buffer || ctx.state !== 'running') return;
   const at = Math.max(0, seconds);
   if (at >= buffer.duration) {
     stopMusic();

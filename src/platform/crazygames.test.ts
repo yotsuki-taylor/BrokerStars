@@ -219,3 +219,106 @@ describe('the guest, kept in the Data module', () => {
     expect(guestToken()).toBe('safe');
   });
 });
+
+describe('multiplayer and sound, through the SDK', () => {
+  /** A fake SDK that records what the game told it, with hooks to talk back. */
+  async function sdkWith(over: Record<string, unknown> = {}) {
+    const calls: unknown[][] = [];
+    let settingsListener: ((s: { muteAudio?: boolean }) => void) | null = null;
+    let joinListener: ((p: Record<string, string>) => void) | null = null;
+    (globalThis as any).window = {
+      CrazyGames: {
+        SDK: {
+          environment: 'crazygames',
+          init: async () => {},
+          user: {},
+          game: {
+            settings: { muteAudio: false, disableChat: false },
+            isInstantMultiplayer: false,
+            updateRoom: (r: unknown) => calls.push(['updateRoom', r]),
+            leftRoom: () => calls.push(['leftRoom']),
+            addSettingsChangeListener: (f: typeof settingsListener) => {
+              settingsListener = f;
+            },
+            removeSettingsChangeListener: () => {
+              settingsListener = null;
+            },
+            addJoinRoomListener: (f: typeof joinListener) => {
+              joinListener = f;
+            },
+            removeJoinRoomListener: () => {
+              joinListener = null;
+            },
+            ...over,
+          },
+        },
+      },
+    };
+    await platform().ready();
+    return {
+      calls,
+      settings: (s: { muteAudio?: boolean }) => settingsListener?.(s),
+      join: (p: Record<string, string>) => joinListener?.(p),
+      listening: () => joinListener !== null,
+    };
+  }
+
+  it('opens a joinable room under the duel code, once, and leaves it when the lobby closes', async () => {
+    const sdk = await sdkWith();
+    const p = platform();
+    p.room?.(null); // nothing open yet: nothing to say
+    p.room?.('abc123');
+    p.room?.('abc123'); // the same answer again is not news
+    p.room?.(null);
+    expect(sdk.calls).toEqual([
+      ['updateRoom', { roomId: 'abc123', isJoinable: true, inviteParams: { d: 'abc123' } }],
+      ['updateRoom', { isJoinable: false }],
+      ['leftRoom'],
+    ]);
+  });
+
+  it('says when it was launched to play with friends', async () => {
+    await sdkWith({ isInstantMultiplayer: true });
+    expect(platform().instantDuel?.()).toBe(true);
+    await sdkWith();
+    expect(platform().instantDuel?.()).toBe(false);
+  });
+
+  it('hears the site mute at once and on every change', async () => {
+    const sdk = await sdkWith({ settings: { muteAudio: true } });
+    const heard: boolean[] = [];
+    const stop = platform().onMute?.((m) => heard.push(m));
+    sdk.settings({ muteAudio: false });
+    sdk.settings({ muteAudio: true });
+    expect(heard).toEqual([true, false, true]);
+    stop?.();
+  });
+
+  it('joins a duel or a friend accepted while the game is open, without a reload', async () => {
+    const sdk = await sdkWith();
+    const params: string[] = [];
+    const stop = platform().onLink((p) => params.push(p));
+    sdk.join({ d: 'abc123' });
+    sdk.join({ f: 'xyz' });
+    expect(params).toEqual(['duel_abc123', 'friend_xyz']);
+    stop();
+    expect(sdk.listening()).toBe(false);
+  });
+
+  it('does none of it when the SDK says it is disabled', async () => {
+    const calls: unknown[] = [];
+    (globalThis as any).window = {
+      CrazyGames: {
+        SDK: {
+          environment: 'disabled',
+          init: async () => {},
+          game: { updateRoom: () => calls.push(1), isInstantMultiplayer: true },
+        },
+      },
+    };
+    await platform().ready();
+    platform().room?.('abc123');
+    expect(calls).toEqual([]);
+    expect(platform().instantDuel?.()).toBe(false);
+  });
+});
