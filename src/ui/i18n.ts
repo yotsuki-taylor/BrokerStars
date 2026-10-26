@@ -807,6 +807,12 @@ const EN = {
   'result.trades': 'TRADES',
   'result.closedInProfit': 'CLOSED IN PROFIT',
   'result.playAgain': 'PLAY AGAIN',
+  'result.rematch': 'REMATCH',
+  'result.rematchWaiting': 'WAITING…',
+  'result.newDuel': 'NEW DUEL',
+  'result.rivalWantsRematch': '{name} WANTS A REMATCH',
+  'result.rematchAsked': 'ASKED {name} FOR A REMATCH',
+  'result.rivalLeft': '{name} HAS LEFT THE DUEL',
 } as const;
 
 export type Key = keyof typeof EN;
@@ -1383,6 +1389,12 @@ const RU: Record<Key, string> = {
   'result.trades': 'СДЕЛОК',
   'result.closedInProfit': 'ЗАКРЫТО В ПЛЮС',
   'result.playAgain': 'ЕЩЁ РАЗ',
+  'result.rematch': 'РЕВАНШ',
+  'result.rematchWaiting': 'ЖДЁМ…',
+  'result.newDuel': 'НОВАЯ ДУЭЛЬ',
+  'result.rivalWantsRematch': '{name} ХОЧЕТ РЕВАНШ',
+  'result.rematchAsked': 'ВЫЗОВ НА РЕВАНШ ОТПРАВЛЕН: {name}',
+  'result.rivalLeft': '{name} УЖЕ НЕ В ДУЭЛИ',
 };
 
 const TABLES: Record<Lang, Record<Key, string>> = { en: EN, ru: RU };

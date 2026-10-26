@@ -96,6 +96,16 @@ interface Meta {
    * a code that leaked is still not a seat.
    */
   expect?: string;
+  /**
+   * How many matches this pair has played in here before the one on now.
+   *
+   * An invited duel does not end at the whistle: the two of them may go again
+   * without anybody sending a link (`rematch`), which is what CrazyGames calls
+   * keeping the room. Each round is a match of its own and is paid as one, so
+   * the round goes into the token that stops a payout being filed twice.
+   * Missing means the first.
+   */
+  round?: number;
 }
 
 /**
@@ -140,6 +150,8 @@ export class Duel implements DurableObject {
   private sentNews = 0;
   /** what the match paid, kept so a reconnect after the whistle is still told */
   private awards: [DuelAward | null, DuelAward | null] = [null, null];
+  /** which seats have asked to go again since the last whistle */
+  private again: [boolean, boolean] = [false, false];
 
   constructor(
     private readonly state: DurableObjectState,
@@ -270,6 +282,12 @@ export class Duel implements DurableObject {
         return;
       }
 
+      // After the whistle, which `command` refuses for the same reason.
+      if (msg?.k === 'again') {
+        if (seat !== null) void this.rematch(seat);
+        return;
+      }
+
       if (msg?.k === 'hello') {
         if (seat !== null) return;
         void this.seat(ws, msg).then((s) => {
@@ -288,6 +306,12 @@ export class Duel implements DurableObject {
       if (this.sockets[seat] === ws) {
         this.sockets[seat] = null;
         this.sendTo(otherSeat(seat), { k: 'gone' });
+        // Somebody who has left has not asked for anything any more; if they
+        // come back to the result screen they ask again.
+        if (this.again[seat]) {
+          this.again[seat] = false;
+          this.broadcastAgain();
+        }
       }
     };
     ws.addEventListener('close', drop);
@@ -434,6 +458,44 @@ export class Duel implements DurableObject {
         expiresAt: meta.expiresAt,
         startsBy: this.startsBy,
       });
+    }
+  }
+
+  /**
+   * One of them wants another round with the same rival.
+   *
+   * Only for an invited duel, which is two people who chose each other: the
+   * room stays theirs after the whistle, and a second match needs nothing but
+   * both of them saying so. A pair the pool made goes again the way it began,
+   * by PLAY -- a ranked rematch on demand is two strangers agreeing to farm
+   * each other up the ladder.
+   *
+   * Both asked and both still here, and the next match starts exactly as the
+   * first did: the same `begin`, which reads leagues, offices and wardrobes
+   * afresh, deals a new board and sends both phones `setup`.
+   */
+  private async rematch(seat: Seat): Promise<void> {
+    const meta = this.meta;
+    if (!meta || meta.phase !== 'done' || meta.ranked) return;
+    this.again[seat] = true;
+    if (!(this.again[0] && this.again[1] && this.sockets[0] && this.sockets[1])) {
+      this.broadcastAgain();
+      return;
+    }
+    this.again = [false, false];
+    this.awards = [null, null];
+    this.sentTrades = [0, 0];
+    this.sentNews = 0;
+    this.match = null;
+    meta.round = (meta.round ?? 0) + 1;
+    meta.phase = 'lobby';
+    await this.begin();
+  }
+
+  /** Tell each seat who has asked for another round, from its own side. */
+  private broadcastAgain(): void {
+    for (const s of [0, 1] as Seat[]) {
+      this.sendTo(s, { k: 'again', you: this.again[s], rival: this.again[otherSeat(s)] });
     }
   }
 
@@ -659,6 +721,9 @@ export class Duel implements DurableObject {
     await this.save();
 
     const seed = st.seed.toString(36);
+    // Read once: both of them may ask for the next round while this is still
+    // filing the last one, and that round's number must not leak into here.
+    const round = meta.round ?? 0;
 
     for (const s of [0, 1] as Seat[]) {
       const player = meta.players[s];
@@ -675,8 +740,13 @@ export class Duel implements DurableObject {
       const paid =
         st.resigned === s ? { win: 0, profit: 0, total: 0, league: player.payLeague } : award(player.payLeague, outcome, well);
 
-      this.awards[s] = paid;
-      this.sendTo(s, { k: 'end', award: paid });
+      // Unless the next round has begun while the first seat was being filed:
+      // this one is still recorded below, but the phone has moved on, and an
+      // `end` now would land on the new match's versus screen.
+      if (this.match === st) {
+        this.awards[s] = paid;
+        this.sendTo(s, { k: 'end', award: paid });
+      }
 
       try {
         await record(
@@ -693,7 +763,11 @@ export class Duel implements DurableObject {
             // this match, so its own id and the seat name the payout exactly.
             // `finish` already refuses to run twice, and this is the same
             // promise written where the database can keep it.
-            token: `duel:${this.state.id.toString()}:${s}`,
+            // A rematch is another match in the same object, so its round
+            // goes in too; the first keeps the token it always had.
+            token: round
+              ? `duel:${this.state.id.toString()}:r${round}:${s}`
+              : `duel:${this.state.id.toString()}:${s}`,
           },
         );
 

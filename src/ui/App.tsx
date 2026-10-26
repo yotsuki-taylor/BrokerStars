@@ -249,6 +249,18 @@ interface DuelUi {
    * for somebody again, as PLAY did, rather than minting a link.
    */
   matched?: boolean;
+  /**
+   * After the whistle of an invited duel: who has asked to go again. The room
+   * is kept (`rematch` in worker/src/duel.ts) and the next round starts when
+   * both have. Missing until either has said anything.
+   */
+  again?: { you: boolean; rival: boolean };
+  /**
+   * The room is gone after the whistle -- the server cleared it out, or would
+   * not have this player back. The result screen stays where it is; only a
+   * rematch is off, and PLAY AGAIN mints a link as it used to.
+   */
+  closed?: boolean;
 }
 
 /** What the button says. The card in the wardrobe carries the long version. */
@@ -2045,7 +2057,9 @@ export default function App() {
           setFloats({});
           setPauseOpen(false);
           setRivalOutfit(msg.outfits[1]);
-          setDuel((d) => (d ? { ...d, phase: 'match', league: msg.league, error: null } : d));
+          setDuel((d) =>
+            d ? { ...d, phase: 'match', league: msg.league, error: null, again: undefined } : d,
+          );
           // A pair that got going: the search is over and so is the wait for it.
           pendingPair.current = false;
           setPairing(false);
@@ -2122,6 +2136,10 @@ export default function App() {
           setDuel((d) => (d ? { ...d, rivalGone: true } : d));
           break;
 
+        case 'again':
+          setDuel((d) => (d ? { ...d, again: { you: msg.you, rival: msg.rival } } : d));
+          break;
+
         case 'back':
           setDuel((d) => (d ? { ...d, rivalGone: false } : d));
           break;
@@ -2131,6 +2149,15 @@ export default function App() {
           // error: the player pressed PLAY and is owed a match, not a reason.
           if (pendingPair.current) {
             dealBot();
+            break;
+          }
+          // A room that went away after the whistle is not a duel that failed:
+          // the player is looking at a result, and keeps looking at it.
+          // Told by the duel's own last tick, not by the state, which is a bot
+          // match's until the first `setup` and may well be a finished one.
+          if (lastTick.current?.fin && duelRef.current) {
+            closeDuel();
+            setDuel((d) => (d && d.phase === 'match' ? { ...d, closed: true } : d));
             break;
           }
           closeDuel();
@@ -2145,6 +2172,8 @@ export default function App() {
   const connect = useCallback(
     (code: string, phase: DuelPhase, extra: Partial<DuelUi> = {}) => {
       closeDuel();
+      // the last duel's final tick must not make this one look over
+      lastTick.current = null;
       setDuel({
         phase,
         code,
@@ -3501,10 +3530,29 @@ export default function App() {
             LEAGUES[duel ? (duel.payLeague ?? duel.league) : league] ?? LEAGUES[0],
           )}
           unlockedName={unlockedName}
+          rematch={
+            duel && !duel.matched
+              ? {
+                  you: duel.again?.you ?? false,
+                  rival: duel.again?.rival ?? false,
+                  gone: duel.rivalGone || Boolean(duel.closed) || !duelRef.current,
+                }
+              : undefined
+          }
           onRestart={() => {
-            // An invitation is played again by minting another; a pair the pool
-            // made is played again the way it began, by PLAY.
+            // An invitation is played again in the room it was played in, while
+            // both of them are still in it: ask, and the server starts the next
+            // round when the other one has asked too. A room that has emptied
+            // is played again the old way, by minting another invitation; a
+            // pair the pool made, the way it began, by PLAY.
             if (duel && !duel.matched) {
+              if (!duel.rivalGone && !duel.closed && duelRef.current) {
+                duelRef.current.send({ k: 'again' });
+                setDuel((d) =>
+                  d ? { ...d, again: { you: true, rival: d.again?.rival ?? false } } : d,
+                );
+                return;
+              }
               void startDuel();
               return;
             }

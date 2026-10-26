@@ -1423,6 +1423,24 @@ a.big-btn {
   margin-top: 0;
 }
 
+/* Who has asked for a rematch after a friend's duel, right above the buttons. */
+.result-rematch-note {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--up);
+}
+
+/* a friend who has left is news, not an invitation */
+.result-rematch-note.gone {
+  color: var(--neutral);
+}
+
+.result-actions .big-btn.waiting {
+  opacity: 0.6;
+}
+
 .big-btn.ghost {
   background: linear-gradient(#5b6d88, #35455d);
   color: #f4f9ff;

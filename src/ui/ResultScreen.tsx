@@ -14,6 +14,7 @@ export default function ResultScreen({
   unlockedName,
   onRestart,
   onMenu,
+  rematch,
 }: {
   state: MatchState;
   humanIdx: number;
@@ -24,6 +25,12 @@ export default function ResultScreen({
   unlockedName: string | null;
   onRestart: () => void;
   onMenu: () => void;
+  /**
+   * After a duel with a friend: the room is kept, so PLAY AGAIN is a rematch
+   * that both of them ask for. Who has asked, and whether the rival is still
+   * there to ask. Absent after any other match.
+   */
+  rematch?: { you: boolean; rival: boolean; gone: boolean };
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -44,6 +51,27 @@ export default function ResultScreen({
 
   const me = state.traders[humanIdx];
   const rival = state.traders[1 - humanIdx];
+
+  // The second button, which after a friend's duel is a rematch in the same
+  // room: asked, waited on, or answered. A friend who has left turns it back
+  // into a fresh invitation.
+  const waiting = Boolean(rematch && !rematch.gone && rematch.you && !rematch.rival);
+  const againLabel = !rematch
+    ? tt('result.playAgain')
+    : rematch.gone
+      ? tt('result.newDuel')
+      : waiting
+        ? tt('result.rematchWaiting')
+        : tt('result.rematch');
+  const rematchNote = !rematch
+    ? null
+    : rematch.gone
+      ? tt('result.rivalLeft', { name: rival.name.toUpperCase() })
+      : rematch.rival && !rematch.you
+        ? tt('result.rivalWantsRematch', { name: rival.name.toUpperCase() })
+        : waiting
+          ? tt('result.rematchAsked', { name: rival.name.toUpperCase() })
+          : null;
   /**
    * Each side's own opening book, not the config's: a renovated office sits
    * down with more (`ui/renovation.ts`), so the two percentages on this screen
@@ -155,12 +183,17 @@ export default function ResultScreen({
         </div>
       </div>
 
+      {rematchNote && <div className={`result-rematch-note${rematch?.gone ? ' gone' : ''}`}>{rematchNote}</div>}
       <div className="result-actions">
         <button className="big-btn ghost" onClick={onMenu}>
           {tt('common.menu')}
         </button>
-        <button className="big-btn" onClick={onRestart}>
-          {tt('result.playAgain')}
+        <button
+          className={`big-btn${waiting ? ' waiting' : ''}`}
+          onClick={onRestart}
+          disabled={waiting}
+        >
+          {againLabel}
         </button>
       </div>
     </div>

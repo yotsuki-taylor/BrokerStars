@@ -198,6 +198,13 @@ export type ClientMsg =
    */
   | { k: 'here'; away: boolean }
   /**
+   * Another round with the same rival, asked from the result screen of an
+   * invited duel. The room is kept after the whistle, and when both seats have
+   * asked the server starts the next match itself -- nobody sends a link
+   * again. A pair the pool made is not kept; this is ignored there.
+   */
+  | { k: 'again' }
+  /**
    * Nothing to answer. It exists so that something goes *up* the socket now
    * and then: a duellist who is not trading sends nothing for a minute at a
    * time, and a lobby sends nothing for fifteen, and there are carriers and
@@ -258,6 +265,11 @@ export type ServerMsg =
   | { k: 'sync'; sync: DuelSync; tick: DuelTick }
   | { k: 'tick'; tick: DuelTick }
   | { k: 'end'; award: DuelAward }
+  /**
+   * Who has asked for another round, from the recipient's side. Sent whenever
+   * it changes; the round itself arrives as an ordinary `setup`.
+   */
+  | { k: 'again'; you: boolean; rival: boolean }
   /** the other one dropped; the match, if there is one, carries on without them */
   | { k: 'gone' }
   | { k: 'back' }
