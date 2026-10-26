@@ -47,11 +47,60 @@ interface Guest {
  */
 let guest: Guest | null | undefined;
 
+/** Somewhere a short string can be kept: this browser by default. */
+export interface GuestStore {
+  read(key: string): string | null;
+  write(key: string, value: string): void;
+}
+
+const browser: GuestStore = { read, write };
+let vault: GuestStore = browser;
+
+/**
+ * Keep the guest somewhere better than this browser, for a host that offers one.
+ *
+ * CrazyGames does: its Data module keeps a logged-in player's data in their
+ * account, so a guest kept there comes back on every device they sign in on,
+ * and for a player who is not logged in it is this browser anyway. The guest
+ * is the key to everything the server holds for this player, so where it lives
+ * is where their progress lives. Called by `platform/crazygames.ts` once the SDK
+ * is up; every other host keeps the default.
+ *
+ * The browser is never let go of. Every write goes to both, and a read the
+ * better place has nothing for falls back on the browser and copies what it
+ * finds across — which is also how a guest from before the move gets there,
+ * with nothing to run once. So a place that loses things, refuses them or
+ * throws costs a player the cross-device part and never the guest: found the
+ * hard way, by a test whose Data module was switched off.
+ */
+export function keepGuestIn(store: GuestStore): void {
+  vault = store;
+  guest = undefined;
+}
+
+/** Back to this browser, and nothing cached. For the tests, which are the only thing that may call it. */
+export function __resetGuestStore(): void {
+  vault = browser;
+  guest = undefined;
+}
+
 function load(): Guest | null {
   if (guest !== undefined) return guest;
   guest = null;
   try {
-    const raw = read(KEY);
+    let raw = vault === browser ? browser.read(KEY) : safely(() => vault.read(KEY));
+    if (vault !== browser) {
+      const here = browser.read(KEY);
+      if (!raw && here) {
+        // the better place had nothing: give it what this browser had
+        raw = here;
+        safely(() => vault.write(KEY, here));
+      } else if (raw && raw !== here) {
+        // and this browser keeps a copy of what the better place had, so the
+        // fallback is there the day the better place is not
+        browser.write(KEY, raw);
+      }
+    }
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Guest>;
       if (parsed.token && parsed.id) {
@@ -70,11 +119,21 @@ function load(): Guest | null {
 
 function keep(next: Guest | null): void {
   guest = next;
+  const value = next ? JSON.stringify(next) : '';
   try {
-    if (next) write(KEY, JSON.stringify(next));
-    else write(KEY, '');
+    browser.write(KEY, value);
   } catch {
     /* a session we cannot write is one that lasts until the tab closes */
+  }
+  if (vault !== browser) safely(() => vault.write(KEY, value));
+}
+
+/** Whatever a host's store does wrong is the same as it having nothing. */
+function safely<T>(f: () => T): T | null {
+  try {
+    return f();
+  } catch {
+    return null;
   }
 }
 

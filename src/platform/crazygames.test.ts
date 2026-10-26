@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { platform } from './index';
 import { __codeOf as codeOf } from './crazygames';
 import { canHandOver, linkToShare } from '../ui/duel';
+import { __resetGuestStore, forgetGuest, guestToken } from '../ui/guest';
 
 const TG = 'https://t.me/BrokerStarsBot?start=duel_abc123';
 const WEB = 'https://yotsuki-taylor.github.io/BrokerStars/?d=abc123';
@@ -125,5 +126,96 @@ describe('the code inside an invitation', () => {
   it('is nothing when there is none', () => {
     expect(codeOf('https://t.me/+9R4CBPEDUwg0MTQy')).toBeNull();
     expect(codeOf('not a link')).toBeNull();
+  });
+});
+
+describe('the guest, kept in the Data module', () => {
+  const KEY = 'brokerstars.guest';
+  const saved = (token: string) => JSON.stringify({ token, id: `a:${token}`, name: 'GUEST' });
+
+  /** A Storage-shaped map, for this browser and for the Data module alike. */
+  const memory = (seed: Record<string, string> = {}) => {
+    const m = new Map(Object.entries(seed));
+    return {
+      m,
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => void m.set(k, String(v)),
+      removeItem: (k: string) => void m.delete(k),
+    };
+  };
+
+  let browser: ReturnType<typeof memory>;
+
+  beforeEach(() => {
+    __resetGuestStore();
+    browser = memory();
+    (globalThis as any).localStorage = browser;
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).localStorage;
+    __resetGuestStore();
+  });
+
+  async function withData(seed: Record<string, string> = {}, environment = 'crazygames') {
+    const data = memory(seed);
+    (globalThis as any).window = {
+      CrazyGames: { SDK: { environment, init: async () => {}, data, user: {}, game: {} } },
+    };
+    await platform().ready();
+    return data;
+  }
+
+  it('moves a guest already in this browser into the account, and keeps the browser copy', async () => {
+    // somebody who played before the guest moved must not start over
+    browser.setItem(KEY, saved('old'));
+    const data = await withData();
+    // copied across on the first read, which the game makes right after this
+    expect(guestToken()).toBe('old');
+    expect(data.m.get(KEY)).toBe(saved('old'));
+    expect(browser.getItem(KEY)).toBe(saved('old'));
+  });
+
+  it('takes the guest the account already has over the one in this browser', async () => {
+    // a logged-in player on a second device: the account is who they are
+    browser.setItem(KEY, saved('here'));
+    const data = await withData({ [KEY]: saved('account') });
+    expect(guestToken()).toBe('account');
+    expect(data.m.get(KEY)).toBe(saved('account'));
+    // and this browser now holds the account's guest as its fallback
+    expect(browser.getItem(KEY)).toBe(saved('account'));
+  });
+
+  it('forgets the guest in the account, not only in this browser', async () => {
+    const data = await withData({ [KEY]: saved('gone') });
+    forgetGuest();
+    expect(data.m.has(KEY)).toBe(false);
+    expect(guestToken()).toBe('');
+  });
+
+  it('stays in this browser when the SDK says it is disabled', async () => {
+    browser.setItem(KEY, saved('local'));
+    const data = await withData({}, 'disabled');
+    expect(guestToken()).toBe('local');
+    expect(data.m.size).toBe(0);
+  });
+
+  it('falls back on the browser when the Data module throws', async () => {
+    // switched off on CrazyGames' side, say: the guest must not be lost
+    browser.setItem(KEY, saved('safe'));
+    const broken = {
+      getItem: () => {
+        throw new Error('dataModuleDisabled');
+      },
+      setItem: () => {
+        throw new Error('dataModuleDisabled');
+      },
+      removeItem: () => {},
+    };
+    (globalThis as any).window = {
+      CrazyGames: { SDK: { environment: 'crazygames', init: async () => {}, data: broken, user: {}, game: {} } },
+    };
+    await platform().ready();
+    expect(guestToken()).toBe('safe');
   });
 });

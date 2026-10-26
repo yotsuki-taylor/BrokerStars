@@ -28,6 +28,7 @@
  */
 
 import type { Platform } from './index';
+import { keepGuestIn, type GuestStore } from '../ui/guest';
 import { onDocumentVisibility } from './visibility';
 
 /** The SDK object the script tag puts on the window, if it did. */
@@ -46,6 +47,45 @@ export const inCrazyGames = (): boolean => Boolean(sdk());
  * this first and falls back to doing what a browser tab would.
  */
 let live = false;
+
+/* ---------------------------------------------------------------- the guest */
+
+/**
+ * The SDK's Data module, shaped as the store the guest is kept in.
+ *
+ * It keeps a logged-in player's data in their CrazyGames account and syncs it
+ * to every device they play on; for a player who is not logged in it keeps it
+ * in this browser and moves it into the account if they log in later. Only the
+ * guest goes here: it is the key to everything the server holds for the player,
+ * so it is the one thing that has to follow them. Every other key stays in
+ * localStorage, where losing it costs a convenience and nothing more.
+ *
+ * Its API is localStorage's. An empty value is a removal, as it is for the
+ * guest module. Any error — the module switched off on CrazyGames' side, over
+ * its 1MB, anything — reads as nothing kept and writes as a no-op, so the guest
+ * module falls back on what it already had rather than losing it.
+ */
+const dataModule: GuestStore = {
+  read(key) {
+    try {
+      const v = sdk().data.getItem(key);
+      return v == null ? null : String(v);
+    } catch {
+      return null;
+    }
+  },
+  write(key, value) {
+    try {
+      if (value) sdk().data.setItem(key, value);
+      else sdk().data.removeItem(key);
+    } catch {
+      /* not kept in the account; the browser's copy still stands */
+    }
+  },
+};
+
+/** Exported for the tests, which are the only thing that may call it. */
+export const __dataModule = dataModule;
 
 /* ---------------------------------------------------------------- invitations */
 
@@ -104,6 +144,8 @@ export const CRAZYGAMES: Platform = {
     try {
       await s.init();
       live = s.environment !== 'disabled';
+      // Before anything reads the guest: App asks for one after this resolves.
+      if (live && s.data) keepGuestIn(dataModule);
     } catch {
       // A page that cannot reach CrazyGames still has a game in it; it just
       // plays as an ordinary tab with nobody told.
