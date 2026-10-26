@@ -5009,6 +5009,20 @@ a.big-btn {
   gap: 6px;
 }
 
+/* Why the server turned the last order down, under the buttons that sent it. */
+.trade-refused {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #ffb4b4;
+  text-align: center;
+}
+
+.trade-refused.net {
+  color: #dbe8f8;
+  opacity: 0.85;
+}
+
 .trade-actions .menu-btn {
   flex: 1 1 0;
   min-width: 0;

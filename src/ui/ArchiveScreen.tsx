@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { TradeRefusal } from './api';
 import { COMPANIES, TRAIT_LABEL, companyById, type Company } from '../sim/companies';
 import type { Daily } from '../daily/protocol';
 import {
@@ -80,6 +81,11 @@ export interface CounterProps {
   portfolio: Portfolio;
   dollars: number;
   onTrade: (id: string, shares: number, sell: boolean) => void;
+  /**
+   * The last order the server turned down, and why, so the screen can say so
+   * instead of quietly putting the balance back. Cleared by the next order.
+   */
+  refused?: { id: string; reason: TradeRefusal } | null;
 }
 
 /** The change from one price to the next, as a percentage. Zero when unknown. */
@@ -132,6 +138,7 @@ function TradeRow({
   portfolio,
   dollars,
   onTrade,
+  refused,
 }: { company: Company } & CounterProps) {
   const [size, setSize] = useState(1);
   // a company changed under the stepper leaves the old size standing, which is
@@ -225,6 +232,12 @@ function TradeRow({
           {t('market.sell')} <Dollar size={14} /> {money(bid * size)}
         </button>
       </div>
+
+      {refused && refused.id === company.id && (
+        <p className={`trade-refused${refused.reason === 'net' ? ' net' : ''}`}>
+          {t(`market.refused.${refused.reason}`)}
+        </p>
+      )}
 
     </div>
   );

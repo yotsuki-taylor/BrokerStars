@@ -476,11 +476,51 @@ export const refundRoomStep = (): Promise<Profile | null> =>
  * the browser asks for prices below instead of computing them. A refusal comes
  * back as the profile as it really stands, like every other one here.
  */
-export const tradeShares = (
+export const tradeShares = async (
   company: string,
   shares: number,
   sell: boolean,
-): Promise<Profile | null> => profileCall('/profile/trade', { company, shares, sell });
+): Promise<Traded> => {
+  const answer = ok(await post('/profile/trade', { company, shares, sell })) as {
+    profile?: unknown;
+    error?: unknown;
+  } | null;
+  if (!answer) return { profile: null, refused: 'net' };
+  return {
+    profile: cleanProfile(answer.profile, LEAGUE_COUNT),
+    refused: answer.error ? refusalOf(answer.error) : null,
+  };
+};
+
+/**
+ * Why the counter did not take an order, in the words the screen has for it.
+ *
+ * `net` is the one that is not a refusal: nothing came back, so nobody knows
+ * whether the order landed, and the next profile settles it either way.
+ */
+export type TradeRefusal = 'unmet' | 'dollars' | 'shares' | 'company' | 'net' | 'other';
+
+export interface Traded {
+  /** the profile as the server really has it after the order, or null with no answer */
+  profile: Profile | null;
+  refused: TradeRefusal | null;
+}
+
+/** The server's reason (`profiles.trade`, `market/protocol.ts`) as one the screen can say. */
+export function refusalOf(error: unknown): TradeRefusal {
+  switch (String(error)) {
+    case 'not in the archive yet':
+      return 'unmet';
+    case 'not enough dollars':
+      return 'dollars';
+    case 'not that many shares':
+      return 'shares';
+    case 'no such company':
+      return 'company';
+    default:
+      return 'other';
+  }
+}
 
 /* ------------------------------------------------------------- the friends */
 

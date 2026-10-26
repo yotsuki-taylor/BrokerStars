@@ -447,6 +447,13 @@ const EN = {
   /* The share counter. Coins buy hats; dollars buy a piece of the companies
      you have already played against — see src/market/protocol.ts. */
   'market.noPrices': 'No prices today. The counter is shut.',
+  'market.refused.unmet':
+    'The server does not have this company in your archive yet — play a match against it first. Your dollars are back.',
+  'market.refused.dollars': 'Not enough dollars at today’s price on the server. Your dollars are back.',
+  'market.refused.shares': 'You do not hold that many shares. The order was cancelled.',
+  'market.refused.company': 'This company is not on the market. The order was cancelled.',
+  'market.refused.net': 'The server did not answer. The order will settle once it does.',
+  'market.refused.other': 'The server turned the order down. Your dollars are back.',
   'market.youHold': 'YOU HOLD {n}, IN AT {avg}',
   'market.max': 'MAX',
   'market.buy': 'BUY',
@@ -1122,6 +1129,13 @@ const RU: Record<Key, string> = {
   'archive.achievementsSoon': 'То, что стоит сделать, хотя никто не просил. Пока решаем, что именно.',
 
   'market.noPrices': 'Сегодня без котировок. Стойка закрыта.',
+  'market.refused.unmet':
+    'Сервер пока не видит эту компанию в твоём архиве — сначала сыграй против неё матч. Доллары вернулись.',
+  'market.refused.dollars': 'Не хватило долларов по сегодняшней цене на сервере. Доллары вернулись.',
+  'market.refused.shares': 'Столько акций у тебя нет. Сделка отменена.',
+  'market.refused.company': 'Этой компании нет на рынке. Сделка отменена.',
+  'market.refused.net': 'Сервер не ответил. Сделка уточнится, когда связь появится.',
+  'market.refused.other': 'Сервер отклонил сделку. Доллары вернулись.',
   'market.youHold': 'У ВАС {n}, СРЕДНЯЯ {avg}',
   'market.max': 'МАКС',
   'market.buy': 'КУПИТЬ',

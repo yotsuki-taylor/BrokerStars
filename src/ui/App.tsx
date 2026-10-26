@@ -77,6 +77,7 @@ import {
   refundRoomStep,
   submitResult,
   tradeShares,
+  type TradeRefusal,
   wearOutfit,
 } from './api';
 import { listOf, setOf, type Profile } from '../profile/protocol';
@@ -1607,6 +1608,9 @@ export default function App() {
    * case — that request failed and the fallback walk is on screen — and then
    * the answer is the truth and the balance snaps to it.
    */
+  const [tradeRefused, setTradeRefused] = useState<{ id: string; reason: TradeRefusal } | null>(
+    null,
+  );
   const tradeAtCounter = useCallback(
     (id: string, shares: number, sell: boolean) => {
       const price = priceIn(market, id);
@@ -1621,11 +1625,17 @@ export default function App() {
       savePortfolio(done.portfolio);
       setDollars(done.dollars);
       saveDollars(done.dollars);
+      setTradeRefused(null);
       haptic('heavy');
       if (!sell) track('stock_buy', { company: id });
-      reconcile(tradeShares(id, shares, sell));
+      // The answer replaces the guess either way; a refusal also says why,
+      // rather than the balance quietly snapping back.
+      void tradeShares(id, shares, sell).then(({ profile: p, refused }) => {
+        if (p) applyProfile(p);
+        if (refused) setTradeRefused({ id, reason: refused });
+      });
     },
-    [dollars, market, portfolio, reconcile],
+    [dollars, market, portfolio, applyProfile],
   );
 
   /* ------------------------------------------------- simulation + render loop */
@@ -3174,6 +3184,7 @@ export default function App() {
             portfolio,
             dollars,
             onTrade: tradeAtCounter,
+            refused: tradeRefused,
           }}
           onBack={() => setScreen('menu')}
         />

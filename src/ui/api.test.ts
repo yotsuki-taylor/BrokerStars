@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mintToken, verdictOf } from './api';
+import { mintToken, refusalOf, verdictOf } from './api';
 
 /**
  * What to do with a match that did not go through.
@@ -10,6 +10,20 @@ import { mintToken, verdictOf } from './api';
  * never be accepted is the other mistake, and it is only a queue that never
  * empties.
  */
+describe('why the share counter refused an order', () => {
+  it('names each of the server’s reasons', () => {
+    expect(refusalOf('not in the archive yet')).toBe('unmet');
+    expect(refusalOf('not enough dollars')).toBe('dollars');
+    expect(refusalOf('not that many shares')).toBe('shares');
+    expect(refusalOf('no such company')).toBe('company');
+  });
+
+  it('still says something for a reason it has never heard of', () => {
+    expect(refusalOf('no shares asked for')).toBe('other');
+    expect(refusalOf(undefined)).toBe('other');
+  });
+});
+
 describe('what became of a submission', () => {
   it('is done when the server took it', () => {
     expect(verdictOf({ status: 200, body: { ok: true } })).toBe('done');
