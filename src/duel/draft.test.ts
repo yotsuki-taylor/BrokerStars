@@ -4,6 +4,7 @@ import { Rng } from '../sim/rng';
 import { NO_UI_PERKS, perksFor } from '../ui/perks';
 import {
   DRAFT_MS,
+  LOOK_MS,
   NO_POWERS,
   STETSON_PICKS,
   TURN_MS,
@@ -37,15 +38,42 @@ describe('powersOf', () => {
     expect(hat('legend')).toMatchObject({ picks: STETSON_PICKS });
   });
 
-  it('lets glasses that read quirks see the board without touching it', () => {
-    const p = powersOf(perksFor({ access: 'uncommon' } as any, 10_000).ui);
-    expect(p).toEqual({ see: true, swaps: 0, bans: 0, pins: 0, picks: 0 });
+  it('never lets a bare head see the board, whatever glasses it wears', () => {
+    const p = powersOf(perksFor({ access: 'legend' } as any, 10_000).ui);
+    expect(p).toEqual(NO_POWERS);
   });
 });
 
 describe('openDraft', () => {
-  it('opens nothing when neither player can change the board', () => {
-    expect(openDraft(LEAGUE, BOARD, [powers({}), NO_POWERS], 0, rng())).toBeNull();
+  it('opens nothing when neither player can change the board or look at it', () => {
+    expect(openDraft(LEAGUE, BOARD, [NO_POWERS, NO_POWERS], 0, rng())).toBeNull();
+  });
+
+  it('only shows the board, for a shorter while, when nobody can change it but somebody may look', () => {
+    const d = openDraft(LEAGUE, BOARD, [powers({}), NO_POWERS], 0, rng())!;
+    expect(d.look).toBe(true);
+    expect(d.turn).toBeNull();
+    expect(d.endsAt).toBe(LOOK_MS);
+    // the one looking holds it open; the one who cannot look never does
+    expect(d.done).toEqual([false, true]);
+    expect(viewFor(d, 0, 1000)).toMatchObject({ look: true, contested: false, turnInMs: LOOK_MS - 1000 });
+  });
+
+  it('ends the look as soon as everybody looking has said ready', () => {
+    const d = openDraft(LEAGUE, BOARD, [powers({}), powers({})], 0, rng())!;
+    expect(applyMove(d, 0, { kind: 'swap', slot: 0 }, 0, rng())).toBe(false);
+    expect(applyMove(d, 0, { kind: 'ready' }, 1000, rng())).toBe(true);
+    expect(d.turn).toBeNull();
+    expect(over(d, 1000)).toBe(false);
+    expect(applyMove(d, 1, { kind: 'ready' }, 2000, rng())).toBe(true);
+    expect(over(d, 2000)).toBe(true);
+    expect(d.board).toEqual(BOARD);
+  });
+
+  it('ends the look on its clock if somebody never says ready', () => {
+    const d = openDraft(LEAGUE, BOARD, [powers({}), powers({})], 0, rng())!;
+    expect(step(d, LOOK_MS - 1)).toBe(false);
+    expect(over(d, LOOK_MS)).toBe(true);
   });
 
   it('gives the weaker hat the first move', () => {

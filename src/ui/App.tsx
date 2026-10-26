@@ -3049,7 +3049,10 @@ export default function App() {
           // A bare head while the rival's hat argues over the board.
           hold={
             duel?.draft && !duelLive
-              ? { note: t('draft.rivalPicking'), endsAt: (duel.draftAt ?? Date.now()) + duel.draft.endsInMs }
+              ? {
+                  note: t(duel.draft.look ? 'draft.rivalLooking' : 'draft.rivalPicking'),
+                  endsAt: (duel.draftAt ?? Date.now()) + duel.draft.endsInMs,
+                }
               : null
           }
           // Only while nobody is on the way: see `pairing`.

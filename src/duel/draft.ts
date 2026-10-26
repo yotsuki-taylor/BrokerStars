@@ -35,6 +35,12 @@ import type { UiPerks } from '../ui/perks';
 export const DRAFT_MS = 15_000;
 /** One turn, when both players have something to spend; a turn not taken is passed. */
 export const TURN_MS = 5_000;
+/**
+ * The phase when nobody can change the board but somebody may look at it: a
+ * shorter one, since there is nothing to do but read three names, and it ends
+ * as soon as everybody looking has said they are ready.
+ */
+export const LOOK_MS = 8_000;
 /** The STETSON names the whole board against the bot; here it may replace this many. */
 export const STETSON_PICKS = 3;
 
@@ -54,7 +60,8 @@ export const NO_POWERS: DraftPowers = { see: false, swaps: 0, bans: 0, pins: 0, 
 /** Off the perks the server built from the wardrobe it keeps, never off a client's word. */
 export function powersOf(ui: UiPerks): DraftPowers {
   return {
-    see: ui.seeBoard || ui.showQuirks || ui.rerolls > 0 || ui.bans > 0 || ui.pins > 0 || ui.pickAll,
+    // A hat, and only a hat: a bare head never sees the board before the match.
+    see: ui.seeBoard,
     swaps: ui.rerolls,
     bans: ui.bans,
     pins: ui.pins,
@@ -103,11 +110,22 @@ export interface Draft {
   turnEndsAt: number;
   endsAt: number;
   last: DraftEvent | null;
+  /**
+   * Nobody can change a thing and somebody can look: the board is only shown.
+   * Each player who may look is done when they say READY, a player who may not
+   * is done from the start, and there are no turns.
+   */
+  look: boolean;
 }
 
 /**
  * Open the phase on a board already dealt, or return null when there is
- * nothing to argue about: neither player can change a thing.
+ * nothing to show: neither player can change a thing, and neither may look.
+ *
+ * When neither can change it but one may look (a BANDANA, glasses that read
+ * the board), the board is shown for `LOOK_MS`, ending as soon as everybody
+ * looking is ready — on the versus screen it would be up for three seconds,
+ * and the match screen shows the same three names to everybody anyway.
  *
  * The weaker hat moves first — the stronger one answers, and the last word
  * is what a stronger hat is worth. Level hats leave it to the dealer.
@@ -120,7 +138,22 @@ export function openDraft(
   rng: Picker,
 ): Draft | null {
   const done: [boolean, boolean] = [actions(powers[0]) === 0, actions(powers[1]) === 0];
-  if (done[0] && done[1]) return null;
+  if (done[0] && done[1]) {
+    if (!powers[0].see && !powers[1].see) return null;
+    return {
+      league,
+      board: [...board],
+      pinned: board.map(() => null),
+      banned: [],
+      left: [{ ...powers[0] }, { ...powers[1] }],
+      done: [!powers[0].see, !powers[1].see],
+      turn: null,
+      turnEndsAt: now + LOOK_MS,
+      endsAt: now + LOOK_MS,
+      last: null,
+      look: true,
+    };
+  }
   const alone = done[0] || done[1];
   const a = actions(powers[0]);
   const b = actions(powers[1]);
@@ -136,11 +169,12 @@ export function openDraft(
     turnEndsAt: alone ? now + DRAFT_MS : now + TURN_MS,
     endsAt: now + DRAFT_MS,
     last: null,
+    look: false,
   };
 }
 
 /** Both are still spending, so turns alternate; otherwise the one left plays freely. */
-const contested = (d: Draft): boolean => !d.done[0] && !d.done[1];
+const contested = (d: Draft): boolean => !d.look && !d.done[0] && !d.done[1];
 
 export const over = (d: Draft, now: number): boolean =>
   now >= d.endsAt || (d.done[0] && d.done[1]);
@@ -196,7 +230,8 @@ export function applyMove(d: Draft, seat: Seat, move: DraftMove, now: number, rn
   if (move?.kind === 'ready') {
     d.done[seat] = true;
     d.last = { seat, kind: 'ready' };
-    if (d.turn === seat || d.turn === null) pass(d, seat, now);
+    // Only looking: nothing to hand on, and no turns to keep.
+    if (!d.look && (d.turn === seat || d.turn === null)) pass(d, seat, now);
     return true;
   }
 
@@ -287,6 +322,8 @@ export interface DraftView {
   endsInMs: number;
   /** turns alternate only while both are spending */
   contested: boolean;
+  /** nobody can change the board; it is only being shown (`LOOK_MS`) */
+  look: boolean;
   last: (Omit<DraftEvent, 'seat'> & { who: 'you' | 'rival' }) | null;
 }
 
@@ -306,6 +343,7 @@ export function viewFor(d: Draft, seat: Seat, now: number): DraftView {
     turnInMs: Math.max(0, Math.min(d.turnEndsAt, d.endsAt) - now),
     endsInMs: Math.max(0, d.endsAt - now),
     contested: contested(d),
+    look: d.look,
     last: d.last ? { ...last, who: who(lastSeat) as 'you' | 'rival' } : null,
   };
 }

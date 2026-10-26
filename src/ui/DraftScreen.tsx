@@ -83,7 +83,9 @@ export default function DraftScreen({
   }
 
   // What the line under the title says: whose move, and for how long.
-  const status = view.youDone || !canAct
+  const status = view.look && !view.youDone
+    ? t('draft.look')
+    : view.youDone || !canAct
     ? view.rivalDone
       ? t('draft.starting')
       : t('draft.waitRival')
@@ -211,10 +213,17 @@ export default function DraftScreen({
 
       <button
         className="menu-btn play"
-        disabled={canAct ? view.youDone : pressed}
-        onClick={() => (canAct ? onMove({ kind: 'ready' }) : setPressed(true))}
+        disabled={pressed || (canAct && view.youDone)}
+        onClick={() => {
+          setPressed(true);
+          // Sent whenever the server is still waiting on this player: always
+          // for somebody who can change the board, and for somebody who can
+          // only look while the board is only being shown. Otherwise the press
+          // is this screen's own business.
+          if (!view.youDone) onMove({ kind: 'ready' });
+        }}
       >
-        {(canAct ? view.youDone : pressed) ? (
+        {pressed || (canAct && view.youDone) ? (
           t('draft.waitRival')
         ) : (
           <>

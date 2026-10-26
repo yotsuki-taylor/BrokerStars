@@ -139,7 +139,13 @@ export function perksFor(outfit: Outfit, startingCash: number): Perks {
   return { trader, ui };
 }
 
-/** Does anything the player owns want a look at the board before the match? */
+/**
+ * May this player look at the board before the match?
+ *
+ * The HEAD slot's question and nobody else's: every hat sees the board, and a
+ * bare head never does, whatever else is worn. The glasses that spell a board
+ * out (`showQuirks`) only add to a board a hat is already showing.
+ */
 export function wantsBoardScreen(ui: UiPerks): boolean {
-  return ui.seeBoard || ui.showQuirks || ui.rerolls > 0 || ui.bans > 0 || ui.pins > 0 || ui.pickAll;
+  return ui.seeBoard;
 }

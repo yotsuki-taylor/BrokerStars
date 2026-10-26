@@ -209,15 +209,15 @@ export const CATALOGUE: Record<Slot, Record<Rarity, ItemCard>> = {
     },
     uncommon: {
       name: 'RED SHADES',
-      text: 'You see all three companies, and what each does, before you agree to the match — in a duel too, while the board is being changed.',
+      text: 'The board your hat shows you is spelled out: what each company does. In the match each row says what kind it is.',
     },
     rare: {
       name: 'TRADING HEADSET',
-      text: 'The board is spelled out before you agree to it, and three seconds before a headline lands you hear which company it hits.',
+      text: 'The board your hat shows you is spelled out, and three seconds before a headline lands you hear which company it hits.',
     },
     mythic: {
       name: 'EARPIECE',
-      text: 'The board is spelled out, headlines come with warning, and the company you are holding tells you which way it is about to go.',
+      text: 'The board your hat shows you is spelled out, headlines come with warning, and the company you are holding tells you which way it is about to go.',
     },
     legend: {
       name: 'ORACLE LENS',

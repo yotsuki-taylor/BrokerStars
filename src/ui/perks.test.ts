@@ -101,10 +101,11 @@ describe('every ladder climbs the right way', () => {
 });
 
 describe('the board screen', () => {
-  it('opens for the first rung of either slot that looks at the draw', () => {
+  it('opens for any hat, and for nothing else', () => {
     expect(wantsBoardScreen(perksFor(wearing('hat', 'common'), CASH).ui)).toBe(true);
-    expect(wantsBoardScreen(perksFor(wearing('access', 'uncommon'), CASH).ui)).toBe(true);
-    // the reading glasses only write on the rows during the match
+    // glasses spell out a board a hat shows; they never show one themselves
+    expect(wantsBoardScreen(perksFor(wearing('access', 'uncommon'), CASH).ui)).toBe(false);
+    expect(wantsBoardScreen(perksFor(wearing('access', 'legend'), CASH).ui)).toBe(false);
     expect(wantsBoardScreen(perksFor(wearing('access', 'common'), CASH).ui)).toBe(false);
     expect(wantsBoardScreen(perksFor(wearing('torso', 'legend'), CASH).ui)).toBe(false);
   });

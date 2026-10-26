@@ -823,6 +823,8 @@ const EN = {
   'draft.waitRival': 'WAITING FOR THE RIVAL',
   'draft.starting': 'STARTING',
   'draft.rivalPicking': 'THE RIVAL IS CHOOSING COMPANIES',
+  'draft.rivalLooking': 'THE RIVAL IS LOOKING AT THE BOARD',
+  'draft.look': 'TODAY’S THREE',
   'draft.ready': 'TO BATTLE',
   'draft.swap': 'SWAP',
   'draft.ban': 'BAN',
@@ -1435,6 +1437,8 @@ const RU: Record<Key, string> = {
   'draft.waitRival': 'ЖДЁМ СОПЕРНИКА',
   'draft.starting': 'НАЧИНАЕМ',
   'draft.rivalPicking': 'СОПЕРНИК ВЫБИРАЕТ КОМПАНИИ',
+  'draft.rivalLooking': 'СОПЕРНИК СМОТРИТ КОМПАНИИ',
+  'draft.look': 'СЕГОДНЯШНЯЯ ТРОЙКА',
   'draft.ready': 'В БОЙ',
   'draft.swap': 'ЗАМЕНИТЬ',
   'draft.ban': 'УБРАТЬ',
@@ -1652,13 +1656,13 @@ const RU_DATA: Record<string, string> = {
   'item.access.common.text': 'Каждая компания на ряду показывает, какого она типа.',
   'item.access.uncommon.name': 'ТЁМНЫЕ ОЧКИ',
   'item.access.uncommon.text':
-    'Все три компании и что каждая делает — видно до того, как согласиться на матч. В дуэли тоже, пока меняют доску.',
+    'Доска, которую показывает шапка, расписана: видно, что делает каждая компания. В матче на ряду подписан тип компании.',
   'item.access.rare.name': 'ГАРНИТУРА',
   'item.access.rare.text':
-    'Доска расписана до матча, и за три секунды до новости слышно, на какую компанию она выйдет.',
+    'Доска, которую показывает шапка, расписана, и за три секунды до новости слышно, на какую компанию она выйдет.',
   'item.access.mythic.name': 'НАУШНИК',
   'item.access.mythic.text':
-    'Доска расписана, новости приходят с предупреждением, а компания, которую держишь, подсказывает, куда собирается пойти.',
+    'Доска с шапкой расписана, новости приходят с предупреждением, а компания, которую держишь, подсказывает, куда собирается пойти.',
   'item.access.legend.name': 'ОРАКУЛ',
   'item.access.legend.text':
     'Всё, в чём рынок готов признаться, и следующие две секунды компании, которую держишь, дорисованы впереди линии.',
