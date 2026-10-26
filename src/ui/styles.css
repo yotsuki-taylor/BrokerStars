@@ -2829,14 +2829,15 @@ a.big-btn {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
-/* The privacy line for a new player (PrivacyNote.tsx, CrazyGames only). Over
-   the room's picture and between the two round buttons that sit on it, the one
-   stretch of the menu with nothing to press, so the notice blocks nothing. */
+/* The privacy line for a new player (PrivacyNote.tsx, CrazyGames only), in the
+   middle of the screen where it is read rather than missed. Still no backdrop:
+   it covers what is under it, but nothing else on the menu stops working. */
 .privacy-note {
   position: absolute;
-  top: calc(48px + env(safe-area-inset-top));
-  left: 72px;
-  right: 72px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 40px));
   z-index: 30;
   display: flex;
   flex-direction: column;

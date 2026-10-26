@@ -177,6 +177,8 @@ const EN = {
     'Everything in the wardrobe does something. Five slots, five grades each — abilities, a bigger board, a softer landing when it goes wrong.',
   'gift.shop': 'SEE THE SHOP',
   'gift.later': 'LATER',
+  // CrazyGames' one button on the present (GiftOverlay): out, to the menu.
+  'gift.thanks': 'THANKS',
 
   'profile.title': 'PROFILE',
   // The career, in the six numbers the server has been keeping all along and
@@ -849,6 +851,7 @@ const RU: Record<Key, string> = {
     'В гардеробе всё что-нибудь умеет. Пять слотов, по пять уровней — способности, доска побольше, мягкая посадка, когда всё пошло не так.',
   'gift.shop': 'В МАГАЗИН',
   'gift.later': 'ПОТОМ',
+  'gift.thanks': 'СПАСИБО',
 
   'profile.title': 'ПРОФИЛЬ',
   'profile.wins': 'ПОБЕД',

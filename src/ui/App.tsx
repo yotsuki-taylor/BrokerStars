@@ -887,8 +887,13 @@ function HandoverOverlay({
  * The nudge towards the shop is the point of the screen as much as the present
  * is. A player who has just been handed a thing that changes what they know is
  * the one moment they will believe that the rest of the wardrobe does too.
+ *
+ * Without `onShop` the screen has one button, THANKS, and it is a way out
+ * rather than a way on: that is CrazyGames, where the present lands on a first
+ * run's way to the menu and the tour (`firstRun`), and a detour into the shop
+ * in the middle of it was one turning too many.
  */
-function GiftOverlay({ onShop, onClose }: { onShop: () => void; onClose: () => void }) {
+function GiftOverlay({ onShop, onClose }: { onShop?: () => void; onClose: () => void }) {
   const card = CATALOGUE.hat.common;
   return (
     <div className="overlay gift">
@@ -901,12 +906,20 @@ function GiftOverlay({ onShop, onClose }: { onShop: () => void; onClose: () => v
       <p className="settings-note gift-why">{t('gift.why')}</p>
       <p className="settings-note gift-more">{t('gift.more')}</p>
       <div className="settings-list">
-        <button className="big-btn" onClick={onShop}>
-          {t('gift.shop')}
-        </button>
-        <button className="menu-btn" onClick={onClose}>
-          {t('gift.later')}
-        </button>
+        {onShop ? (
+          <>
+            <button className="big-btn" onClick={onShop}>
+              {t('gift.shop')}
+            </button>
+            <button className="menu-btn" onClick={onClose}>
+              {t('gift.later')}
+            </button>
+          </>
+        ) : (
+          <button className="big-btn" onClick={onClose}>
+            {t('gift.thanks')}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1812,13 +1825,49 @@ export default function App() {
    * step out of the shop.
    */
   const tourChecked = useRef(false);
+
+  /**
+   * A new player on CrazyGames, before their first menu.
+   *
+   * CrazyGames wants a new player in play at once, a click at most, so there
+   * the first launch skips the menu: the versus screen, a match against a bot
+   * in the first league, and only then the menu — with the present the server
+   * gives for a first finished match, and after it the tour. Everywhere else
+   * the first thing anybody sees is the menu and its tour, as it always was.
+   *
+   * "New" is the tour not yet seen, which is this browser's own memory of the
+   * player. An invitation outranks all of it: somebody who came in on a duel or
+   * a friend's link goes where the link says, and meets the tour at the menu.
+   */
+  const [firstRun, setFirstRun] = useState(
+    () =>
+      platform().id === 'crazygames' &&
+      !tutorialSeen() &&
+      platform().launchParam() === '' &&
+      !/[?&][df]=/.test(String((globalThis as any).location?.search ?? '')),
+  );
+
+  /**
+   * The first run's match is behind it: the player has come back to the menu
+   * from it, or backed out of the versus screen. Until then the menu the app
+   * opens on — for the one render before the first run sends it to the match —
+   * is not a menu anybody saw, and must not open the tour behind the match.
+   */
+  const firstRunBack = useRef(false);
+
   useEffect(() => {
     if (tourChecked.current || screen !== 'menu') return;
+    if (firstRun && !firstRunBack.current) return;
+    // The first run's present comes before its tour: the bandana is the thing
+    // the tour's first stop is about to explain, and two overlays at once is
+    // one too many on a screen the player has never seen.
+    if (firstRun && gifted) return;
     tourChecked.current = true;
+    setFirstRun(false);
     if (tutorialSeen()) return;
     markTutorialSeen();
     setTourOpen(true);
-  }, [screen]);
+  }, [screen, firstRun, gifted]);
 
   /* ----------------------------------------------------------------- dev panel */
   useEffect(() => {
@@ -2283,6 +2332,26 @@ export default function App() {
     },
     [dealBot],
   );
+
+  /**
+   * The first run on CrazyGames (`firstRun`): straight to a match against a
+   * bot in the first league, on the versus screen's own flourish rather than a
+   * real search. A newcomer's first match is against a bot on purpose — it is
+   * where the game is learned, and a stranger who knows it is not a lesson.
+   */
+  useEffect(() => {
+    if (!firstRun) return;
+    const s = String(Math.floor(Math.random() * 1e6));
+    setLeague(0);
+    savePick(0);
+    hold(0, s);
+    restart(s, LEAGUES[0].preset, 0, null);
+    setSeeking(false);
+    setSearched(false);
+    setScreen('vs');
+    // once, on the first render that knows it is a first run
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Opened on somebody's invitation: straight into it, whatever screen was next.
@@ -2877,6 +2946,7 @@ export default function App() {
           }}
           onCancel={() => {
             stopSearch();
+            firstRunBack.current = true;
             setScreen('menu');
           }}
         />
@@ -3141,8 +3211,10 @@ export default function App() {
             </div>
           </div>
         )}
-        {/* Draws nothing outside CrazyGames, or once it has been seen. */}
-        <PrivacyNote />
+        {/* Draws nothing outside CrazyGames, or once it has been seen. Not
+            under the present or the tour either: it sits above the menu, and
+            a first run brings both of those to this screen before it. */}
+        {!gifted && !tourOpen && <PrivacyNote />}
         {pauseOpen && !st.finished && (
         <div className="overlay pause">
           <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
@@ -3176,11 +3248,22 @@ export default function App() {
           it, which is the result screen they just finished on. */}
       {gifted && (
         <GiftOverlay
-          onShop={() => {
+          onShop={
+            platform().id === 'crazygames'
+              ? undefined
+              : () => {
+                  setGifted(false);
+                  setScreen('shop');
+                }
+          }
+          onClose={() => {
             setGifted(false);
-            setScreen('shop');
+            // THANKS on CrazyGames is the way to the main menu, wherever the
+            // present found the player; elsewhere LATER leaves them where they are.
+            if (platform().id !== 'crazygames') return;
+            if (duel) leaveDuel();
+            setScreen('menu');
           }}
-          onClose={() => setGifted(false)}
         />
       )}
 
@@ -3402,7 +3485,12 @@ export default function App() {
             play(league);
           }}
           onMenu={() => {
-            if (!duel) return setScreen('leagues');
+            // The first run goes to the menu, not the league list: the present
+            // and the tour are waiting there (`firstRun`).
+            if (!duel) {
+              firstRunBack.current = true;
+              return setScreen(firstRun ? 'menu' : 'leagues');
+            }
             const matched = duel.matched;
             leaveDuel();
             // back where PLAY was pressed, as from a match against a bot
@@ -3441,14 +3529,26 @@ export default function App() {
       )}
 
       {/* Over whatever screen the player is on when the profile comes back with
-          it, which is the result screen they just finished on. */}
-      {gifted && (
+          it, which is the result screen they just finished on — except on a
+          first run, where it waits for the menu and goes before the tour. */}
+      {gifted && !firstRun && (
         <GiftOverlay
-          onShop={() => {
+          onShop={
+            platform().id === 'crazygames'
+              ? undefined
+              : () => {
+                  setGifted(false);
+                  setScreen('shop');
+                }
+          }
+          onClose={() => {
             setGifted(false);
-            setScreen('shop');
+            // THANKS on CrazyGames is the way to the main menu, wherever the
+            // present found the player; elsewhere LATER leaves them where they are.
+            if (platform().id !== 'crazygames') return;
+            if (duel) leaveDuel();
+            setScreen('menu');
           }}
-          onClose={() => setGifted(false)}
         />
       )}
 
