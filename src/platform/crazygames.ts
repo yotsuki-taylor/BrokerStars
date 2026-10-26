@@ -93,6 +93,12 @@ export const CRAZYGAMES: Platform = {
   walled: true,
 
   async ready(): Promise<void> {
+    // The one hook the stylesheet has on this host: CrazyGames plays in a wide,
+    // short iframe the phone layouts were never drawn for (styles.css, under
+    // `[data-host='crazygames']`). Set before anything else, so the first frame
+    // is already laid out for it.
+    const doc = (globalThis as any).document;
+    if (doc?.documentElement) doc.documentElement.dataset.host = 'crazygames';
     const s = sdk();
     if (!s) return;
     try {

@@ -951,6 +951,44 @@ body {
   }
 }
 
+/* CrazyGames only: its 16:9 iframe goes down to 800×450, where the column
+   above ran 60px past the bottom and cut off the third company's buttons. A
+   wide, short window has width to spare and no height, so the portraits move
+   beside the money cards, facing the clock, and the rest tightens a little.
+   Scoped to the marker `platform/crazygames.ts` puts on <html>, so the phone
+   builds — Telegram, Android, a browser tab — keep the layout they had. */
+@media (max-height: 520px) {
+  [data-host='crazygames'] .app {
+    gap: 4px;
+  }
+  [data-host='crazygames'] .chart-card {
+    min-height: 90px;
+  }
+  [data-host='crazygames'] .trader {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+  /* the right-hand side mirrored, so both portraits sit next to the clock */
+  [data-host='crazygames'] .trader:last-child {
+    flex-direction: row-reverse;
+  }
+  [data-host='crazygames'] .trader-card {
+    flex: 1 1 auto;
+  }
+  [data-host='crazygames'] .portrait {
+    flex: 0 0 40px;
+    height: 52px;
+    margin-top: 0;
+  }
+  [data-host='crazygames'] .row {
+    height: 42px;
+  }
+  [data-host='crazygames'] .rows {
+    gap: 5px;
+  }
+}
+
 /* ---------- main menu ---------- */
 
 .menu {
@@ -2789,6 +2827,44 @@ a.big-btn {
   background: rgba(6, 40, 92, 0.94);
   border: 2px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* The privacy line for a new player (PrivacyNote.tsx, CrazyGames only). Over
+   the room's picture and between the two round buttons that sit on it, the one
+   stretch of the menu with nothing to press, so the notice blocks nothing. */
+.privacy-note {
+  position: absolute;
+  top: calc(48px + env(safe-area-inset-top));
+  left: 72px;
+  right: 72px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(6, 40, 92, 0.94);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.privacy-note p {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.privacy-note-actions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.privacy-note-actions button {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .duel-call-who {

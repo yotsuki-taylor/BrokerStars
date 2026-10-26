@@ -230,6 +230,11 @@ const EN = {
   'feedback.err.failed': 'It did not go. Your text is still here — try again.',
 
   'settings.privacy': 'PRIVACY POLICY',
+  // The notice a new player on CrazyGames sees once (PrivacyNote.tsx). Says
+  // what is kept and that it goes nowhere else; the policy says the rest.
+  'privacy.note':
+    'The game keeps your progress on its own server and counts how it is played. Nothing is shared with anyone.',
+  'privacy.ok': 'GOT IT',
   'settings.close': 'CLOSE',
 
   // A name of one's own, in the account drawer.
@@ -880,6 +885,9 @@ const RU: Record<Key, string> = {
   'feedback.err.failed': 'Не ушло. Текст на месте — попробуй ещё раз.',
 
   'settings.privacy': 'КОНФИДЕНЦИАЛЬНОСТЬ',
+  'privacy.note':
+    'Игра хранит прогресс на своём сервере и считает, как в неё играют. Никому ничего не передаём.',
+  'privacy.ok': 'ПОНЯТНО',
   'settings.close': 'ЗАКРЫТЬ',
 
   'nick.change': 'ИЗМЕНИТЬ НИКНЕЙМ',

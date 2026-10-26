@@ -50,6 +50,7 @@ import RatingScreen from './RatingScreen';
 import ResultScreen from './ResultScreen';
 import Shop from './Shop';
 import TutorialOverlay from './TutorialOverlay';
+import PrivacyNote from './PrivacyNote';
 import VersusScreen from './VersusScreen';
 import { NO_AWARD, awardFor, loadStars, saveStars, tradedWell, type Award } from './progress';
 import { loadSeen, saveSeen, withSeen } from './archive';
@@ -3140,6 +3141,8 @@ export default function App() {
             </div>
           </div>
         )}
+        {/* Draws nothing outside CrazyGames, or once it has been seen. */}
+        <PrivacyNote />
         {pauseOpen && !st.finished && (
         <div className="overlay pause">
           <h2>{t(duel ? 'match.stillRunning' : 'match.paused')}</h2>
