@@ -80,6 +80,13 @@ export interface Env {
    * Missing means `/auth/google` refuses everything.
    */
   GOOGLE_CLIENT_ID?: string;
+  /**
+   * This game's id on CrazyGames, which every CrazyGames user token names. Set
+   * it once the game is published there: it is what stops a token minted for
+   * another CrazyGames game being replayed here as the same player. Empty, and
+   * the check is skipped (`verifyCrazyGamesToken`).
+   */
+  CRAZYGAMES_GAME_ID?: string;
   DUEL: DurableObjectNamespace;
   /**
    * The pool PLAY looks for a stranger in (`matchmaker.ts`). Optional so that a

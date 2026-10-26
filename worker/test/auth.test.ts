@@ -1,5 +1,12 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { identify, mintGuest, mintSession, readSession, verifyGoogleIdToken } from '../src/index';
+import {
+  identify,
+  mintGuest,
+  mintSession,
+  readSession,
+  verifyCrazyGamesToken,
+  verifyGoogleIdToken,
+} from '../src/index';
 import type { Env } from '../src/index';
 
 /**
@@ -166,6 +173,70 @@ describe('a Google ID token', () => {
   it('refuses everything when no client id is configured', async () => {
     serveKeys();
     expect(await verifyGoogleIdToken(await googleToken(), '')).toBeNull();
+  });
+});
+
+/** A token shaped and signed as CrazyGames' SDK hands one to the game. */
+async function crazyToken(
+  claims: Record<string, unknown> = {},
+  header: Record<string, unknown> = {},
+): Promise<string> {
+  const h = b64urlJson({ alg: 'RS256', kid: KID, typ: 'JWT', ...header });
+  const p = b64urlJson({
+    userId: 'Xk3mZ8',
+    gameId: 'broker-stars',
+    username: 'masha_trades',
+    profilePictureUrl: 'https://images.crazygames.com/u/1.png',
+    iat: Math.floor(Date.now() / 1000),
+    exp: future(),
+    ...claims,
+  });
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', keys.privateKey, enc.encode(`${h}.${p}`));
+  return `${h}.${p}.${b64url(sig)}`;
+}
+
+describe('a CrazyGames user token', () => {
+  it('names the player it was issued for, under the cg: namespace, by their username', async () => {
+    serveKeys();
+    expect(await verifyCrazyGamesToken(await crazyToken())).toEqual({
+      id: 'cg:Xk3mZ8',
+      name: 'masha_trades',
+    });
+  });
+
+  it('is refused when it was issued to another game, once this game knows its id', async () => {
+    serveKeys();
+    const token = await crazyToken({ gameId: 'somebody-elses-game' });
+    expect(await verifyCrazyGamesToken(token, 'broker-stars')).toBeNull();
+    expect(await verifyCrazyGamesToken(await crazyToken(), 'broker-stars')).not.toBeNull();
+    // before the id is known there is nothing to compare against
+    expect(await verifyCrazyGamesToken(token)).not.toBeNull();
+  });
+
+  it('is refused when it has expired', async () => {
+    serveKeys();
+    const token = await crazyToken({ exp: Math.floor(Date.now() / 1000) - 3600 });
+    expect(await verifyCrazyGamesToken(token)).toBeNull();
+  });
+
+  it('is refused when the claims were edited after signing', async () => {
+    serveKeys();
+    const [h, , s] = (await crazyToken()).split('.');
+    const forged = `${h}.${b64urlJson({ userId: 'someone-else', username: 'x', exp: future() })}.${s}`;
+    expect(await verifyCrazyGamesToken(forged)).toBeNull();
+  });
+
+  it('refuses an unsigned token, and one with no user in it', async () => {
+    serveKeys();
+    const [, p] = (await crazyToken()).split('.');
+    expect(await verifyCrazyGamesToken(`${b64urlJson({ alg: 'none', kid: KID })}.${p}.`)).toBeNull();
+    expect(await verifyCrazyGamesToken(await crazyToken({ userId: '' }))).toBeNull();
+  });
+
+  it('is a session from the door down once traded, like any other player', async () => {
+    const caller = { id: 'cg:Xk3mZ8', name: 'masha_trades' };
+    const token = await mintSession(caller, SECRET);
+    expect(await identify(token, { SESSION_SECRET: SECRET } as Env)).toEqual(caller);
   });
 });
 

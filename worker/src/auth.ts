@@ -130,7 +130,7 @@ let keyCache: { at: number; keys: Map<string, CryptoKey> } | null = null;
 const KEY_TTL_MS = 60 * 60 * 1000;
 
 async function loadKeys(): Promise<void> {
-  const fetched = await fetchGoogleKeys();
+  const fetched = await fetchKeys(GOOGLE_CERTS);
   if (fetched) keyCache = { at: Date.now(), keys: fetched };
 }
 
@@ -144,9 +144,10 @@ async function googleKey(kid: string): Promise<CryptoKey | null> {
   return keyCache?.keys.get(kid) ?? null;
 }
 
-async function fetchGoogleKeys(): Promise<Map<string, CryptoKey> | null> {
+/** A JSON Web Key Set, as Google and CrazyGames both publish theirs. */
+async function fetchKeys(url: string): Promise<Map<string, CryptoKey> | null> {
   try {
-    const res = await fetch(GOOGLE_CERTS);
+    const res = await fetch(url);
     if (!res.ok) return null;
     const body = (await res.json()) as { keys?: Jwk[] };
     const out = new Map<string, CryptoKey>();
@@ -227,6 +228,97 @@ export async function verifyGoogleIdToken(
     // the given name reads like a player; the full one reads like a document
     const name = String(claims.given_name || claims.name || '').trim();
     return { id: `g:${sub}`, name: name.slice(0, 24) || 'PLAYER' };
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------- CrazyGames */
+
+/**
+ * CrazyGames' keys for the in-game user token (`IN_GAME_AUTH`), which is the
+ * signing key its docs recommend; the legacy one is not accepted here. Cached
+ * and refreshed on an unknown `kid` exactly as Google's are, in a cache of
+ * their own so that neither can evict the other.
+ */
+const CRAZYGAMES_JWKS = 'https://userportal.crazygames.com/.well-known/jwks.json';
+
+let crazyCache: { at: number; keys: Map<string, CryptoKey> } | null = null;
+
+async function loadCrazyKeys(): Promise<void> {
+  const fetched = await fetchKeys(CRAZYGAMES_JWKS);
+  if (fetched) crazyCache = { at: Date.now(), keys: fetched };
+}
+
+async function crazyKey(kid: string): Promise<CryptoKey | null> {
+  const stale = !crazyCache || Date.now() - crazyCache.at > KEY_TTL_MS;
+  if (stale) await loadCrazyKeys();
+  const hit = crazyCache?.keys.get(kid);
+  if (hit) return hit;
+  if (!stale) await loadCrazyKeys();
+  return crazyCache?.keys.get(kid) ?? null;
+}
+
+/**
+ * Check a CrazyGames user token and say who it is for.
+ *
+ * The same things have to be true as for Google's: the algorithm is RS256 and
+ * not `none`, the signature is CrazyGames', and the token has not expired. Its
+ * payload is `userId, gameId, username, profilePictureUrl, iat, exp`.
+ *
+ * THE GAME. A token names the game it was issued to, and `gameId` — this
+ * game's id on CrazyGames, `CRAZYGAMES_GAME_ID` in wrangler.toml — is what
+ * stops a token minted for somebody else's game from being replayed here as
+ * the same person. The id exists only once the game is published there, so
+ * an empty one skips the check; set it as soon as it is known.
+ *
+ * The id is namespaced `cg:` beside `g:` and `a:`, and the name is the
+ * CrazyGames username, which its rules keep to 6–20 letters, digits, dots and
+ * underscores.
+ */
+export async function verifyCrazyGamesToken(
+  token: string,
+  gameId = '',
+): Promise<Caller | null> {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [rawHeader, rawPayload, rawSig] = parts;
+
+  const headerText = b64urlText(rawHeader);
+  if (!headerText) return null;
+  let kid = '';
+  try {
+    const header = JSON.parse(headerText) as { alg?: string; kid?: string };
+    if (header.alg !== 'RS256' || !header.kid) return null;
+    kid = header.kid;
+  } catch {
+    return null;
+  }
+
+  const key = await crazyKey(kid);
+  if (!key) return null;
+
+  const sigBytes = b64urlDecode(rawSig);
+  if (!sigBytes) return null;
+  const signed = await crypto.subtle.verify(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    sigBytes as BufferSource,
+    enc.encode(`${rawHeader}.${rawPayload}`),
+  );
+  if (!signed) return null;
+
+  const payloadText = b64urlText(rawPayload);
+  if (!payloadText) return null;
+  try {
+    const claims = JSON.parse(payloadText) as Record<string, unknown>;
+    const exp = Number(claims.exp ?? 0);
+    if (!exp || exp + SKEW_SECONDS < Date.now() / 1000) return null;
+    if (gameId && String(claims.gameId ?? '') !== gameId) return null;
+    const userId = String(claims.userId ?? '');
+    if (!userId) return null;
+    const name = String(claims.username ?? '').trim();
+    return { id: `cg:${userId}`, name: name.slice(0, 24) || 'PLAYER' };
   } catch {
     return null;
   }

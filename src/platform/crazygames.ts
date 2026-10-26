@@ -22,13 +22,17 @@
  * is what CrazyGames measures the initial download against and keeps its ads
  * out of.
  *
- * Who the player is, is still nobody: a guest session, exactly as in a browser
- * tab (`ui/guest.ts`). Signing in with a CrazyGames account is the next piece of
- * work and a Worker route of its own, not something this file can do alone.
+ * WHO THE PLAYER IS comes from CrazyGames when they are logged in there, and
+ * that needs no button: CrazyGames logs its users in for every game, and asks
+ * games to use the account and its username. At startup the SDK's user token is
+ * traded once at `/auth/crazygames` for a session of the Worker's own, which is
+ * what every request then carries. A player who is not logged in is a guest, as
+ * in a browser tab (`ui/guest.ts`), kept in the Data module.
  */
 
 import type { Platform } from './index';
-import { keepGuestIn, type GuestStore } from '../ui/guest';
+import { forgetGuest, guestToken, keepGuestIn, type GuestStore } from '../ui/guest';
+import { read, write } from '../ui/store';
 import { onDocumentVisibility } from './visibility';
 
 /** The SDK object the script tag puts on the window, if it did. */
@@ -87,6 +91,124 @@ const dataModule: GuestStore = {
 /** Exported for the tests, which are the only thing that may call it. */
 export const __dataModule = dataModule;
 
+/* -------------------------------------------------------------- the account */
+
+/**
+ * Where the Worker is, read when it is needed rather than once at load, which
+ * is all that lets the tests point it somewhere.
+ */
+const api = (): string => String(import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+
+const SESSION_KEY = 'brokerstars.cg.session';
+
+/** How long startup waits on the sign-in before the game draws as a guest. */
+const SIGN_IN_MS = 5000;
+
+interface Session {
+  /** the Worker's own token, what every request carries */
+  token: string;
+  /** `cg:<userId>`, or whatever it resolves to on the server */
+  id: string;
+  /** the CrazyGames username */
+  name: string;
+  /**
+   * Which CrazyGames account it was minted for, so that another account logging
+   * in on this browser is traded afresh. Told apart by the SDK's own user id,
+   * which its docs say not to trust for authentication — and it is not: it only
+   * decides whether to ask the server again, and the server checks the token.
+   */
+  user: string;
+}
+
+let session: Session | null = null;
+
+function loadSession(): Session | null {
+  try {
+    const raw = read(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Partial<Session>;
+    return s.token && s.id
+      ? { token: String(s.token), id: String(s.id), name: String(s.name ?? ''), user: String(s.user ?? '') }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function keepSession(next: Session | null): void {
+  session = next;
+  write(SESSION_KEY, next ? JSON.stringify(next) : '');
+}
+
+/**
+ * Sign the player in as the CrazyGames user they are logged in as, if they are.
+ *
+ * Silent in every way it can fail — no server, no account features on this
+ * domain, a token the server refuses, a slow network — because each of them
+ * leaves an ordinary guest, which is a whole game. A logout on CrazyGames
+ * reloads the page, so a player who is no longer logged in arrives here with
+ * no user, and the session kept for the last one is let go of.
+ *
+ * The guest goes along to the server, which makes the account a second door
+ * into the guest's save; once it has, the guest is spent.
+ */
+async function signIn(): Promise<void> {
+  const base = api();
+  const user = sdk()?.user;
+  if (!base || !user?.isUserAccountAvailable) return;
+
+  let who: { username?: string; __dangerousUserId?: string } | null = null;
+  try {
+    who = await user.getUser();
+  } catch {
+    return;
+  }
+  if (!who) {
+    keepSession(null);
+    return;
+  }
+
+  const tag = String(who.__dangerousUserId ?? who.username ?? '');
+  const held = loadSession();
+  if (held && held.user === tag) {
+    session = held;
+    return;
+  }
+
+  let token = '';
+  try {
+    token = String((await user.getUserToken({ signingKeyType: 'IN_GAME_AUTH' })) ?? '');
+  } catch {
+    return;
+  }
+  if (!token) return;
+
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), SIGN_IN_MS);
+  try {
+    const res = await fetch(`${base}/auth/crazygames`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token, guest: guestToken() }),
+      signal: stop.signal,
+    });
+    if (!res.ok) return;
+    const body = (await res.json()) as { token?: string; id?: string; name?: string; adopted?: boolean };
+    if (!body.token || !body.id) return;
+    keepSession({
+      token: body.token,
+      id: body.id,
+      name: String(body.name || who.username || '').slice(0, 24),
+      user: tag,
+    });
+    if (body.adopted) forgetGuest();
+  } catch {
+    /* a guest, this time */
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /* ---------------------------------------------------------------- invitations */
 
 /**
@@ -139,6 +261,8 @@ export const CRAZYGAMES: Platform = {
     // is already laid out for it.
     const doc = (globalThis as any).document;
     if (doc?.documentElement) doc.documentElement.dataset.host = 'crazygames';
+    // nobody until the SDK says otherwise (`signIn`)
+    session = null;
     const s = sdk();
     if (!s) return;
     try {
@@ -146,6 +270,8 @@ export const CRAZYGAMES: Platform = {
       live = s.environment !== 'disabled';
       // Before anything reads the guest: App asks for one after this resolves.
       if (live && s.data) keepGuestIn(dataModule);
+      // And before the first frame, which asks who is playing.
+      if (live) await signIn();
     } catch {
       // A page that cannot reach CrazyGames still has a game in it; it just
       // plays as an ordinary tab with nobody told.
@@ -154,15 +280,15 @@ export const CRAZYGAMES: Platform = {
   },
 
   authToken(): string {
-    return '';
+    return session?.token ?? '';
   },
 
   userId(): string | null {
-    return null;
+    return session?.id ?? null;
   },
 
   userName(): string {
-    return '';
+    return session?.name ?? '';
   },
 
   language(): string {

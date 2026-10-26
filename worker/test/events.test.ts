@@ -215,6 +215,26 @@ describe('two accounts, one person', () => {
     expect(new Set(got.map((r) => r.player_id))).toEqual(new Set([guest.caller.id]));
   });
 
+  it('carries a guest over to a CrazyGames account the same way', async () => {
+    const { env, fake } = setup();
+    const guest = await mintGuest(SECRET);
+    const crazy = { id: 'cg:Xk3mZ8', name: 'masha_trades' };
+
+    await send(env, guest.token, [{ name: 'app_open', props: {} }]);
+    expect(await link.adopt(env, crazy, guest.caller.id)).toBeNull();
+
+    // the CrazyGames account answers to the guest's save from here on
+    await send(env, await mintSession(crazy, SECRET), [{ name: 'app_open', props: {} }]);
+    const got = await rows(fake);
+    expect(new Set(got.map((r) => r.player_id))).toEqual(new Set([guest.caller.id]));
+  });
+
+  it('never lets one alias account join another', async () => {
+    const { env } = setup();
+    expect(await link.adopt(env, { id: 'cg:1', name: 'A' }, 'g:2')).toBe('self');
+    expect(await link.adopt(env, { id: 'g:3', name: 'B' }, 'cg:4')).toBe('self');
+  });
+
   it('does not count events as a game that would make the link refuse', async () => {
     const { env } = setup();
     const google = { id: 'g:456', name: 'BOB' };

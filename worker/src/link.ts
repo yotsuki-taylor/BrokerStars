@@ -47,7 +47,8 @@ function mintCode(): string {
  * before they linked.
  */
 export async function resolve(env: Env, id: string): Promise<string> {
-  if (!id.startsWith('g:')) return id;
+  // Google's accounts and CrazyGames' are the only ones that join anything
+  if (!id.startsWith('g:') && !id.startsWith('cg:')) return id;
   try {
     const row = await env.DB.prepare(`SELECT player_id FROM identities WHERE alias_id = ?1`)
       .bind(id)
@@ -141,10 +142,11 @@ async function hasGame(env: Env, id: string): Promise<boolean> {
 export async function adopt(env: Env, alias: Caller, playerId: string): Promise<LinkError | null> {
   if (alias.id === playerId) return 'self';
 
-  // Only a Google account joins, and only a non-Google account is joined. Both
-  // are the direction the table is built for: `g:` on the left, a Telegram id
-  // or a guest on the right.
-  if (!alias.id.startsWith('g:') || playerId.startsWith('g:')) return 'self';
+  // Only a Google or a CrazyGames account joins, and only an account of
+  // neither kind is joined. Both are the direction the table is built for:
+  // `g:` or `cg:` on the left, a Telegram id or a guest on the right.
+  const joins = (id: string) => id.startsWith('g:') || id.startsWith('cg:');
+  if (!joins(alias.id) || joins(playerId)) return 'self';
 
   if (await isLinked(env, alias)) return 'already';
   const other = await env.DB.prepare(

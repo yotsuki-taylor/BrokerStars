@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { platform } from './index';
 import { __codeOf as codeOf } from './crazygames';
 import { canHandOver, linkToShare } from '../ui/duel';
@@ -320,5 +320,93 @@ describe('multiplayer and sound, through the SDK', () => {
     platform().room?.('abc123');
     expect(calls).toEqual([]);
     expect(platform().instantDuel?.()).toBe(false);
+  });
+});
+
+describe('signing in as the CrazyGames user', () => {
+  const memory = () => {
+    const m = new Map<string, string>();
+    return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k) };
+  };
+
+  let posted: Record<string, unknown>[];
+  let answer: { status: number; body: Record<string, unknown> };
+
+  beforeEach(() => {
+    __resetGuestStore();
+    (globalThis as any).localStorage = memory();
+    vi.stubEnv('VITE_API_URL', 'https://api.test');
+    posted = [];
+    answer = { status: 200, body: { ok: true, token: 'bs1.session', id: 'cg:Xk3mZ8', name: 'masha_trades', adopted: true } };
+    vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
+      posted.push({ url, ...JSON.parse(init.body) });
+      return new Response(JSON.stringify(answer.body), { status: answer.status });
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    delete (globalThis as any).localStorage;
+    __resetGuestStore();
+  });
+
+  async function onCrazyGamesAs(user: { username: string; __dangerousUserId: string } | null) {
+    (globalThis as any).window = {
+      CrazyGames: {
+        SDK: {
+          environment: 'crazygames',
+          init: async () => {},
+          game: {},
+          user: {
+            isUserAccountAvailable: true,
+            getUser: async () => user,
+            getUserToken: async (o: { signingKeyType?: string }) => `jwt-${o?.signingKeyType}`,
+          },
+        },
+      },
+    };
+    await platform().ready();
+  }
+
+  it('trades the user token for a session, with the guest along, and plays under the username', async () => {
+    (globalThis as any).localStorage.setItem('brokerstars.guest', JSON.stringify({ token: 'bs1.guest', id: 'a:1', name: 'GUEST 1' }));
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    expect(posted).toEqual([{ url: 'https://api.test/auth/crazygames', token: 'jwt-IN_GAME_AUTH', guest: 'bs1.guest' }]);
+    expect(platform().authToken()).toBe('bs1.session');
+    expect(platform().userId()).toBe('cg:Xk3mZ8');
+    expect(platform().userName()).toBe('masha_trades');
+    // the server took the guest in, so it is spent
+    expect(guestToken()).toBe('');
+  });
+
+  it('does not ask again for the same user on the next launch', async () => {
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    expect(posted).toHaveLength(1);
+    expect(platform().authToken()).toBe('bs1.session');
+  });
+
+  it('asks again when a different account logs in on this browser', async () => {
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    answer.body = { ok: true, token: 'bs1.other', id: 'cg:Q9', name: 'other_one' };
+    await onCrazyGamesAs({ username: 'other_one', __dangerousUserId: 'Q9' });
+    expect(posted).toHaveLength(2);
+    expect(platform().userName()).toBe('other_one');
+  });
+
+  it('lets the session go when the player has logged out, and is a guest again', async () => {
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    await onCrazyGamesAs(null);
+    expect(platform().authToken()).toBe('');
+    expect(platform().userName()).toBe('');
+  });
+
+  it('stays a guest when the server refuses the token, and keeps the guest', async () => {
+    (globalThis as any).localStorage.setItem('brokerstars.guest', JSON.stringify({ token: 'bs1.guest', id: 'a:1', name: 'GUEST 1' }));
+    answer = { status: 401, body: { error: 'bad token' } };
+    await onCrazyGamesAs({ username: 'masha_trades', __dangerousUserId: 'Xk3mZ8' });
+    expect(platform().authToken()).toBe('');
+    expect(guestToken()).toBe('bs1.guest');
   });
 });

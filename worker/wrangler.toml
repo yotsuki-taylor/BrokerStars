@@ -51,6 +51,10 @@ WEBAPP_URL = "https://yotsuki-taylor.github.io/BrokerStars/"
 ADMIN_ID = "165233146"
 CHAT_ID = "-1004363436099"
 GOOGLE_CLIENT_ID = "814427976892-u602o00j2nedkmunlu0p9k8chbi27raf.apps.googleusercontent.com"
+# This game's id on CrazyGames, which every CrazyGames user token names
+# (`verifyCrazyGamesToken`). Unknown until the game is published there; set it
+# then, or a token minted for another CrazyGames game could be replayed here.
+# CRAZYGAMES_GAME_ID = ""
 
 [[d1_databases]]
 binding = "DB"

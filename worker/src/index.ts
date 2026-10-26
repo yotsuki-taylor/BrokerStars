@@ -83,13 +83,27 @@ import {
   sameSecret,
   webhookSecret,
 } from './telegram';
-import { identify, isGuest, mintGuest, mintSession, verifyGoogleIdToken } from './auth';
+import {
+  identify,
+  isGuest,
+  mintGuest,
+  mintSession,
+  verifyCrazyGamesToken,
+  verifyGoogleIdToken,
+} from './auth';
 import { duelStub, mintCode } from './duel';
 
 export { Duel } from './duel';
 export { Matchmaker } from './matchmaker';
 export { verifyInitData } from './telegram';
-export { identify, mintGuest, mintSession, readSession, verifyGoogleIdToken } from './auth';
+export {
+  identify,
+  mintGuest,
+  mintSession,
+  readSession,
+  verifyCrazyGamesToken,
+  verifyGoogleIdToken,
+} from './auth';
 export type { Env } from './results';
 
 /**
@@ -428,6 +442,60 @@ async function googleSignIn(request: Request, env: Env) {
   if (guest) {
     const was = await identify(guest, env);
     if (was && isGuest(was.id)) adopted = (await link.adopt(env, caller, was.id)) === null;
+  }
+
+  return json({
+    ok: true,
+    token: await mintSession(caller, env.SESSION_SECRET),
+    id: caller.id,
+    name: caller.name,
+    adopted,
+  });
+}
+
+/**
+ * A CrazyGames user, signed in by the token the SDK hands the game.
+ *
+ * The same shape as the Google door and for the same reasons: the token is
+ * checked once and traded for a session of ours, good for months, so the game
+ * is not asking CrazyGames for a fresh hour-long token before every write; a
+ * guest the same browser was playing as becomes this account's save rather
+ * than an empty room beside it (`link.adopt`). The game calls this on its own
+ * at startup for a player CrazyGames says is logged in — there is no button.
+ *
+ * One thing the Google door does not do: the CrazyGames username goes onto the
+ * player's row straight away, unless they chose a name of their own, so the
+ * friends and rivals who see them in a duel or on the board see the name they
+ * know them by before their next match writes it there anyway.
+ */
+async function crazyGamesSignIn(request: Request, env: Env) {
+  if (!env.SESSION_SECRET) return bad(503, 'no session secret configured');
+
+  let body: { token?: unknown; guest?: unknown };
+  try {
+    body = (await request.json()) as { token?: unknown; guest?: unknown };
+  } catch {
+    return bad(400, 'not json');
+  }
+
+  const token = typeof body.token === 'string' ? body.token : '';
+  const caller = token ? await verifyCrazyGamesToken(token, env.CRAZYGAMES_GAME_ID ?? '') : null;
+  if (!caller) return bad(401, 'bad token');
+
+  const guest = typeof body.guest === 'string' ? body.guest : '';
+  let adopted = false;
+  if (guest) {
+    const was = await identify(guest, env);
+    if (was && isGuest(was.id)) adopted = (await link.adopt(env, caller, was.id)) === null;
+  }
+
+  try {
+    const player = await link.resolve(env, caller.id);
+    await env.DB.prepare(`UPDATE players SET name = ?1 WHERE id = ?2 AND named = 0`)
+      .bind(caller.name, player)
+      .run();
+  } catch {
+    /* the next match writes it anyway */
   }
 
   return json({
@@ -1528,6 +1596,7 @@ export default {
     if (request.method === 'POST') {
       if (url.pathname === '/auth/guest') return guestSignIn(request, env);
       if (url.pathname === '/auth/google') return googleSignIn(request, env);
+      if (url.pathname === '/auth/crazygames') return crazyGamesSignIn(request, env);
       if (url.pathname === '/profile') return openProfile(request, env);
       if (url.pathname === '/profile/buy') return buy(request, env);
       if (url.pathname === '/profile/wear') return wear(request, env);
