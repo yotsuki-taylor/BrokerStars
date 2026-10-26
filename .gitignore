@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-crazygames
+dist-crazygames.zip
 tsconfig.tsbuildinfo
 
 # bot token lives here
