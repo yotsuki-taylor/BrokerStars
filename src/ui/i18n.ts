@@ -317,7 +317,7 @@ const EN = {
 
   'tut.duel.title': 'PLAY · DUEL',
   'tut.duel.body':
-    'PLAY is eighty seconds against a bot. DUEL is the same match against a person — you send them a link.',
+    'PLAY is eighty seconds against a random player from your league — or a bot, if nobody is around. DUEL is the same match with a friend: you send them a link.',
 
   'tut.friends.title': 'YOUR PROFILE',
   'tut.friends.body':
@@ -962,7 +962,7 @@ const RU: Record<Key, string> = {
 
   'tut.duel.title': 'ИГРАТЬ · ДУЭЛЬ',
   'tut.duel.body':
-    'ИГРАТЬ — восемьдесят секунд против бота. ДУЭЛЬ — тот же матч против человека: ему отправляется ссылка.',
+    'ИГРАТЬ — восемьдесят секунд против случайного игрока твоей лиги, а если никого нет — против бота. ДУЭЛЬ — тот же матч с другом: ему отправляется ссылка.',
 
   'tut.friends.title': 'ТВОЙ ПРОФИЛЬ',
   'tut.friends.body':

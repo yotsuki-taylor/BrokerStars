@@ -20,7 +20,8 @@
  * instead of lighting up empty floor.
  *
  * THE MATCH ITSELF IS NOT IN HERE. One clause says PLAY is eighty seconds
- * against a bot and leaves it there. What happens inside those seconds is what
+ * against a stranger from the same league, or a bot when nobody is about, and
+ * leaves it there. What happens inside those seconds is what
  * HOW TO PLAY is for, and a tour that stopped to teach shorting would be closed
  * before it reached the things nobody discovers by themselves.
  */
