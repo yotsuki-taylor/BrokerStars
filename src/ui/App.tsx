@@ -207,6 +207,13 @@ const HUMAN = 0;
  * still needs from the socket — whether the connection is up, and whether the
  * other player is still on the end of it.
  */
+/**
+ * How long the first run on CrazyGames "searches" before its bot comes in:
+ * past the browser's full-screen notice, which sits over the trade buttons for
+ * the first eight to ten seconds (`firstSearch` in App).
+ */
+const FIRST_SEARCH_MS = 10_000;
+
 interface DuelUi {
   phase: DuelPhase | 'match';
   code: string | null;
@@ -2391,6 +2398,7 @@ export default function App() {
     const old = searchRef.current;
     searchRef.current = null;
     old?.cancel();
+    window.clearTimeout(firstSearch.current);
     if (pendingPair.current) {
       pendingPair.current = false;
       setPairing(false);
@@ -2423,10 +2431,20 @@ export default function App() {
 
   /**
    * The first run on CrazyGames (`firstRun`): straight to a match against a
-   * bot in the first league, on the versus screen's own flourish rather than a
-   * real search. A newcomer's first match is against a bot on purpose — it is
-   * where the game is learned, and a stranger who knows it is not a lesson.
+   * bot in the first league. A newcomer's first match is against a bot on
+   * purpose — it is where the game is learned, and a stranger who knows it is
+   * not a lesson.
+   *
+   * WHY IT "SEARCHES" FOR TEN SECONDS. CrazyGames opens a game full screen,
+   * and the browser lays its own "press Esc to exit full screen" bar along the
+   * bottom for the first eight to ten seconds — right over the BUY and SELL
+   * buttons. The versus screen's own flourish was over in under four, so the
+   * newcomer's very first trades were made under a system banner. The search
+   * screen is the wait that bar costs anyway, and it has nothing to tap; no
+   * pool is asked and no stranger can turn up. No "play the bot" button
+   * either: the point is the wait.
    */
+  const firstSearch = useRef(0);
   useEffect(() => {
     if (!firstRun) return;
     const s = String(Math.floor(Math.random() * 1e6));
@@ -2434,9 +2452,14 @@ export default function App() {
     savePick(0);
     hold(0, s);
     restart(s, LEAGUES[0].preset, 0, null);
-    setSeeking(false);
+    setSeeking(true);
     setSearched(false);
     setScreen('vs');
+    firstSearch.current = window.setTimeout(() => {
+      // the way an empty answer goes: the bot dealt above comes straight in
+      setSeeking(false);
+      setSearched(true);
+    }, FIRST_SEARCH_MS);
     // once, on the first render that knows it is a first run
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -3056,7 +3079,8 @@ export default function App() {
               : null
           }
           // Only while nobody is on the way: see `pairing`.
-          onSkip={seeking && !pairing ? () => skipSearch(league) : undefined}
+          // Only during a real search: the first run's wait is the point (`firstSearch`).
+          onSkip={seeking && !pairing && searchRef.current ? () => skipSearch(league) : undefined}
           searched={searched}
           // Only in a duel: a match against a bot has already shown these on a
           // screen of their own, and showing them twice would be a screen that
