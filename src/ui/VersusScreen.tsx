@@ -193,20 +193,6 @@ export default function VersusScreen({
         </div>
       )}
 
-      {/* Under the status, where the eye already is. It stops the tap from
-          reaching the screen behind, which would only skip the flourish. */}
-      {onSkip && !rivalIn && waited >= SKIP_AFTER_S && (
-        <button
-          className="menu-btn versus-skip"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSkip();
-          }}
-        >
-          {t('versus.playBot')}
-        </button>
-      )}
-
       {rivalIn && <div className="name-plate top">{rivalName}</div>}
 
       {/* The bottom corner, stacked rather than layered. The player's own name
@@ -235,6 +221,23 @@ export default function VersusScreen({
               </div>
             ))}
           </div>
+        )}
+        {/* Under VS and over the player's own name, in this column rather than
+            placed over the scene, so it can never land on either of them
+            whatever the height. It shares the column with nothing else: the
+            board above only comes in with the rival, and the button goes the
+            moment there is one. Stops the tap from reaching the screen behind,
+            which would only skip the flourish. */}
+        {onSkip && !rivalIn && waited >= SKIP_AFTER_S && (
+          <button
+            className="menu-btn versus-skip"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSkip();
+            }}
+          >
+            {t('versus.playBot')}
+          </button>
         )}
         <div className="name-plate bottom">{playerName}</div>
       </div>

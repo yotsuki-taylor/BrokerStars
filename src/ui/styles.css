@@ -2043,14 +2043,10 @@ a.big-btn {
   font-variant-numeric: tabular-nums;
 }
 
-/* The bot, now: under the status, centred, and smaller than the big buttons —
-   the wait is the default and this is the way out of it. */
+/* The bot, now: in the foot column over the player's name (VersusScreen),
+   and smaller than the big buttons — the wait is the default and this is the
+   way out of it. */
 .versus-skip {
-  position: absolute;
-  top: calc(26% + 30px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
   min-height: 40px;
   padding: 0 16px;
   font-size: 14px;
@@ -2058,7 +2054,7 @@ a.big-btn {
 }
 
 .versus-skip:active {
-  transform: translateX(-50%) scale(0.96);
+  transform: scale(0.96);
 }
 
 @keyframes searching {
