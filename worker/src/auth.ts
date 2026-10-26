@@ -236,8 +236,10 @@ export async function verifyGoogleIdToken(
 /* ------------------------------------------------------------- CrazyGames */
 
 /**
- * CrazyGames' keys for the in-game user token (`IN_GAME_AUTH`), which is the
- * signing key its docs recommend; the legacy one is not accepted here. Cached
+ * CrazyGames' keys for the user token. The game asks for the `IN_GAME_AUTH`
+ * signing key, which its docs recommend, but the set at this address also
+ * carries the legacy one (`ingame-auth-legacy`), and a token signed by either
+ * is CrazyGames' own — so the token's `kid` picks whichever it names. Cached
  * and refreshed on an unknown `kid` exactly as Google's are, in a cache of
  * their own so that neither can evict the other.
  */
