@@ -152,6 +152,16 @@ export interface Platform {
   gameplay?(playing: boolean): void;
 
   /**
+   * The first frame is on screen: whatever the host counts as loading is over.
+   * Called once, by `main.tsx`, after the first render has been painted.
+   *
+   * Absent wherever nobody is listening — CrazyGames is told the load began
+   * when its SDK came up (`ready`) and ended here, which is how it measures
+   * the time between a click on the game and a game.
+   */
+  loaded?(): void;
+
+  /**
    * The duel this player can be joined in right now, or null for none.
    *
    * For a host with an invite button of its own: CrazyGames shows one on the

@@ -29,6 +29,8 @@ async function onCrazyGames(
             `https://www.crazygames.com/game/broker-stars?${new URLSearchParams(params)}`,
           gameplayStart: () => calls.push('start'),
           gameplayStop: () => calls.push('stop'),
+          loadingStart: () => calls.push('loading'),
+          loadingStop: () => calls.push('loaded'),
         },
       },
     },
@@ -106,12 +108,21 @@ describe('on CrazyGames', () => {
     const p = platform();
     for (const playing of [false, true, true, true, false, false, true]) p.gameplay?.(playing);
     p.gameplay?.(false);
-    expect(calls).toEqual(['start', 'stop', 'start', 'stop']);
+    expect(calls.filter((c) => c === 'start' || c === 'stop')).toEqual(['start', 'stop', 'start', 'stop']);
+  });
+
+  it('tells the site the load began with the SDK and ended at the first frame, once', async () => {
+    const calls = await onCrazyGames();
+    expect(calls).toEqual(['loading']);
+    platform().loaded?.();
+    platform().loaded?.();
+    expect(calls).toEqual(['loading', 'loaded']);
   });
 
   it('tells nobody when the SDK said it is disabled', async () => {
     const calls = await onCrazyGames('disabled');
     platform().gameplay?.(true);
+    platform().loaded?.();
     expect(calls).toEqual([]);
     expect(platform().launchParam()).toBe('');
   });

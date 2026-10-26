@@ -122,6 +122,9 @@ interface Session {
 
 let session: Session | null = null;
 
+/** `loadingStart` went out and `loadingStop` has not yet (`ready`, `loaded`). */
+let loading = false;
+
 function loadSession(): Session | null {
   try {
     const raw = read(SESSION_KEY);
@@ -270,11 +273,22 @@ export const CRAZYGAMES: Platform = {
     if (doc?.documentElement) doc.documentElement.dataset.host = 'crazygames';
     // nobody until the SDK says otherwise (`signIn`)
     session = null;
+    loading = false;
     const s = sdk();
     if (!s) return;
     try {
       await s.init();
       live = s.environment !== 'disabled';
+      // The load as CrazyGames measures it: from here to the first frame
+      // (`loaded`), which takes in the sign-in below and the font.
+      if (live) {
+        try {
+          s.game.loadingStart();
+          loading = true;
+        } catch {
+          /* a statistic, not a reason to stop */
+        }
+      }
       // Before anything reads the guest: App asks for one after this resolves.
       if (live && s.data) keepGuestIn(dataModule);
       // And before the first frame, which asks who is playing.
@@ -403,6 +417,17 @@ export const CRAZYGAMES: Platform = {
       };
     } catch {
       return () => {};
+    }
+  },
+
+  loaded(): void {
+    // Only a load that was started, and only once.
+    if (!loading) return;
+    loading = false;
+    try {
+      sdk().game.loadingStop();
+    } catch {
+      /* a missed signal costs the site a statistic, not the player a game */
     }
   },
 

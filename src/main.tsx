@@ -35,6 +35,13 @@ async function start(): Promise<void> {
       <App />
     </React.StrictMode>,
   );
+  // Two frames: the first runs before React's commit has been painted, the
+  // second after — the moment the player is actually looking at the game. A
+  // page opened in a background tab paints nothing and runs no frames, so a
+  // timer says it too; `loaded` only answers the first of them.
+  const loaded = () => platform().loaded?.();
+  requestAnimationFrame(() => requestAnimationFrame(loaded));
+  setTimeout(loaded, 1000);
 }
 
 void start();
